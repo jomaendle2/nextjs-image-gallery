@@ -4,6 +4,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { extractDominantColorDebounced } from "@/utils/colorExtractor";
 import { galleryImages } from "@/data/galleryData";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface ImageCarouselProps {
   currentIndex: number;
@@ -91,9 +92,15 @@ export function ImageCarousel({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") handlePrevious();
-      if (e.key === "ArrowRight") handleNext();
-      if (e.key === "Escape") onViewModeChange();
+      if (e.key === "ArrowLeft") {
+        handlePrevious();
+      }
+      if (e.key === "ArrowRight") {
+        handleNext();
+      }
+      if (e.key === "Escape") {
+        onViewModeChange();
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -159,8 +166,10 @@ export function ImageCarousel({
               </div>
             )}
 
-            <img
+            <Image
               ref={imageRef}
+              width={imageRef.current?.width || 800}
+              height={imageRef.current?.height || 600}
               src={currentImage.src}
               alt={currentImage.title}
               className={`w-full h-auto max-h-[70vh] object-contain transition-opacity duration-300 transform-gpu ${

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { galleryImages } from "@/data/galleryData";
+import Image from "next/image";
 
 interface ImageGridProps {
   onImageSelect: (index: number) => void;
@@ -71,9 +72,11 @@ export function ImageGrid({ onImageSelect, onViewModeChange }: ImageGridProps) {
 
                 {/* Image */}
                 <div className="aspect-[4/3] overflow-hidden">
-                  <img
+                  <Image
                     src={image.src}
                     alt={image.title}
+                    width={400}
+                    height={300}
                     className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 transform-gpu ${
                       loadedImages.has(image.id) ? "opacity-100" : "opacity-0"
                     }`}
