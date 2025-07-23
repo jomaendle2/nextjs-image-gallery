@@ -28,6 +28,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <footer>
+          <div className="text-center fixed text-sm text-gray-300 bottom-8 left-8 z-20 mt-8">
+            © {new Date().getFullYear()} Jo Mändle
+          </div>
+        </footer>
       </body>
     </html>
   );
