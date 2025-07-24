@@ -1,13 +1,26 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { ImageGrid } from "@/components/gallery/ImageGrid";
+import { useImageColor } from "@/components/gallery/carousel/useImageColor";
+import { galleryImages } from "@/data/galleryData";
 
 type ViewMode = "carousel" | "grid";
 
 const Index = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("carousel");
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  // Get current image data
+  const currentImage = galleryImages[currentImageIndex];
+
+  // Use the image color hook for background adaptation
+  const { dominantColor } = useImageColor(
+    imageRef,
+    currentImage.id,
+    currentImageIndex,
+  );
 
   const handleViewModeChange = () => {
     setViewMode(viewMode === "carousel" ? "grid" : "carousel");
@@ -27,11 +40,20 @@ const Index = () => {
   }
 
   return (
-    <ImageCarousel
-      currentIndex={currentImageIndex}
-      onIndexChange={setCurrentImageIndex}
-      onViewModeChange={handleViewModeChange}
-    />
+    <div
+      className="min-h-screen transition-colors duration-700"
+      style={{
+        backgroundColor: dominantColor
+          .replace("hsl(", "hsla(")
+          .replace(")", ", 0.1)"),
+      }}
+    >
+      <ImageCarousel
+        currentIndex={currentImageIndex}
+        onIndexChange={setCurrentImageIndex}
+        onViewModeChange={handleViewModeChange}
+      />
+    </div>
   );
 };
 

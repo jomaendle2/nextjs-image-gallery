@@ -6,7 +6,7 @@ interface CarouselTopBarProps {
 
 export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
   return (
-    <div className="flex-shrink-0 flex justify-between items-center p-6 bg-gradient-to-b from-black/60 via-black/30 to-transparent">
+    <div className="flex-shrink-0 flex justify-between items-center p-6">
       {onClose && (
         <button
           onClick={onClose}

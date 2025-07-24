@@ -24,7 +24,7 @@ export function useImageColor(
 
   useEffect(() => {
     updateDominantColor();
-  }, [currentIndex, imageId]);
+  }, [currentIndex, imageId, updateDominantColor]);
 
   return { dominantColor, updateDominantColor };
 }

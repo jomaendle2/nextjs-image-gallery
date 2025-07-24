@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
@@ -8,20 +8,50 @@ import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
 import { galleryImages } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
+import { useImageColor } from "./carousel/useImageColor";
 
 interface ImageCarouselProps {
   initialIndex?: number;
+  currentIndex?: number;
+  onIndexChange?: (index: number) => void;
   onClose?: () => void;
+  onViewModeChange?: () => void;
 }
 
 export function ImageCarousel({
   initialIndex = 0,
+  currentIndex: externalCurrentIndex,
+  onIndexChange,
   onClose,
 }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(
+    externalCurrentIndex ?? initialIndex,
+  );
   const [isTransitioning, setIsTransitioning] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentImageRef = useRef<HTMLImageElement>(null);
+
+  // Get the current image data
+  const currentImage = galleryImages[currentIndex];
+
+  // Use the image color hook
+  const { dominantColor } = useImageColor(
+    currentImageRef,
+    currentImage.id,
+    currentIndex,
+  );
+
+  // Sync external currentIndex with internal state
+  useEffect(() => {
+    if (
+      externalCurrentIndex !== undefined &&
+      externalCurrentIndex !== currentIndex
+    ) {
+      setCurrentIndex(externalCurrentIndex);
+      scrollToImage(externalCurrentIndex);
+    }
+  }, [externalCurrentIndex, currentIndex]);
 
   // Handle keyboard navigation
   useCarouselKeyboard({
@@ -29,6 +59,14 @@ export function ImageCarousel({
     onPrevious: () => goToPrevious(),
     onClose: onClose,
   });
+
+  const updateCurrentIndex = useCallback(
+    (newIndex: number) => {
+      setCurrentIndex(newIndex);
+      onIndexChange?.(newIndex);
+    },
+    [onIndexChange],
+  );
 
   const goToNext = () => {
     if (currentIndex < galleryImages.length - 1) {
@@ -65,7 +103,7 @@ export function ImageCarousel({
 
         // Check if we're close enough to the target position (within 5px)
         if (Math.abs(scrollLeft - targetScrollPosition) < 5) {
-          setCurrentIndex(index);
+          updateCurrentIndex(index);
           setIsTransitioning(false);
         } else {
           // Continue checking
@@ -109,13 +147,13 @@ export function ImageCarousel({
         newIndex >= 0 &&
         newIndex < galleryImages.length
       ) {
-        setCurrentIndex(newIndex);
+        updateCurrentIndex(newIndex);
       }
     };
 
     carousel.addEventListener("scroll", handleScroll, { passive: true });
     return () => carousel.removeEventListener("scroll", handleScroll);
-  }, [currentIndex, isTransitioning]);
+  }, [currentIndex, isTransitioning, updateCurrentIndex]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -133,10 +171,15 @@ export function ImageCarousel({
     }
   }, [initialIndex]);
 
-  const currentImage = galleryImages[currentIndex];
-
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
+    <div
+      className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
+      style={{
+        backgroundColor: dominantColor
+          .replace("hsl(", "hsla(")
+          .replace(")", ", 0.9)"),
+      }}
+    >
       <CarouselTopBar onClose={onClose} />
 
       <h1 className="text-2xl text-center font-bold text-white">
@@ -159,6 +202,7 @@ export function ImageCarousel({
               className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-4"
             >
               <CarouselImage
+                ref={index === currentIndex ? currentImageRef : null}
                 src={image.src}
                 alt={image.title}
                 priority={Math.abs(index - currentIndex) <= 1}
