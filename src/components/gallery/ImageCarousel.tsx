@@ -6,7 +6,7 @@ import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
-import { galleryImages, type GalleryImage } from "@/data/galleryData";
+import { galleryImages } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 
 interface ImageCarouselProps {
@@ -19,8 +19,9 @@ export function ImageCarousel({
   onClose,
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle keyboard navigation
   useCarouselKeyboard({
@@ -32,22 +33,49 @@ export function ImageCarousel({
   const goToNext = () => {
     if (currentIndex < galleryImages.length - 1) {
       const newIndex = currentIndex + 1;
-      setCurrentIndex(newIndex);
-      scrollToImage(newIndex);
+      goToImage(newIndex);
     }
   };
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
       const newIndex = currentIndex - 1;
-      setCurrentIndex(newIndex);
-      scrollToImage(newIndex);
+      goToImage(newIndex);
     }
   };
 
   const goToImage = (index: number) => {
-    setCurrentIndex(index);
+    // Prevent multiple rapid clicks during transition
+    if (isTransitioning || index === currentIndex) return;
+
+    setIsTransitioning(true);
     scrollToImage(index);
+
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // Monitor scroll completion and update state when animation finishes
+    const checkScrollCompletion = () => {
+      if (carouselRef.current) {
+        const scrollLeft = carouselRef.current.scrollLeft;
+        const imageWidth = carouselRef.current.clientWidth;
+        const targetScrollPosition = index * imageWidth;
+
+        // Check if we're close enough to the target position (within 5px)
+        if (Math.abs(scrollLeft - targetScrollPosition) < 5) {
+          setCurrentIndex(index);
+          setIsTransitioning(false);
+        } else {
+          // Continue checking
+          scrollTimeoutRef.current = setTimeout(checkScrollCompletion, 50);
+        }
+      }
+    };
+
+    // Start checking after a short delay to let the smooth scroll begin
+    scrollTimeoutRef.current = setTimeout(checkScrollCompletion, 100);
   };
 
   const scrollToImage = (index: number) => {
@@ -63,16 +91,15 @@ export function ImageCarousel({
     }
   };
 
-  const handleImageLoad = (imageId: string) => {
-    setImagesLoaded((prev) => ({ ...prev, [imageId]: true }));
-  };
-
   // Handle scroll snap detection to update current index
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
 
     const handleScroll = () => {
+      // Don't update during manual transitions to avoid conflicts
+      if (isTransitioning) return;
+
       const scrollLeft = carousel.scrollLeft;
       const imageWidth = carousel.clientWidth;
       const newIndex = Math.round(scrollLeft / imageWidth);
@@ -88,7 +115,16 @@ export function ImageCarousel({
 
     carousel.addEventListener("scroll", handleScroll, { passive: true });
     return () => carousel.removeEventListener("scroll", handleScroll);
-  }, [currentIndex]);
+  }, [currentIndex, isTransitioning]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Initialize scroll position
   useEffect(() => {
@@ -101,11 +137,11 @@ export function ImageCarousel({
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
-      <CarouselTopBar
-        currentIndex={currentIndex}
-        totalImages={galleryImages.length}
-        onClose={onClose}
-      />
+      <CarouselTopBar onClose={onClose} />
+
+      <h1 className="text-2xl text-center font-bold text-white">
+        the beauty of earth.
+      </h1>
 
       <div className="flex-1 relative overflow-hidden">
         {/* Main carousel container with scroll snap */}
@@ -125,7 +161,6 @@ export function ImageCarousel({
               <CarouselImage
                 src={image.src}
                 alt={image.title}
-                onLoad={() => handleImageLoad(image.id)}
                 priority={Math.abs(index - currentIndex) <= 1}
                 blurDataURL={image.blurDataURL}
               />

@@ -1,22 +1,12 @@
 import { X } from "lucide-react";
 
 interface CarouselTopBarProps {
-  currentIndex: number;
-  totalImages: number;
   onClose?: () => void;
 }
 
-export function CarouselTopBar({
-  currentIndex,
-  totalImages,
-  onClose,
-}: CarouselTopBarProps) {
+export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
   return (
     <div className="flex-shrink-0 flex justify-between items-center p-6 bg-gradient-to-b from-black/60 via-black/30 to-transparent">
-      <div className="text-white/90 font-medium text-sm tracking-wide">
-        {currentIndex + 1} of {totalImages}
-      </div>
-
       {onClose && (
         <button
           onClick={onClose}
