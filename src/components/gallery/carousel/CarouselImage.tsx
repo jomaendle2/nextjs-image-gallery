@@ -17,7 +17,7 @@ export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
 
     return (
       <div className="relative w-full h-full flex items-center justify-center px-4 py-6">
-        <div className="relative max-w-full h-full flex items-center justify-center max-h-full">
+        <div className="relative max-w-full h-full flex items-center justify-center max-h-full pb-6">
           <Image
             ref={ref}
             src={src}

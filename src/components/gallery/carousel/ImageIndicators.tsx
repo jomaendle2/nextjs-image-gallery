@@ -58,7 +58,7 @@ export function ImageIndicators({
             onClick={() => onImageSelect(index)}
             className={`relative flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ease-out ${
               index === currentIndex
-                ? "w-16 h-16 ring-2 ring-white shadow-lg scale-110"
+                ? "w-16 h-16 ring-2 ring-white/50 shadow-lg scale-110"
                 : "w-12 h-12 ring-1 ring-white/20 hover:ring-white/40 hover:scale-105 active:scale-95"
             }`}
             aria-label={`Go to image ${index + 1}: ${image.title}`}
@@ -78,7 +78,7 @@ export function ImageIndicators({
             )}
             {/* Active indicator dot */}
             {index === currentIndex && (
-              <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+              <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white/80 rounded-full shadow-sm" />
             )}
           </button>
         ))}

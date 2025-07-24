@@ -182,7 +182,10 @@ export function ImageCarousel({
     >
       <CarouselTopBar onClose={onClose} />
 
-      <h1 className="text-2xl text-center font-bold text-white">
+      <h1
+        className="text-3xl text-center font-bold text-white"
+        style={{ letterSpacing: "-0.05em" }}
+      >
         the beauty of earth.
       </h1>
 
@@ -222,7 +225,7 @@ export function ImageCarousel({
       </div>
 
       {/* Bottom controls */}
-      <div className="flex-shrink-0 p-6 space-y-4">
+      <div className="flex-shrink-0 px-6 pb-6 space-y-4">
         <ImageIndicators
           images={galleryImages}
           currentIndex={currentIndex}
