@@ -77,11 +77,14 @@ export function ImageGrid({ onImageSelect, onViewModeChange }: ImageGridProps) {
                     alt={image.title}
                     width={400}
                     height={300}
+                    priority={index < 4} // Prioritize first 4 images
+                    quality={85}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                     className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 transform-gpu ${
                       loadedImages.has(image.id) ? "opacity-100" : "opacity-0"
                     }`}
                     onLoad={() => handleImageLoad(image.id)}
-                    loading="lazy"
+                    loading={index < 4 ? "eager" : "lazy"}
                   />
                 </div>
 

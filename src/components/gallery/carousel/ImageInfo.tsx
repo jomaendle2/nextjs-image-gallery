@@ -29,10 +29,8 @@ export function ImageInfo({ title, description }: ImageInfoProps) {
   return (
     <div className="mt-8 text-center space-y-4">
       <div className="space-y-2">
-        <h2 className="text-2xl md:text-3xl font-bold text-gallery-text">
-          {title}
-        </h2>
-        <p className="text-gallery-muted text-lg max-w-2xl mx-auto">
+        <h2 className="text-xl  font-bold text-gallery-text">{title}</h2>
+        <p className="text-gallery-muted text-base max-w-2xl mx-auto">
           {description}
         </p>
       </div>

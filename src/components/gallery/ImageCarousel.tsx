@@ -37,17 +37,19 @@ export function ImageCarousel({
   };
 
   const handlePrevious = () => {
+    const newIndex =
+      currentIndex === 0 ? galleryImages.length - 1 : currentIndex - 1;
+    onIndexChange(newIndex);
+    setIsLoading(true);
     setIsTransitioning(true);
-    onIndexChange(
-      currentIndex === 0 ? galleryImages.length - 1 : currentIndex - 1,
-    );
   };
 
   const handleNext = () => {
+    const newIndex =
+      currentIndex === galleryImages.length - 1 ? 0 : currentIndex + 1;
+    onIndexChange(newIndex);
+    setIsLoading(true);
     setIsTransitioning(true);
-    onIndexChange(
-      currentIndex === galleryImages.length - 1 ? 0 : currentIndex + 1,
-    );
   };
 
   useCarouselKeyboard({
@@ -84,11 +86,13 @@ export function ImageCarousel({
           />
 
           <CarouselImage
+            key={currentImage.id}
             ref={imageRef}
             src={currentImage.src}
             alt={currentImage.title}
-            isLoading={isLoading}
+            blurDataURL={currentImage.blurDataURL}
             onLoad={handleImageLoad}
+            priority={true}
           />
 
           <ImageInfo
