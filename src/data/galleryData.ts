@@ -18,6 +18,7 @@ export interface GalleryImage {
   description: string;
   dominantColor?: string;
   blurDataURL?: string;
+  bgColor: string;
 }
 
 export const galleryImages: GalleryImage[] = [
@@ -27,6 +28,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature0.blurDataURL,
     title: "Vila Nova de Milfontes, Portugal",
     description: "Beautiful coastal landscape in Portugal",
+    bgColor: "#191815",
   },
   {
     id: "1",
@@ -34,6 +36,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature1.blurDataURL,
     title: "Bali, Indonesia",
     description: "A beautiful, blooming Plumeria rubra flower",
+    bgColor: "#4c89a1",
   },
   {
     id: "2",
@@ -41,6 +44,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature2.blurDataURL,
     title: "Bromo Volcano, Java, Indonesia",
     description: "Peaceful sunrise at Bromo Tengger Semeru National Park",
+    bgColor: "#663829",
   },
   {
     id: "3",
@@ -48,6 +52,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature3.blurDataURL,
     title: "Uluwatu, Bali, Indonesia",
     description: "Teal waves crash against rocky, shrub-covered cliffs.",
+    bgColor: "#446165",
   },
   {
     id: "4",
@@ -56,6 +61,7 @@ export const galleryImages: GalleryImage[] = [
     title: "Sagres, Portugal",
     description:
       "A golden sunset glows over gentle waves on a sandy Sagres shore.",
+    bgColor: "#6a4332",
   },
   {
     id: "5",
@@ -63,6 +69,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature5.blurDataURL,
     title: "San Diego, California",
     description: "Close-up of a vibrant palm tree nearby the beach.",
+    bgColor: "#4d623c",
   },
   {
     id: "9",
@@ -70,6 +77,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature9.blurDataURL,
     title: "Koh Samui, Thailand",
     description: "White plumeria blossoms against a clear blue sky.",
+    bgColor: "#2a88a3",
   },
   {
     id: "6",
@@ -77,6 +85,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature6.blurDataURL,
     title: "San Francisco, California",
     description: "Golden Gate Bridge at sunset with a vibrant sky.",
+    bgColor: "#2184ab",
   },
   {
     id: "7",
@@ -85,6 +94,7 @@ export const galleryImages: GalleryImage[] = [
     title: "Arches National Park, Utah",
     description:
       "Storm clouds roll over towering red sandstone formations in Arches NP",
+    bgColor: "#646378",
   },
   {
     id: "8",
@@ -92,6 +102,7 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature8.blurDataURL,
     title: "Böblingen, Germany",
     description: "Pink cherry blossoms against a clear blue sky.",
+    bgColor: "#136aa0",
   },
 
   {
@@ -100,5 +111,6 @@ export const galleryImages: GalleryImage[] = [
     blurDataURL: nature10.blurDataURL,
     title: "Koh Phangan, Thailand",
     description: "Lovely palm trees swaying in the breeze on a tropical beach.",
+    bgColor: "#87abab",
   },
 ];

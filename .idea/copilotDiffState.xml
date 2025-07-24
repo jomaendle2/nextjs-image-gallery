@@ -38,14 +38,6 @@
             </PendingDiffInfo>
           </value>
         </entry>
-        <entry key="$PROJECT_DIR$/src/components/gallery/carousel/useCarouselKeyboard.ts">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/src/components/gallery/carousel/useCarouselKeyboard.ts" />
-              <option name="updatedContent" value="import { useEffect } from &quot;react&quot;;&#10;&#10;interface UseCarouselKeyboardProps {&#10;  onNext: () =&gt; void;&#10;  onPrevious: () =&gt; void;&#10;  onClose?: () =&gt; void;&#10;}&#10;&#10;export function useCarouselKeyboard({&#10;  onNext,&#10;  onPrevious,&#10;  onClose,&#10;}: UseCarouselKeyboardProps) {&#10;  useEffect(() =&gt; {&#10;    const handleKeyDown = (event: KeyboardEvent) =&gt; {&#10;      switch (event.key) {&#10;        case &quot;ArrowRight&quot;:&#10;        case &quot; &quot;: // Spacebar&#10;          event.preventDefault();&#10;          onNext();&#10;          break;&#10;        case &quot;ArrowLeft&quot;:&#10;          event.preventDefault();&#10;          onPrevious();&#10;          break;&#10;        case &quot;Escape&quot;:&#10;          event.preventDefault();&#10;          onClose?.();&#10;          break;&#10;        default:&#10;          break;&#10;      }&#10;    };&#10;&#10;    window.addEventListener(&quot;keydown&quot;, handleKeyDown);&#10;    return () =&gt; window.removeEventListener(&quot;keydown&quot;, handleKeyDown);&#10;  }, [onNext, onPrevious, onClose]);&#10;}" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
       </map>
     </option>
   </component>

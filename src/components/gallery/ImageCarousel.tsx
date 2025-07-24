@@ -8,7 +8,6 @@ import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
 import { galleryImages } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
-import { useImageColor } from "./carousel/useImageColor";
 
 interface ImageCarouselProps {
   initialIndex?: number;
@@ -26,20 +25,20 @@ export function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(
     externalCurrentIndex ?? initialIndex,
   );
+  const [bgColor, setBgColor] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentImageRef = useRef<HTMLImageElement>(null);
 
-  // Get the current image data
-  const currentImage = galleryImages[currentIndex];
+  useEffect(() => {
+    const currentImage = galleryImages[currentIndex];
+    if (!currentImage) {
+      return;
+    }
 
-  // Use the image color hook
-  const { dominantColor } = useImageColor(
-    currentImageRef,
-    currentImage.id,
-    currentIndex,
-  );
+    setBgColor(currentImage.bgColor);
+  }, [currentIndex]);
 
   // Sync external currentIndex with internal state
   useEffect(() => {
@@ -174,9 +173,7 @@ export function ImageCarousel({
     <div
       className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
       style={{
-        backgroundColor: dominantColor
-          .replace("hsl(", "hsla(")
-          .replace(")", ", 0.9)"),
+        backgroundColor: bgColor || "transparent",
       }}
     >
       <CarouselTopBar onClose={onClose} />
@@ -224,7 +221,7 @@ export function ImageCarousel({
       </div>
 
       <div className="flex-shrink-0 px-6 pb-10 space-y-4">
-        <ImageInfo image={currentImage} />
+        <ImageInfo image={galleryImages[currentIndex]} />
         <ImageIndicators
           images={galleryImages}
           currentIndex={currentIndex}

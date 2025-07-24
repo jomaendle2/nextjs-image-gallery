@@ -1,5 +1,5 @@
-import IndexPage from "@/components/IndexPage";
+import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 
 export default function Home() {
-  return <IndexPage />;
+  return <ImageCarousel />;
 }
