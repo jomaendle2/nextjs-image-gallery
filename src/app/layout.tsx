@@ -21,13 +21,22 @@ export const metadata: Metadata = {
     description:
       "Images from around the world. Explore the beauty of our planet 🌍",
     url: "https://images.jomaendle.com",
+    images: [
+      {
+        url: "/api/og?title=the%20beauty%20of%20earth.",
+        width: 1200,
+        height: 630,
+        alt: "the beauty of earth. - Images from around the world",
+      },
+    ],
+    type: "website",
   },
   twitter: {
     title: "the beauty of earth.",
     description:
       "Images from around the world. Explore the beauty of our planet 🌍",
     card: "summary_large_image",
-    creator: "@jomaendle",
+    images: ["/api/og?title=the%20beauty%20of%20earth."],
   },
 };
 
@@ -42,10 +51,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <footer>
-          <div className="text-center fixed text-sm text-gray-300 bottom-8 left-8 z-20 mt-8">
-            © {new Date().getFullYear()} Jo Mändle
-          </div>
+        <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
+          © {new Date().getFullYear()}{" "}
+          <a
+            href="https://jomaendle.com"
+            className="text-white/70 hover:text-white transition-colors duration-200"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Jo Mändle
+          </a>
         </footer>
       </body>
     </html>

@@ -15,7 +15,6 @@ interface ImageCarouselProps {
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
   onClose?: () => void;
-  onViewModeChange?: () => void;
 }
 
 export function ImageCarousel({
@@ -224,18 +223,12 @@ export function ImageCarousel({
         />
       </div>
 
-      {/* Bottom controls */}
-      <div className="flex-shrink-0 px-6 pb-6 space-y-4">
+      <div className="flex-shrink-0 px-6 pb-10 space-y-4">
+        <ImageInfo image={currentImage} />
         <ImageIndicators
           images={galleryImages}
           currentIndex={currentIndex}
           onImageSelect={goToImage}
-        />
-
-        <ImageInfo
-          image={currentImage}
-          currentIndex={currentIndex}
-          totalImages={galleryImages.length}
         />
       </div>
     </div>
