@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { extractDominantColorDebounced } from "@/utils/colorExtractor";
 
 export function useImageColor(
@@ -8,7 +8,7 @@ export function useImageColor(
 ) {
   const [dominantColor, setDominantColor] = useState("hsl(220, 20%, 15%)");
 
-  const updateDominantColor = async () => {
+  const updateDominantColor = useCallback(async () => {
     if (imageRef.current && imageRef.current.complete) {
       try {
         const color = await extractDominantColorDebounced(
@@ -20,7 +20,7 @@ export function useImageColor(
         console.error("Error extracting color:", error);
       }
     }
-  };
+  }, [imageRef, imageId]);
 
   useEffect(() => {
     updateDominantColor();

@@ -1,6 +1,7 @@
 {
-  "name": "nextjs-image-gallery",
-  "version": "0.1.0",
+  "name": "beauty-of-earth-gallery",
+  "version": "1.0.0",
+  "author": "Jo Mändle",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
