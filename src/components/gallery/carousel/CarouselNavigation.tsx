@@ -1,40 +1,47 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { GlassButton } from "@/components/ui/glass-button";
 
 interface CarouselNavigationProps {
-  onPrevious: () => void;
   onNext: () => void;
-  isTransitioning: boolean;
+  onPrevious: () => void;
+  canGoNext: boolean;
+  canGoPrevious: boolean;
 }
 
 export function CarouselNavigation({
-  onPrevious,
   onNext,
-  isTransitioning,
+  onPrevious,
+  canGoNext,
+  canGoPrevious,
 }: CarouselNavigationProps) {
   return (
     <>
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-        <GlassButton
-          variant="icon"
-          onClick={onPrevious}
-          className="hover:scale-105 transition-transform duration-200"
-          disabled={isTransitioning}
-        >
-          <ChevronLeft size={24} />
-        </GlassButton>
-      </div>
+      {/* Previous button */}
+      <button
+        onClick={onPrevious}
+        disabled={!canGoPrevious}
+        className={`absolute left-6 top-1/2 -translate-y-1/2 z-10 p-4 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 transition-all duration-300 ease-out shadow-lg ${
+          canGoPrevious
+            ? "hover:bg-black/50 hover:scale-105 hover:shadow-xl active:scale-95 opacity-100"
+            : "opacity-40 cursor-not-allowed"
+        }`}
+        aria-label="Previous image"
+      >
+        <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </button>
 
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
-        <GlassButton
-          variant="icon"
-          onClick={onNext}
-          className="hover:scale-105 transition-transform duration-200"
-          disabled={isTransitioning}
-        >
-          <ChevronRight size={24} />
-        </GlassButton>
-      </div>
+      {/* Next button */}
+      <button
+        onClick={onNext}
+        disabled={!canGoNext}
+        className={`absolute right-6 top-1/2 -translate-y-1/2 z-10 p-4 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 transition-all duration-300 ease-out shadow-lg ${
+          canGoNext
+            ? "hover:bg-black/50 hover:scale-105 hover:shadow-xl active:scale-95 opacity-100"
+            : "opacity-40 cursor-not-allowed"
+        }`}
+        aria-label="Next image"
+      >
+        <ChevronRight className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </button>
     </>
   );
 }

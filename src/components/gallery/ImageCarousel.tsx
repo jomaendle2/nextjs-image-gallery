@@ -1,112 +1,161 @@
-import { useState, useRef } from "react";
-import { galleryImages } from "@/data/galleryData";
-import { CarouselTopBar } from "./carousel/CarouselTopBar";
-import { CarouselNavigation } from "./carousel/CarouselNavigation";
+"use client";
+
+import { useState, useRef, useEffect } from "react";
 import { CarouselImage } from "./carousel/CarouselImage";
-import { ImageInfo } from "./carousel/ImageInfo";
+import { CarouselNavigation } from "./carousel/CarouselNavigation";
+import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { ImageIndicators } from "./carousel/ImageIndicators";
+import { ImageInfo } from "./carousel/ImageInfo";
+import { galleryImages, type GalleryImage } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
-import { useImageColor } from "./carousel/useImageColor";
 
 interface ImageCarouselProps {
-  currentIndex: number;
-  onIndexChange: (index: number) => void;
-  onViewModeChange: () => void;
+  initialIndex?: number;
+  onClose?: () => void;
 }
 
 export function ImageCarousel({
-  currentIndex,
-  onIndexChange,
-  onViewModeChange,
+  initialIndex = 0,
+  onClose,
 }: ImageCarouselProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  const currentImage = galleryImages[currentIndex];
-  const { dominantColor, updateDominantColor } = useImageColor(
-    imageRef,
-    currentImage.id,
-    currentIndex,
-  );
-
-  const handleImageLoad = async () => {
-    setIsLoading(false);
-    setIsTransitioning(false);
-    await updateDominantColor();
-  };
-
-  const handlePrevious = () => {
-    const newIndex =
-      currentIndex === 0 ? galleryImages.length - 1 : currentIndex - 1;
-    onIndexChange(newIndex);
-    setIsLoading(true);
-    setIsTransitioning(true);
-  };
-
-  const handleNext = () => {
-    const newIndex =
-      currentIndex === galleryImages.length - 1 ? 0 : currentIndex + 1;
-    onIndexChange(newIndex);
-    setIsLoading(true);
-    setIsTransitioning(true);
-  };
-
+  // Handle keyboard navigation
   useCarouselKeyboard({
-    onPrevious: handlePrevious,
-    onNext: handleNext,
-    onViewModeChange,
-    currentIndex,
+    onNext: () => goToNext(),
+    onPrevious: () => goToPrevious(),
+    onClose: onClose,
   });
 
-  return (
-    <div
-      className="min-h-screen w-full transition-colors duration-500 ease-out relative overflow-hidden"
-      style={{
-        backgroundColor: dominantColor,
-        contain: "layout style paint",
-      }}
-    >
-      {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/30" />
+  const goToNext = () => {
+    if (currentIndex < galleryImages.length - 1) {
+      const newIndex = currentIndex + 1;
+      setCurrentIndex(newIndex);
+      scrollToImage(newIndex);
+    }
+  };
 
+  const goToPrevious = () => {
+    if (currentIndex > 0) {
+      const newIndex = currentIndex - 1;
+      setCurrentIndex(newIndex);
+      scrollToImage(newIndex);
+    }
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentIndex(index);
+    scrollToImage(index);
+  };
+
+  const scrollToImage = (index: number) => {
+    if (carouselRef.current) {
+      const imageElement = carouselRef.current.children[index] as HTMLElement;
+      if (imageElement) {
+        imageElement.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }
+  };
+
+  const handleImageLoad = (imageId: string) => {
+    setImagesLoaded((prev) => ({ ...prev, [imageId]: true }));
+  };
+
+  // Handle scroll snap detection to update current index
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const handleScroll = () => {
+      const scrollLeft = carousel.scrollLeft;
+      const imageWidth = carousel.clientWidth;
+      const newIndex = Math.round(scrollLeft / imageWidth);
+
+      if (
+        newIndex !== currentIndex &&
+        newIndex >= 0 &&
+        newIndex < galleryImages.length
+      ) {
+        setCurrentIndex(newIndex);
+      }
+    };
+
+    carousel.addEventListener("scroll", handleScroll, { passive: true });
+    return () => carousel.removeEventListener("scroll", handleScroll);
+  }, [currentIndex]);
+
+  // Initialize scroll position
+  useEffect(() => {
+    if (carouselRef.current && initialIndex > 0) {
+      scrollToImage(initialIndex);
+    }
+  }, [initialIndex]);
+
+  const currentImage = galleryImages[currentIndex];
+
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
       <CarouselTopBar
         currentIndex={currentIndex}
         totalImages={galleryImages.length}
-        onViewModeChange={onViewModeChange}
+        onClose={onClose}
       />
 
-      {/* Main image container */}
-      <div className="flex items-center justify-center min-h-screen px-6 md:px-20">
-        <div className="relative max-w-5xl w-full">
-          <CarouselNavigation
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            isTransitioning={isTransitioning}
-          />
-
-          <CarouselImage
-            key={currentImage.id}
-            ref={imageRef}
-            src={currentImage.src}
-            alt={currentImage.title}
-            blurDataURL={currentImage.blurDataURL}
-            onLoad={handleImageLoad}
-            priority={true}
-          />
-
-          <ImageInfo
-            title={currentImage.title}
-            description={currentImage.description}
-          />
+      <div className="flex-1 relative overflow-hidden">
+        {/* Main carousel container with scroll snap */}
+        <div
+          ref={carouselRef}
+          className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {galleryImages.map((image, index) => (
+            <div
+              key={image.id}
+              className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-4"
+            >
+              <CarouselImage
+                src={image.src}
+                alt={image.title}
+                onLoad={() => handleImageLoad(image.id)}
+                priority={Math.abs(index - currentIndex) <= 1}
+                blurDataURL={image.blurDataURL}
+              />
+            </div>
+          ))}
         </div>
+
+        {/* Navigation arrows */}
+        <CarouselNavigation
+          onNext={goToNext}
+          onPrevious={goToPrevious}
+          canGoNext={currentIndex < galleryImages.length - 1}
+          canGoPrevious={currentIndex > 0}
+        />
       </div>
 
-      <ImageIndicators
-        totalImages={galleryImages.length}
-        currentIndex={currentIndex}
-        onIndexChange={onIndexChange}
-      />
+      {/* Bottom controls */}
+      <div className="flex-shrink-0 p-6 space-y-4">
+        <ImageIndicators
+          images={galleryImages}
+          currentIndex={currentIndex}
+          onImageSelect={goToImage}
+        />
+
+        <ImageInfo
+          image={currentImage}
+          currentIndex={currentIndex}
+          totalImages={galleryImages.length}
+        />
+      </div>
     </div>
   );
 }

@@ -1,29 +1,31 @@
-import { Grid3x3 } from "lucide-react";
-import { GlassButton } from "@/components/ui/glass-button";
+import { X } from "lucide-react";
 
 interface CarouselTopBarProps {
   currentIndex: number;
   totalImages: number;
-  onViewModeChange: () => void;
+  onClose?: () => void;
 }
 
 export function CarouselTopBar({
   currentIndex,
   totalImages,
-  onViewModeChange,
+  onClose,
 }: CarouselTopBarProps) {
   return (
-    <div className="absolute top-6 left-6 right-6 z-20 flex justify-between items-center">
-      <div className="text-gallery-text/80 text-sm font-medium">
+    <div className="flex-shrink-0 flex justify-between items-center p-6 bg-gradient-to-b from-black/60 via-black/30 to-transparent">
+      <div className="text-white/90 font-medium text-sm tracking-wide">
         {currentIndex + 1} of {totalImages}
       </div>
-      <GlassButton
-        variant="icon"
-        onClick={onViewModeChange}
-        className="hover:scale-105 transition-transform duration-200"
-      >
-        <Grid3x3 size={20} />
-      </GlassButton>
+
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="p-3 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 hover:bg-black/50 transition-all duration-300 ease-out hover:scale-105 active:scale-95 shadow-lg"
+          aria-label="Close gallery"
+        >
+          <X className="w-5 h-5 text-white" strokeWidth={2.5} />
+        </button>
+      )}
     </div>
   );
 }

@@ -1,32 +1,38 @@
 import { useEffect } from "react";
 
 interface UseCarouselKeyboardProps {
-  onPrevious: () => void;
   onNext: () => void;
-  onViewModeChange: () => void;
-  currentIndex: number;
+  onPrevious: () => void;
+  onClose?: () => void;
 }
 
 export function useCarouselKeyboard({
-  onPrevious,
   onNext,
-  onViewModeChange,
-  currentIndex,
+  onPrevious,
+  onClose,
 }: UseCarouselKeyboardProps) {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        onPrevious();
-      }
-      if (e.key === "ArrowRight") {
-        onNext();
-      }
-      if (e.key === "Escape") {
-        onViewModeChange();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case "ArrowRight":
+        case " ": // Spacebar
+          event.preventDefault();
+          onNext();
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          onPrevious();
+          break;
+        case "Escape":
+          event.preventDefault();
+          onClose?.();
+          break;
+        default:
+          break;
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, onPrevious, onNext, onViewModeChange]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onNext, onPrevious, onClose]);
 }

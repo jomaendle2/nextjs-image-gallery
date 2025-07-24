@@ -1,49 +1,27 @@
-import { Share2 } from "lucide-react";
-import { GlassButton } from "@/components/ui/glass-button";
-import { toast } from "sonner";
+import { type GalleryImage } from "@/data/galleryData";
 
 interface ImageInfoProps {
-  title: string;
-  description: string;
+  image: GalleryImage;
+  currentIndex: number;
+  totalImages: number;
 }
 
-export function ImageInfo({ title, description }: ImageInfoProps) {
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title,
-          text: description,
-          url: window.location.href,
-        });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Link copied to clipboard!");
-      }
-    } catch (error) {
-      console.error("Error sharing:", error);
-      toast.error("Failed to share image");
-    }
-  };
-
+export function ImageInfo({
+  image,
+  currentIndex,
+  totalImages,
+}: ImageInfoProps) {
   return (
-    <div className="mt-8 text-center space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-xl  font-bold text-gallery-text">{title}</h2>
-        <p className="text-gallery-muted text-base max-w-2xl mx-auto">
-          {description}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-center gap-4 pt-4">
-        <GlassButton
-          onClick={handleShare}
-          className="hover:scale-105 transition-transform duration-200"
-        >
-          <Share2 size={18} className="mr-2" />
-          Share
-        </GlassButton>
-      </div>
+    <div className="text-center text-white px-6 max-w-2xl mx-auto">
+      <h3 className="font-semibold text-xl mb-2 text-white/95 tracking-tight leading-tight">
+        {image.title}
+      </h3>
+      <p className="text-sm text-white/70 leading-relaxed mb-3 font-medium">
+        {image.description}
+      </p>
+      <p className="text-xs text-white/50 font-medium tracking-wide">
+        {currentIndex + 1} of {totalImages}
+      </p>
     </div>
   );
 }

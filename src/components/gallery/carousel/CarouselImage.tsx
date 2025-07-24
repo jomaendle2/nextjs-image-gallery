@@ -1,66 +1,69 @@
-import { forwardRef, useState } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface CarouselImageProps {
   src: string;
   alt: string;
-  onLoad: () => void;
+  onLoad?: () => void;
   priority?: boolean;
   blurDataURL?: string;
 }
 
-export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
-  ({ src, alt, onLoad, priority = false, blurDataURL }, ref) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
+export function CarouselImage({
+  src,
+  alt,
+  onLoad,
+  priority = false,
+  blurDataURL,
+}: CarouselImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
 
-    const handleImageLoad = () => {
-      setImageLoaded(true);
-      onLoad();
-    };
+  const handleLoad = () => {
+    setIsLoaded(true);
+    onLoad?.();
+  };
 
-    return (
-      <div className="relative rounded-3xl overflow-hidden shadow-intense bg-black/15 transform-gpu">
-        {/* Blur placeholder - always visible initially, fades out when image loads */}
-        {blurDataURL && (
-          <>
-            <div
-              className={`absolute inset-0 flex items-center justify-center w-full h-full bg-cover bg-center transform-gpu transition-opacity duration-500 ease-out ${
-                imageLoaded ? "motion-opacity-out" : "motion-preset-fade"
-              }`}
-              style={{
-                backgroundImage: `url(${blurDataURL})`,
-                filter: "blur(20px)",
-                transform: "scale(1.1)", // Slightly scale to hide blur edges
-                willChange: "opacity",
-              }}
-            ></div>
-            {!imageLoaded && (
-              <div className="text-gallery-text/80 absolute inset-0 flex items-center justify-center z-20 h-full w-full">
-                <Loader2 className="size-8 m-auto animate-spin" />
-              </div>
-            )}
-          </>
-        )}
-
+  return (
+    <div className="relative w-full h-full flex items-center justify-center px-4 py-6">
+      <div className="relative max-w-full h-full flex items-center justify-center max-h-full">
         <Image
-          ref={ref}
-          width={800}
-          height={600}
           src={src}
           alt={alt}
-          priority={priority}
-          quality={90}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
-          className={`w-full h-auto max-h-[70vh] aspect-[16/10] object-cover transform-gpu transition-opacity duration-500 ease-out ${
-            imageLoaded ? "opacity-100" : "opacity-0"
+          width={1200}
+          height={800}
+          className={`max-w-full max-h-full w-full object-contain rounded-2xl transition-all shadow-2xl border-8 border-neutral-500/15 duration-500 ${
+            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
           }`}
-          onLoad={handleImageLoad}
-          style={{ willChange: "opacity" }}
+          onLoad={handleLoad}
+          priority={priority}
+          placeholder={blurDataURL ? "blur" : "empty"}
+          blurDataURL={blurDataURL}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 80vw"
         />
-      </div>
-    );
-  },
-);
 
-CarouselImage.displayName = "CarouselImage";
+        {/* Loading state with blur image */}
+        {!isLoaded && blurDataURL && (
+          <div className="absolute inset-0 rounded-2xl overflow-hidden">
+            <Image
+              src={blurDataURL}
+              alt=""
+              fill
+              className="object-contain scale-110 blur-sm"
+              priority
+            />
+            <div className="absolute inset-0 bg-black/20 rounded-2xl flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            </div>
+          </div>
+        )}
+
+        {/* Fallback loading for images without blur */}
+        {!isLoaded && !blurDataURL && (
+          <div className="absolute inset-0 rounded-2xl bg-gray-900/30 backdrop-blur-sm flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

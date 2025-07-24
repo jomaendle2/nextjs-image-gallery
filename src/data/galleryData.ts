@@ -1,3 +1,4 @@
+// Gallery data structure
 import nature0 from "@/assets/0.jpg";
 import nature1 from "@/assets/1.jpg";
 import nature2 from "@/assets/2.jpg";
@@ -25,87 +26,76 @@ export const galleryImages: GalleryImage[] = [
     src: nature0.src,
     blurDataURL: nature0.blurDataURL,
     title: "Vila Nova de Milfontes, Portugal",
-    description:
-      "Golden sunset paints the tranquil Portuguese coastline in warm, ethereal light.",
+    description: "Beautiful coastal landscape in Portugal",
   },
   {
     id: "1",
     src: nature1.src,
     blurDataURL: nature1.blurDataURL,
-    title: "Bali, Indonesia",
-    description:
-      "Emerald rice terraces cascade down Balinese hillsides like nature's stairway to heaven.",
+    title: "Mountain Vista",
+    description: "Stunning mountain view with forest",
   },
   {
     id: "2",
     src: nature2.src,
     blurDataURL: nature2.blurDataURL,
-    title: "Java, Indonesia",
-    description:
-      "Ancient volcanic peaks emerge through mystical morning mist in Java's untamed wilderness.",
+    title: "Ocean Waves",
+    description: "Peaceful ocean waves at sunset",
   },
   {
     id: "3",
     src: nature3.src,
     blurDataURL: nature3.blurDataURL,
-    title: "Bali, Indonesia",
-    description:
-      "Turquoise waves meet pristine beaches along Bali's dramatic coral-fringed coastline.",
+    title: "Forest Path",
+    description: "Serene forest pathway",
   },
   {
     id: "4",
     src: nature4.src,
     blurDataURL: nature4.blurDataURL,
-    title: "Sagres, Portugal",
-    description:
-      "A solitary figure contemplates the infinite Atlantic horizon at Europe's edge.",
+    title: "Desert Landscape",
+    description: "Vast desert with dramatic clouds",
   },
   {
     id: "5",
     src: nature5.src,
     blurDataURL: nature5.blurDataURL,
-    title: "Natural Serenity",
-    description:
-      "Crystal clear mountain streams flow through moss-covered stones in pristine wilderness.",
+    title: "Alpine Lake",
+    description: "Crystal clear alpine lake reflection",
   },
   {
     id: "6",
     src: nature6.src,
     blurDataURL: nature6.blurDataURL,
-    title: "Forest Cathedral",
-    description:
-      "Towering ancient trees create a natural sanctuary of dappled light and shadow.",
+    title: "Autumn Colors",
+    description: "Vibrant autumn foliage",
   },
   {
     id: "7",
     src: nature7.src,
     blurDataURL: nature7.blurDataURL,
-    title: "Alpine Majesty",
-    description:
-      "Snow-capped peaks pierce azure skies above alpine meadows bursting with wildflowers.",
+    title: "Coastal Cliffs",
+    description: "Dramatic coastal cliff formations",
   },
   {
     id: "8",
     src: nature8.src,
     blurDataURL: nature8.blurDataURL,
-    title: "Desert Bloom",
-    description:
-      "Vibrant desert wildflowers defy the arid landscape with their resilient beauty.",
+    title: "Rolling Hills",
+    description: "Green rolling hills landscape",
   },
   {
     id: "9",
     src: nature9.src,
     blurDataURL: nature9.blurDataURL,
-    title: "Coastal Wonder",
-    description:
-      "Dramatic sea cliffs stand sentinel against the relentless power of ocean waves.",
+    title: "Tropical Paradise",
+    description: "Tropical beach with palm trees",
   },
   {
     id: "10",
     src: nature10.src,
     blurDataURL: nature10.blurDataURL,
-    title: "Morning Mist",
-    description:
-      "Ethereal fog dances between rolling hills in the gentle embrace of dawn.",
+    title: "Snow-Capped Peaks",
+    description: "Majestic snow-capped mountain peaks",
   },
 ];
