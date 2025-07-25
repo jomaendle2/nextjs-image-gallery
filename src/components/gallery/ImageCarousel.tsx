@@ -30,6 +30,17 @@ export function ImageCarousel({
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentImageRef = useRef<HTMLImageElement>(null);
+  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Buffer size: how many images to render on each side of current image
+  const BUFFER_SIZE = 1;
+
+  // Calculate which images should be rendered
+  const getVisibleIndices = useCallback(() => {
+    const start = Math.max(0, currentIndex - BUFFER_SIZE);
+    const end = Math.min(galleryImages.length - 1, currentIndex + BUFFER_SIZE);
+    return { start, end };
+  }, [currentIndex]);
 
   useEffect(() => {
     const currentImage = galleryImages[currentIndex];
@@ -127,37 +138,52 @@ export function ImageCarousel({
     }
   };
 
+  // Create throttled scroll handler using useRef for better performance
+  const handleScroll = useCallback(() => {
+    const carousel = carouselRef.current;
+    if (!carousel || isTransitioning) return;
+
+    const scrollLeft = carousel.scrollLeft;
+    const imageWidth = carousel.clientWidth;
+    const newIndex = Math.round(scrollLeft / imageWidth);
+
+    if (
+      newIndex !== currentIndex &&
+      newIndex >= 0 &&
+      newIndex < galleryImages.length
+    ) {
+      updateCurrentIndex(newIndex);
+    }
+  }, [currentIndex, isTransitioning, updateCurrentIndex]);
+
+  const throttledScrollHandler = useCallback(() => {
+    if (throttleRef.current) return;
+
+    throttleRef.current = setTimeout(() => {
+      handleScroll();
+      throttleRef.current = null;
+    }, 16); // ~60fps throttling
+  }, [handleScroll]);
+
   // Handle scroll snap detection to update current index
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
 
-    const handleScroll = () => {
-      // Don't update during manual transitions to avoid conflicts
-      if (isTransitioning) return;
+    carousel.addEventListener("scroll", throttledScrollHandler, {
+      passive: true,
+    });
+    return () => carousel.removeEventListener("scroll", throttledScrollHandler);
+  }, [throttledScrollHandler]);
 
-      const scrollLeft = carousel.scrollLeft;
-      const imageWidth = carousel.clientWidth;
-      const newIndex = Math.round(scrollLeft / imageWidth);
-
-      if (
-        newIndex !== currentIndex &&
-        newIndex >= 0 &&
-        newIndex < galleryImages.length
-      ) {
-        updateCurrentIndex(newIndex);
-      }
-    };
-
-    carousel.addEventListener("scroll", handleScroll, { passive: true });
-    return () => carousel.removeEventListener("scroll", handleScroll);
-  }, [currentIndex, isTransitioning, updateCurrentIndex]);
-
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
+      }
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
       }
     };
   }, []);
@@ -169,11 +195,13 @@ export function ImageCarousel({
     }
   }, [initialIndex]);
 
+  const { start, end } = getVisibleIndices();
+
   return (
     <div
       className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
       style={{
-        backgroundColor: bgColor || "transparent",
+        backgroundColor: bgColor || galleryImages[0].bgColor,
       }}
     >
       <CarouselTopBar onClose={onClose} />
@@ -195,20 +223,30 @@ export function ImageCarousel({
             msOverflowStyle: "none",
           }}
         >
-          {galleryImages.map((image, index) => (
-            <div
-              key={image.id}
-              className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
-            >
-              <CarouselImage
-                ref={index === currentIndex ? currentImageRef : null}
-                src={image.src}
-                alt={image.title}
-                priority={Math.abs(index - currentIndex) <= 1}
-                blurDataURL={image.blurDataURL}
-              />
-            </div>
-          ))}
+          {galleryImages.map((image, index) => {
+            // Only render images within the visible range
+            const shouldRender = index >= start && index <= end;
+
+            return (
+              <div
+                key={image.id}
+                className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
+              >
+                {shouldRender ? (
+                  <CarouselImage
+                    ref={index === currentIndex ? currentImageRef : null}
+                    src={image.src}
+                    alt={image.title}
+                    priority={index === currentIndex}
+                    blurDataURL={image.blurDataURL}
+                  />
+                ) : (
+                  // Placeholder div to maintain scroll positions
+                  <div className="w-full h-full" />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Navigation arrows */}
