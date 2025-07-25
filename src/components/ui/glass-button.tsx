@@ -14,7 +14,7 @@ const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         className={cn(
           // Base styles
           "relative inline-flex items-center justify-center",
-          "bg-button-glass/80 backdrop-blur-md border border-glass-border",
+          "bg-button-glass/80 border border-glass-border",
           "text-gallery-text font-medium",
           "transition-all duration-200 ease-out",
           "hover:bg-button-glass-hover active:scale-95",
@@ -34,7 +34,10 @@ const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         )}
         ref={ref}
         style={{
-          willChange: "transform",
+          willChange: "transform, backdrop-filter",
+          isolation: "isolate",
+          WebkitBackdropFilter: "blur(12px)",
+          backdropFilter: "blur(12px)",
           contain: "layout style paint",
         }}
         {...props}

@@ -50,6 +50,12 @@ export function ImageIndicators({
       <div
         ref={containerRef}
         className="flex items-center gap-3 p-3 h-[90px] bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 max-w-full overflow-x-auto scrollbar-hide shadow-lg"
+        style={{
+          WebkitBackdropFilter: "blur(24px)",
+          backdropFilter: "blur(24px)",
+          willChange: "backdrop-filter",
+          isolation: "isolate",
+        }}
       >
         {images.map((image, index) => (
           <button
