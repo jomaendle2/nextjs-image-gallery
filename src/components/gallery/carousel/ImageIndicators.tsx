@@ -46,7 +46,7 @@ export function ImageIndicators({
   }, [currentIndex]);
 
   return (
-    <div className="flex justify-center px-4 pb-4">
+    <div className="flex justify-center pb-4">
       <div
         ref={containerRef}
         className="flex items-center gap-3 p-3 h-[90px] bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 max-w-full overflow-x-auto scrollbar-hide shadow-lg"
@@ -67,6 +67,7 @@ export function ImageIndicators({
               src={image.src}
               alt={image.title}
               fill
+              loading="lazy"
               sizes="64px"
               className="object-cover"
               placeholder={image.blurDataURL ? "blur" : "empty"}

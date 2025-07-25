@@ -16,7 +16,7 @@ export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
     };
 
     return (
-      <div className="relative w-full h-full flex items-center justify-center px-4 py-6">
+      <div className="relative w-full h-full flex items-center justify-center py-6">
         <div className="relative max-w-full h-full flex items-center justify-center max-h-full pb-6">
           <Image
             ref={ref}
@@ -29,6 +29,7 @@ export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
             priority={priority}
             placeholder={blurDataURL ? "blur" : "empty"}
             blurDataURL={blurDataURL}
+            loading={priority ? "eager" : "lazy"}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 80vw"
           />
         </div>

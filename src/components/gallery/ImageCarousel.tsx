@@ -198,7 +198,7 @@ export function ImageCarousel({
           {galleryImages.map((image, index) => (
             <div
               key={image.id}
-              className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-4"
+              className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
             >
               <CarouselImage
                 ref={index === currentIndex ? currentImageRef : null}
