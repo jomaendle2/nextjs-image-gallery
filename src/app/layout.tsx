@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import QueryProvider from "@/components/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,7 +51,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <QueryProvider>{children}</QueryProvider>
         <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
           © {new Date().getFullYear()}{" "}
           <a

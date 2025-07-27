@@ -14,6 +14,7 @@ import cherry from "@/assets/cherry.jpg";
 import waves from "@/assets/waves.jpg";
 
 export interface GalleryImage {
+  id: number;
   src: string;
   title: string;
   description: string;
@@ -24,6 +25,7 @@ export interface GalleryImage {
 
 export const galleryImages: GalleryImage[] = [
   {
+    id: 1,
     src: waves.src,
     blurDataURL: waves.blurDataURL,
     title: "Bali, Indonesia",
@@ -31,6 +33,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#2a6b7c",
   },
   {
+    id: 2,
     src: nature0.src,
     blurDataURL: nature0.blurDataURL,
     title: "Vila Nova de Milfontes, Portugal",
@@ -38,6 +41,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#191815",
   },
   {
+    id: 3,
     src: nature1.src,
     blurDataURL: nature1.blurDataURL,
     title: "Bali, Indonesia",
@@ -45,6 +49,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#4c89a1",
   },
   {
+    id: 4,
     src: nature2.src,
     blurDataURL: nature2.blurDataURL,
     title: "Bromo, Java, Indonesia",
@@ -52,6 +57,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#663829",
   },
   {
+    id: 5,
     src: cherry.src,
     blurDataURL: cherry.blurDataURL,
     title: "Böblingen, Germany",
@@ -59,6 +65,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#4c566e",
   },
   {
+    id: 6,
     src: nature3.src,
     blurDataURL: nature3.blurDataURL,
     title: "Uluwatu, Bali, Indonesia",
@@ -66,6 +73,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#446165",
   },
   {
+    id: 7,
     src: nature4.src,
     blurDataURL: nature4.blurDataURL,
     title: "Sagres, Portugal",
@@ -73,6 +81,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#6a4332",
   },
   {
+    id: 8,
     src: nature5.src,
     blurDataURL: nature5.blurDataURL,
     title: "San Diego, California",
@@ -80,6 +89,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#4d623c",
   },
   {
+    id: 9,
     src: nature9.src,
     blurDataURL: nature9.blurDataURL,
     title: "Koh Samui, Thailand",
@@ -87,6 +97,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#2a88a3",
   },
   {
+    id: 10,
     src: nature6.src,
     blurDataURL: nature6.blurDataURL,
     title: "San Francisco, California",
@@ -94,6 +105,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#2184ab",
   },
   {
+    id: 11,
     src: nature7.src,
     blurDataURL: nature7.blurDataURL,
     title: "Arches National Park, Utah",
@@ -102,14 +114,15 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#646378",
   },
   {
+    id: 12,
     src: nature8.src,
     blurDataURL: nature8.blurDataURL,
     title: "Böblingen, Germany",
     description: "Pink cherry blossoms against a clear blue sky.",
     bgColor: "#136aa0",
   },
-
   {
+    id: 13,
     src: nature10.src,
     blurDataURL: nature10.blurDataURL,
     title: "Koh Phangan, Thailand",

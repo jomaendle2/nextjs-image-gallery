@@ -5,6 +5,7 @@ import Image from "next/image";
 import { X, ZoomIn, ZoomOut } from "lucide-react";
 import { GalleryImage } from "@/data/galleryData";
 import { GlassButton } from "@/components/ui/glass-button";
+import { ViewCount } from "@/components/gallery/ViewCount";
 
 interface ImageModalProps {
   image: GalleryImage;
@@ -179,6 +180,26 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
         </GlassButton>
       </div>
 
+      {/* Image Info - positioned in bottom right corner */}
+      <div className="absolute bottom-4 right-4 left-4 z-10">
+        <div className="backdrop-blur-md bg-black/20 rounded-2xl p-4 border border-white/10">
+          <h3 className="font-semibold text-lg mb-1 text-white/95 tracking-tight">
+            {image.title}
+          </h3>
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-sm text-white/70 leading-relaxed">
+              {image.description}
+            </p>
+            <ViewCount
+              imageId={image.id}
+              variant="modal"
+              className="text-white/80"
+              shouldIncrement={false}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Image container */}
       <div
         className={`relative w-full h-full flex items-center justify-center transition-transform duration-300 ${
@@ -219,14 +240,6 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
             quality={95}
             draggable={false}
           />
-        </div>
-      </div>
-
-      {/* Image info overlay */}
-      <div className="absolute bottom-4 overflow-hidden rounded-2xl border border-white/10 left-4 right-4 z-10">
-        <div className="bg-black/20  backdrop-blur-md p-4 text-white">
-          <h3 className="text-lg font-semibold mb-1">{image.title}</h3>
-          <p className="text-sm text-gray-300">{image.description}</p>
         </div>
       </div>
 
