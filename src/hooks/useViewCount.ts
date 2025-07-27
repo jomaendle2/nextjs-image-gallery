@@ -16,18 +16,6 @@ const viewCountKeys = {
   byId: (imageId: number) => [...viewCountKeys.all, imageId] as const,
 };
 
-// Fetch function for view count
-const fetchViewCount = async (imageId: number): Promise<number> => {
-  const response = await fetch(`/api/views/${encodeURIComponent(imageId)}`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch view count");
-  }
-
-  const data = await response.json();
-  return data.viewCount || 0;
-};
-
 // Increment view count function
 const incrementViewCount = async (imageId: number): Promise<number> => {
   const response = await fetch("/api/views", {
@@ -46,6 +34,26 @@ const incrementViewCount = async (imageId: number): Promise<number> => {
   return data.viewCount || 0;
 };
 
+const fetchAllViewCounts = async (): Promise<
+  { image_id: number; view_count: number }[]
+> => {
+  const response = await fetch("/api/views");
+  if (!response.ok) {
+    throw new Error("Failed to fetch all view counts");
+  }
+  const data = await response.json();
+  return data.viewCounts || [];
+};
+
+export function prefetchAllViewCounts(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
+  return queryClient.prefetchQuery({
+    queryKey: viewCountKeys.all,
+    queryFn: fetchAllViewCounts,
+  });
+}
+
 export function useViewCount(imageId: number): UseViewCountReturn {
   const queryClient = useQueryClient();
 
@@ -55,9 +63,11 @@ export function useViewCount(imageId: number): UseViewCountReturn {
     isLoading,
     error: queryError,
   } = useQuery({
-    queryKey: viewCountKeys.byId(imageId),
-    queryFn: () => fetchViewCount(imageId),
+    queryKey: viewCountKeys.all,
+    queryFn: fetchAllViewCounts,
     enabled: !!imageId,
+    select: (data) =>
+      data.find((i) => String(i.image_id) === String(imageId))?.view_count,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

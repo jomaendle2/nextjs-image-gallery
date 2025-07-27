@@ -1,7 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { prefetchAllViewCounts } from "@/hooks/useViewCount";
 
 export default function QueryProvider({
   children,
@@ -19,6 +20,16 @@ export default function QueryProvider({
         },
       }),
   );
+
+  // Non-blocking prefetch of all view counts on app start
+  useEffect(() => {
+    // Use setTimeout to ensure this doesn't block the initial render
+    const prefetchTimer = setTimeout(() => {
+      prefetchAllViewCounts(queryClient);
+    }, 0);
+
+    return () => clearTimeout(prefetchTimer);
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

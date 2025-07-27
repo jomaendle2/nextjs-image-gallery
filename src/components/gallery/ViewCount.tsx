@@ -3,6 +3,7 @@
 import { Eye } from "lucide-react";
 import { useViewCount } from "@/hooks/useViewCount";
 import { useEffect, useRef } from "react";
+import NumberFlow from "@number-flow/react";
 
 interface ViewCountProps {
   imageId: number;
@@ -17,7 +18,7 @@ export function ViewCount({
   className = "",
   shouldIncrement = true,
 }: ViewCountProps) {
-  const { viewCount, incrementView, isLoading } = useViewCount(imageId);
+  const { viewCount, incrementView } = useViewCount(imageId);
   const hasIncremented = useRef(new Map<number, boolean>());
 
   // Increment view count when component mounts (only once per image)
@@ -32,31 +33,6 @@ export function ViewCount({
         });
     }
   }, [imageId]); // Removed incrementView from dependencies to prevent infinite loop
-
-  const formatViewCount = (count: number): string => {
-    return new Intl.NumberFormat("en-US", {
-      notation: "compact",
-      maximumFractionDigits: 1,
-      compactDisplay: "short",
-    }).format(count);
-  };
-
-  if (isLoading && viewCount === 0) {
-    return (
-      <div
-        className={`flex items-center text-left gap-1.5 motion-opacity-in ${className}`}
-      >
-        <Eye size={variant === "modal" ? 16 : 14} className="opacity-50" />
-        <span
-          className={`${
-            variant === "modal" ? "text-sm" : "text-xs"
-          } opacity-50 animate-pulse min-w-[60px]`}
-        >
-          — views
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -73,9 +49,10 @@ export function ViewCount({
           variant === "modal"
             ? "text-sm text-white/80 font-medium"
             : "text-xs text-white/60 font-medium"
-        } transition-colors tabular-nums min-w-[60px]`}
+        } transition-colors tabular-nums flex items-center gap-1 min-w-[60px]`}
       >
-        {formatViewCount(viewCount)} {viewCount === 1 ? "view" : "views"}
+        <NumberFlow value={viewCount} />
+        {viewCount === 1 ? "view" : "views"}
       </span>
     </div>
   );

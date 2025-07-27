@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface UseCarouselKeyboardProps {
   onNext: () => void;
@@ -11,8 +11,14 @@ export function useCarouselKeyboard({
   onPrevious,
   onClose,
 }: UseCarouselKeyboardProps) {
+  const [isDisabledState, setIsDisabledState] = useState(false);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isDisabledState) {
+        return; // Ignore key events if disabled
+      }
+
       switch (event.key) {
         case "ArrowRight":
         case " ": // Spacebar
@@ -35,4 +41,8 @@ export function useCarouselKeyboard({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onNext, onPrevious, onClose]);
+
+  return {
+    setIsDisabled: setIsDisabledState,
+  };
 }

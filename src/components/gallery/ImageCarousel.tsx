@@ -65,7 +65,7 @@ export function ImageCarousel({
   }, [externalCurrentIndex, currentIndex]);
 
   // Handle keyboard navigation
-  useCarouselKeyboard({
+  const { setIsDisabled } = useCarouselKeyboard({
     onNext: () => goToNext(),
     onPrevious: () => goToPrevious(),
     onClose: onClose,
@@ -201,10 +201,12 @@ export function ImageCarousel({
 
   const handleImageClick = () => {
     setIsModalOpen(true);
+    setIsDisabled(true);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+    setIsDisabled(false);
   };
 
   return (

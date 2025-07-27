@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { incrementViewCount, initDatabase } from "@/lib/database";
+import {
+  getAllViewCounts,
+  incrementViewCount,
+  initDatabase,
+} from "@/lib/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +31,28 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error in view count API:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+// on GET, return all view counts
+export async function GET() {
+  try {
+    // Initialize database on first request
+    await initDatabase();
+
+    // Fetch all view counts (this could be optimized further)
+    const data = await getAllViewCounts();
+
+    return NextResponse.json({
+      viewCounts: data,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error getting view counts:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

@@ -182,7 +182,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
       {/* Image Info - positioned in bottom right corner */}
       <div className="absolute bottom-4 right-4 left-4 z-10">
-        <div className="backdrop-blur-md bg-black/20 rounded-2xl p-4 border border-white/10">
+        <div className="backdrop-blur-md mx-auto max-w-md bg-black/20 rounded-2xl p-4 border border-white/10">
           <h3 className="font-semibold text-lg mb-1 text-white/95 tracking-tight">
             {image.title}
           </h3>
