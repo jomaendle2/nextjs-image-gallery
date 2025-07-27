@@ -3,7 +3,7 @@ import { getViewCount } from "@/lib/database";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { imageId: string } },
+  { params }: { params: Promise<{ imageId: string }> },
 ) {
   try {
     const { imageId } = await params;
