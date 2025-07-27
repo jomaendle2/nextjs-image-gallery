@@ -59,7 +59,7 @@ export function ImageIndicators({
       >
         {images.map((image, index) => (
           <button
-            key={image.id}
+            key={image.src}
             ref={index === currentIndex ? activeButtonRef : null}
             onClick={() => onImageSelect(index)}
             className={`relative flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ease-out ${

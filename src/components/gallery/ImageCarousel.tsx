@@ -6,6 +6,7 @@ import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
+import { ImageModal } from "./carousel/ImageModal";
 import { galleryImages } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 
@@ -27,6 +28,7 @@ export function ImageCarousel({
   );
   const [bgColor, setBgColor] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentImageRef = useRef<HTMLImageElement>(null);
@@ -197,75 +199,93 @@ export function ImageCarousel({
 
   const { start, end } = getVisibleIndices();
 
+  const handleImageClick = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+  };
+
   return (
-    <div
-      className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
-      style={{
-        backgroundColor: bgColor || galleryImages[0].bgColor,
-      }}
-    >
-      <CarouselTopBar onClose={onClose} />
-
-      <h1
-        className="text-3xl text-center font-bold text-white"
-        style={{ letterSpacing: "-0.05em" }}
+    <>
+      <div
+        className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
+        style={{
+          backgroundColor: bgColor || galleryImages[0].bgColor,
+        }}
       >
-        the beauty of earth.
-      </h1>
+        <CarouselTopBar onClose={onClose} />
 
-      <div className="flex-1 relative overflow-hidden">
-        {/* Main carousel container with scroll snap */}
-        <div
-          ref={carouselRef}
-          className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-          style={{
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-          }}
+        <h1
+          className="text-3xl text-center font-bold text-white"
+          style={{ letterSpacing: "-0.05em" }}
         >
-          {galleryImages.map((image, index) => {
-            // Only render images within the visible range
-            const shouldRender = index >= start && index <= end;
+          the beauty of earth.
+        </h1>
 
-            return (
-              <div
-                key={image.id}
-                className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
-              >
-                {shouldRender ? (
-                  <CarouselImage
-                    ref={index === currentIndex ? currentImageRef : null}
-                    src={image.src}
-                    alt={image.title}
-                    priority={index === currentIndex}
-                    blurDataURL={image.blurDataURL}
-                  />
-                ) : (
-                  // Placeholder div to maintain scroll positions
-                  <div className="w-full h-full" />
-                )}
-              </div>
-            );
-          })}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Main carousel container with scroll snap */}
+          <div
+            ref={carouselRef}
+            className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
+            {galleryImages.map((image, index) => {
+              // Only render images within the visible range
+              const shouldRender = index >= start && index <= end;
+
+              return (
+                <div
+                  key={image.src}
+                  className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
+                >
+                  {shouldRender ? (
+                    <CarouselImage
+                      ref={index === currentIndex ? currentImageRef : null}
+                      src={image.src}
+                      alt={image.title}
+                      priority={index === currentIndex}
+                      blurDataURL={image.blurDataURL}
+                      onClick={handleImageClick}
+                    />
+                  ) : (
+                    // Placeholder div to maintain scroll positions
+                    <div className="w-full h-full" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Navigation arrows */}
+          <CarouselNavigation
+            onNext={goToNext}
+            onPrevious={goToPrevious}
+            canGoNext={currentIndex < galleryImages.length - 1}
+            canGoPrevious={currentIndex > 0}
+          />
         </div>
 
-        {/* Navigation arrows */}
-        <CarouselNavigation
-          onNext={goToNext}
-          onPrevious={goToPrevious}
-          canGoNext={currentIndex < galleryImages.length - 1}
-          canGoPrevious={currentIndex > 0}
-        />
+        <div className="flex-shrink-0 px-6 pb-10 space-y-4">
+          <ImageInfo image={galleryImages[currentIndex]} />
+          <ImageIndicators
+            images={galleryImages}
+            currentIndex={currentIndex}
+            onImageSelect={goToImage}
+          />
+        </div>
       </div>
 
-      <div className="flex-shrink-0 px-6 pb-10 space-y-4">
-        <ImageInfo image={galleryImages[currentIndex]} />
-        <ImageIndicators
-          images={galleryImages}
-          currentIndex={currentIndex}
-          onImageSelect={goToImage}
-        />
-      </div>
-    </div>
+      {/* Full screen image modal */}
+      <ImageModal
+        image={galleryImages[currentIndex]}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
+    </>
   );
 }

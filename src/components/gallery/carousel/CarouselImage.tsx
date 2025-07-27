@@ -7,10 +7,11 @@ interface CarouselImageProps {
   onLoad?: () => void;
   priority?: boolean;
   blurDataURL?: string;
+  onClick?: () => void;
 }
 
 export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
-  ({ src, alt, onLoad, priority = false, blurDataURL }, ref) => {
+  ({ src, alt, onLoad, priority = false, blurDataURL, onClick }, ref) => {
     const handleLoad = () => {
       onLoad?.();
     };
@@ -24,8 +25,9 @@ export const CarouselImage = forwardRef<HTMLImageElement, CarouselImageProps>(
             alt={alt}
             width={1200}
             height={800}
-            className={`max-w-full max-h-full w-auto object-contain rounded-2xl overflow-hidden transition-all shadow-2xl border-6 md:border-8 border-neutral-500/15 duration-500`}
+            className={`max-w-full max-h-full w-auto object-contain rounded-2xl overflow-hidden transition-all shadow-2xl border-6 md:border-8 border-neutral-500/15 duration-500 cursor-pointer hover:scale-[1.02] active:scale-[0.98]`}
             onLoad={handleLoad}
+            onClick={onClick}
             priority={priority}
             placeholder={blurDataURL ? "blur" : "empty"}
             blurDataURL={blurDataURL}
