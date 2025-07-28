@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/components/QueryProvider";
+import PlausibleProvider from "next-plausible";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,18 +53,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <QueryProvider>{children}</QueryProvider>
-        <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
-          © {new Date().getFullYear()}{" "}
-          <a
-            href="https://jomaendle.com"
-            className="text-white/70 hover:text-white transition-colors duration-200"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Jo Mändle
-          </a>
-        </footer>
+        <PlausibleProvider domain="thebeautyof.earth">
+          <QueryProvider>
+            {children}
+            <SpeedInsights />
+          </QueryProvider>
+          <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
+            © {new Date().getFullYear()}{" "}
+            <a
+              href="https://jomaendle.com"
+              className="text-white/70 hover:text-white transition-colors duration-200"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Jo Mändle
+            </a>
+          </footer>
+        </PlausibleProvider>
       </body>
     </html>
   );
