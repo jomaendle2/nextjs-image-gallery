@@ -12,6 +12,7 @@ import nature9 from "@/assets/9.jpg";
 import nature10 from "@/assets/10.jpg";
 import cherry from "@/assets/cherry.jpg";
 import waves from "@/assets/waves.jpg";
+import rio from "@/assets/rio.jpg";
 
 export interface GalleryImage {
   id: number;
@@ -98,6 +99,14 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     id: 10,
+    src: rio.src,
+    blurDataURL: rio.blurDataURL,
+    title: "Rio de Janeiro, Brazil",
+    description: "Aerial view of the iconic Rio de Janeiro coastline.",
+    bgColor: "#3a5c7b",
+  },
+  {
+    id: 11,
     src: nature6.src,
     blurDataURL: nature6.blurDataURL,
     title: "San Francisco, California",
@@ -105,7 +114,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#2184ab",
   },
   {
-    id: 11,
+    id: 12,
     src: nature7.src,
     blurDataURL: nature7.blurDataURL,
     title: "Arches National Park, Utah",
@@ -114,7 +123,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#646378",
   },
   {
-    id: 12,
+    id: 13,
     src: nature8.src,
     blurDataURL: nature8.blurDataURL,
     title: "Böblingen, Germany",
@@ -122,7 +131,7 @@ export const galleryImages: GalleryImage[] = [
     bgColor: "#136aa0",
   },
   {
-    id: 13,
+    id: 14,
     src: nature10.src,
     blurDataURL: nature10.blurDataURL,
     title: "Koh Phangan, Thailand",

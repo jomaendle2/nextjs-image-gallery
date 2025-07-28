@@ -35,7 +35,7 @@ export function ImageCarousel({
   const throttleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Buffer size: how many images to render on each side of current image
-  const BUFFER_SIZE = 3;
+  const BUFFER_SIZE = 2;
 
   // Calculate which images should be rendered
   const getVisibleIndices = useCallback(() => {

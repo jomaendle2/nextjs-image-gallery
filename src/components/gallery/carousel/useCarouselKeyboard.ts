@@ -40,7 +40,7 @@ export function useCarouselKeyboard({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onNext, onPrevious, onClose]);
+  }, [onNext, onPrevious, onClose, isDisabledState]);
 
   return {
     setIsDisabled: setIsDisabledState,
