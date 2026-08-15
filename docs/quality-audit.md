@@ -187,6 +187,27 @@ their own work previewed as the generic gallery image.
 
 All five page types now have exactly one `main`.
 
+### Admin actions fail on their own row — `7daff09`
+
+`useServerAction` never caught the action, so a throw inside the transition
+reached the error boundary and one failed "Revoke" replaced the whole admin
+page with "That didn't load". Verified by aborting the action's POST at the
+network layer: the row now reports it, the page keeps its heading and all
+33 buttons, and letting the request through clears the error.
+
+### Moderation shows the photograph — `f5be40c`
+
+Sixteen rows identified by title alone, two of them reading "Böblingen,
+Germany", each beside an Unpublish button.
+
+### Auth flows exercised
+
+Never tested before this pass. The magic link signs in and lands on the
+contributor's own page; replaying a spent token from a clean session is
+refused with "That link has expired or was already used", which is the
+atomic single-use `UPDATE` doing its job. A signed-in non-owner still gets a
+404 at `/contribute/admin` rather than a 403.
+
 ---
 
 ## Open
