@@ -32,6 +32,21 @@ export function AnnounceActions({
 }) {
   const { pending: sending, error, run } = useServerAction();
   const [result, setResult] = useState<string | null>(null);
+  /*
+   * Two steps, matching the delete on a photograph — and this one has the
+   * better claim to them. Deleting loses one photograph and the owner can
+   * ask the photographer for it again. This puts a message in every
+   * subscriber's inbox, and there is no version of the internet where that
+   * can be taken back. It was a single click, next to a count, on a page
+   * opened to do something else entirely.
+   *
+   * The confirmation names both numbers, because "are you sure" asks a
+   * question nobody can answer; "16 photographs to 40 people" is the thing
+   * actually being decided.
+   */
+  const [confirming, setConfirming] = useState(false);
+  const arm = useCallback(() => setConfirming(true), []);
+  const cancel = useCallback(() => setConfirming(false), []);
 
   const send = useCallback(() => {
     setResult(null);
@@ -43,6 +58,7 @@ export function AnnounceActions({
           : `${outcome.photographs} photographs`;
       const people =
         outcome.sent === 1 ? "1 subscriber" : `${outcome.sent} subscribers`;
+      setConfirming(false);
       setResult(
         outcome.failed === 0
           ? `Sent ${photographs} to ${people}.`
@@ -72,16 +88,38 @@ export function AnnounceActions({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        {pending === 0 ? null : (
+        {pending === 0 || confirming ? null : (
           <GlassButton
             disabled={sending || subscribers === 0}
-            onClick={send}
+            onClick={arm}
             size="sm"
           >
             <Send aria-hidden="true" className="mr-1.5" size={14} />
-            {sending ? "Sending…" : `Announce ${pending}`}
+            {`Announce ${pending}`}
           </GlassButton>
         )}
+
+        {confirming && pending > 0 ? (
+          <>
+            <span className="text-sm text-white/80">
+              Send {pending} {pending === 1 ? "photograph" : "photographs"} to{" "}
+              {subscribers} {subscribers === 1 ? "person" : "people"}? This
+              cannot be undone.
+            </span>
+            <GlassButton autoFocus={true} onClick={cancel} size="sm">
+              Not yet
+            </GlassButton>
+            <GlassButton
+              className="border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25"
+              disabled={sending}
+              onClick={send}
+              size="sm"
+            >
+              <Send aria-hidden="true" className="mr-1.5" size={14} />
+              {sending ? "Sending…" : "Send now"}
+            </GlassButton>
+          </>
+        ) : null}
         {pending > 0 && subscribers === 0 ? (
           <span className="text-sm text-white/45">
             Nobody has confirmed a subscription yet.
