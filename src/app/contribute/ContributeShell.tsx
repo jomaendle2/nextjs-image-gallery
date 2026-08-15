@@ -91,8 +91,14 @@ function Frame({
         */}
         <footer className="mt-16 text-white/35 text-xs">
           ©{" "}
+          {/*
+            The last control on the site under the touch floor: 58x14, on
+            every contribute page, at both widths. It is the only link in
+            this footer rather than a link inside a sentence, so the
+            exemption for prose does not cover it.
+          */}
           <a
-            className="transition-colors hover:text-white/70"
+            className={`${TOUCH_LINK} transition-colors hover:text-white/70`}
             href="https://jomaendle.com"
             rel="noopener noreferrer"
             target="_blank"
