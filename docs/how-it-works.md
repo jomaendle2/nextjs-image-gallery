@@ -101,6 +101,18 @@ because contributors type titles and captions.
 4. You land on `/contribute/photos`. `/contribute/admin` is linked from
    there, and has a breadcrumb back.
 
+**If the email never arrives**, mint a link directly:
+
+```bash
+npm run mint-link -- maendle.johannes@gmail.com
+```
+
+That is the break-glass path, and it exists for the case you are most likely
+to meet: a mail provider outage, a domain falling out of verification, or a
+wrong `EMAIL_FROM` — all of which lock you out of the admin page you would
+need in order to fix them. It goes through the same `mintLoginToken` the
+form uses, so the same rules apply.
+
 The link works **once** and expires after fifteen minutes — but *opening* it
 does not spend it. The page it lands on has a Sign in button, and only
 pressing that redeems the token, so a mail scanner or a link preview cannot
