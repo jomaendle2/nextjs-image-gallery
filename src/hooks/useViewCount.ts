@@ -1,7 +1,20 @@
 "use client";
 
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+/** The API reports ids as strings; the gallery keys them as numbers. */
+interface ViewCountRow {
+  image_id: string | number;
+  view_count: number;
+}
 
 interface UseViewCountReturn {
   viewCount: number;
@@ -10,19 +23,14 @@ interface UseViewCountReturn {
   error: string | null;
 }
 
-// Query key factory
 const viewCountKeys = {
   all: ["viewCount"] as const,
-  byId: (imageId: number) => [...viewCountKeys.all, imageId] as const,
 };
 
-// Increment view count function
 const incrementViewCount = async (imageId: number): Promise<number> => {
   const response = await fetch("/api/views", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ imageId }),
   });
 
@@ -30,34 +38,33 @@ const incrementViewCount = async (imageId: number): Promise<number> => {
     throw new Error("Failed to increment view count");
   }
 
-  const data = await response.json();
-  return data.viewCount || 0;
+  const data: { viewCount?: number } = await response.json();
+  return data.viewCount ?? 0;
 };
 
-const fetchAllViewCounts = async (): Promise<
-  { image_id: number; view_count: number }[]
-> => {
+const fetchAllViewCounts = async (): Promise<ViewCountRow[]> => {
   const response = await fetch("/api/views");
   if (!response.ok) {
     throw new Error("Failed to fetch all view counts");
   }
-  const data = await response.json();
-  return data.viewCounts || [];
+  const data: { viewCounts?: ViewCountRow[] } = await response.json();
+  return data.viewCounts ?? [];
 };
 
-export function prefetchAllViewCounts(
-  queryClient: ReturnType<typeof useQueryClient>,
-) {
+const sameId = (a: string | number, b: string | number) =>
+  String(a) === String(b);
+
+export function prefetchAllViewCounts(queryClient: QueryClient) {
   return queryClient.prefetchQuery({
     queryKey: viewCountKeys.all,
     queryFn: fetchAllViewCounts,
+    staleTime: STALE_TIME_MS,
   });
 }
 
 export function useViewCount(imageId: number): UseViewCountReturn {
   const queryClient = useQueryClient();
 
-  // Query for fetching view count with 5-minute stale time
   const {
     data: viewCount = 0,
     isLoading,
@@ -65,36 +72,53 @@ export function useViewCount(imageId: number): UseViewCountReturn {
   } = useQuery({
     queryKey: viewCountKeys.all,
     queryFn: fetchAllViewCounts,
-    enabled: !!imageId,
-    select: (data) =>
-      data.find((i) => String(i.image_id) === String(imageId))?.view_count,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // `select` previously returned undefined for an image with no row yet,
+    // which the return type claimed was a number.
+    select: (rows: ViewCountRow[]) =>
+      rows.find((row) => sameId(row.image_id, imageId))?.view_count ?? 0,
+    staleTime: STALE_TIME_MS,
   });
 
-  // Mutation for incrementing view count
-  const incrementMutation = useMutation({
-    mutationFn: () => incrementViewCount(imageId),
-    onSuccess: (newViewCount) => {
-      // Update the query cache with the new view count
-      queryClient.setQueryData(viewCountKeys.byId(imageId), newViewCount);
-    },
-    onError: () => {
-      // Optimistic update on error - increment the cached value
-      queryClient.setQueryData(
-        viewCountKeys.byId(imageId),
-        (old: number = 0) => old + 1,
+  /**
+   * Writes the server's new total back into the list this hook actually
+   * reads from. The previous version wrote to a `["viewCount", imageId]`
+   * key that nothing subscribed to, so a successful increment never showed
+   * up in the UI until the 5 minute stale window expired.
+   */
+  const writeCount = useCallback(
+    (nextCount: number) => {
+      queryClient.setQueryData<ViewCountRow[]>(
+        viewCountKeys.all,
+        (rows = []) => {
+          const existing = rows.find((row) => sameId(row.image_id, imageId));
+          if (!existing) {
+            return [...rows, { image_id: imageId, view_count: nextCount }];
+          }
+          return rows.map((row) =>
+            sameId(row.image_id, imageId)
+              ? { ...row, view_count: nextCount }
+              : row,
+          );
+        },
       );
     },
+    [queryClient, imageId],
+  );
+
+  const incrementMutation = useMutation({
+    mutationFn: () => incrementViewCount(imageId),
+    onSuccess: writeCount,
   });
 
+  const { mutateAsync } = incrementMutation;
   const incrementView = useCallback(async () => {
-    await incrementMutation.mutateAsync();
-  }, [incrementMutation]);
+    await mutateAsync();
+  }, [mutateAsync]);
 
   return {
     viewCount,
     incrementView,
     isLoading: isLoading || incrementMutation.isPending,
-    error: queryError?.message || incrementMutation.error?.message || null,
+    error: queryError?.message ?? incrementMutation.error?.message ?? null,
   };
 }

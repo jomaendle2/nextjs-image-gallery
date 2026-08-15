@@ -25,6 +25,7 @@ export function CarouselNavigation({
             : "opacity-40 cursor-not-allowed"
         }`}
         aria-label="Previous image"
+        type="button"
       >
         <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>
@@ -39,6 +40,7 @@ export function CarouselNavigation({
             : "opacity-40 cursor-not-allowed"
         }`}
         aria-label="Next image"
+        type="button"
       >
         <ChevronRight className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>

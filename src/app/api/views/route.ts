@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   getAllViewCounts,
   incrementViewCount,
@@ -7,12 +7,9 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    // Initialize database on first request
     await initDatabase();
 
-    const { imageId } = await request.json();
-
-    console.log("Received imageId:", imageId);
+    const { imageId }: { imageId?: string | number } = await request.json();
 
     if (!imageId) {
       return NextResponse.json(
@@ -21,14 +18,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const viewCount = await incrementViewCount(imageId);
+    const viewCount = await incrementViewCount(String(imageId));
 
-    console.log("Updated view count for imageId:", imageId, "to", viewCount);
-
-    return NextResponse.json({
-      viewCount,
-      success: true,
-    });
+    return NextResponse.json({ viewCount, success: true });
   } catch (error) {
     console.error("Error in view count API:", error);
     return NextResponse.json(
@@ -41,16 +33,22 @@ export async function POST(request: NextRequest) {
 // on GET, return all view counts
 export async function GET() {
   try {
-    // Initialize database on first request
     await initDatabase();
 
-    // Fetch all view counts (this could be optimized further)
     const data = await getAllViewCounts();
 
-    return NextResponse.json({
-      viewCounts: data,
-      success: true,
-    });
+    return NextResponse.json(
+      { viewCounts: data, success: true },
+      {
+        headers: {
+          // View counts are ambient, not authoritative. Letting the CDN serve
+          // a slightly stale copy while it revalidates keeps this off the
+          // database for most visitors.
+          "Cache-Control":
+            "public, s-maxage=60, stale-while-revalidate=300, max-age=0",
+        },
+      },
+    );
   } catch (error) {
     console.error("Error getting view counts:", error);
     return NextResponse.json(

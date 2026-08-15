@@ -1,9 +1,9 @@
 "use client";
 
-import { Eye } from "lucide-react";
-import { useViewCount } from "@/hooks/useViewCount";
-import { useEffect, useRef } from "react";
 import NumberFlow from "@number-flow/react";
+import { Eye } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { useViewCount } from "@/hooks/useViewCount";
 
 interface ViewCountProps {
   imageId: number;
@@ -19,34 +19,47 @@ export function ViewCount({
   shouldIncrement = true,
 }: ViewCountProps) {
   const { viewCount, incrementView } = useViewCount(imageId);
-  const hasIncremented = useRef(new Map<number, boolean>());
 
-  // Increment view count when component mounts (only once per image)
+  // This component is reused across images rather than remounted per image,
+  // so the guard has to be per image id, not per mount.
+  const incrementedIds = useRef(new Set<number>());
+  // Held in a ref so the effect can call the latest version without listing
+  // it as a dependency and re-firing on every render.
+  const incrementViewRef = useRef(incrementView);
+  incrementViewRef.current = incrementView;
+  const shouldIncrementRef = useRef(shouldIncrement);
+  shouldIncrementRef.current = shouldIncrement;
+
   useEffect(() => {
-    if (!hasIncremented.current.get(imageId) && imageId && shouldIncrement) {
-      incrementView()
-        .then(() => {
-          hasIncremented.current.set(imageId, true);
-        })
-        .catch((error) => {
-          console.error("Failed to increment view count:", error);
-        });
+    if (!(imageId && shouldIncrementRef.current)) {
+      return;
     }
-  }, [imageId]); // Removed incrementView from dependencies to prevent infinite loop
+    if (incrementedIds.current.has(imageId)) {
+      return;
+    }
+
+    incrementedIds.current.add(imageId);
+    incrementViewRef.current().catch((error: unknown) => {
+      // Allow a later visit to retry.
+      incrementedIds.current.delete(imageId);
+      console.error("Failed to increment view count:", error);
+    });
+  }, [imageId]);
+
+  const isModal = variant === "modal";
 
   return (
     <div
       className={`flex items-center text-left gap-1.5 motion-opacity-in ${className}`}
     >
       <Eye
-        size={variant === "modal" ? 16 : 14}
-        className={`${
-          variant === "modal" ? "text-white/60" : "text-white/50"
-        } transition-colors`}
+        aria-hidden="true"
+        className={`${isModal ? "text-white/60" : "text-white/50"} transition-colors`}
+        size={isModal ? 16 : 14}
       />
       <span
         className={`${
-          variant === "modal"
+          isModal
             ? "text-sm text-white/80 font-medium"
             : "text-xs text-white/60 font-medium"
         } transition-colors tabular-nums flex items-center gap-1 min-w-[60px]`}

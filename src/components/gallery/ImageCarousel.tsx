@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { galleryImages } from "@/data/galleryData";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
 import { ImageModal } from "./carousel/ImageModal";
-import { galleryImages } from "@/data/galleryData";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
+import { useCarouselScroll } from "./carousel/useCarouselScroll";
+
+/** How many images to keep mounted on each side of the current one. */
+const BUFFER_SIZE = 2;
 
 interface ImageCarouselProps {
   initialIndex?: number;
@@ -26,50 +30,7 @@ export function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(
     externalCurrentIndex ?? initialIndex,
   );
-  const [bgColor, setBgColor] = useState<string | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentImageRef = useRef<HTMLImageElement>(null);
-  const throttleRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Buffer size: how many images to render on each side of current image
-  const BUFFER_SIZE = 2;
-
-  // Calculate which images should be rendered
-  const getVisibleIndices = useCallback(() => {
-    const start = Math.max(0, currentIndex - BUFFER_SIZE);
-    const end = Math.min(galleryImages.length - 1, currentIndex + BUFFER_SIZE);
-    return { start, end };
-  }, [currentIndex]);
-
-  useEffect(() => {
-    const currentImage = galleryImages[currentIndex];
-    if (!currentImage) {
-      return;
-    }
-
-    setBgColor(currentImage.bgColor);
-  }, [currentIndex]);
-
-  // Sync external currentIndex with internal state
-  useEffect(() => {
-    if (
-      externalCurrentIndex !== undefined &&
-      externalCurrentIndex !== currentIndex
-    ) {
-      setCurrentIndex(externalCurrentIndex);
-      scrollToImage(externalCurrentIndex);
-    }
-  }, [externalCurrentIndex, currentIndex]);
-
-  // Handle keyboard navigation
-  const { setIsDisabled } = useCarouselKeyboard({
-    onNext: () => goToNext(),
-    onPrevious: () => goToPrevious(),
-    onClose: onClose,
-  });
 
   const updateCurrentIndex = useCallback(
     (newIndex: number) => {
@@ -79,143 +40,65 @@ export function ImageCarousel({
     [onIndexChange],
   );
 
-  const goToNext = () => {
-    if (currentIndex < galleryImages.length - 1) {
-      const newIndex = currentIndex + 1;
-      goToImage(newIndex);
-    }
-  };
+  const { carouselRef, goToIndex, scrollToIndex } = useCarouselScroll({
+    itemCount: galleryImages.length,
+    currentIndex,
+    onIndexChange: updateCurrentIndex,
+  });
 
-  const goToPrevious = () => {
-    if (currentIndex > 0) {
-      const newIndex = currentIndex - 1;
-      goToImage(newIndex);
-    }
-  };
+  const goToNext = useCallback(() => {
+    goToIndex(currentIndex + 1);
+  }, [currentIndex, goToIndex]);
 
-  const goToImage = (index: number) => {
-    // Prevent multiple rapid clicks during transition
-    if (isTransitioning || index === currentIndex) return;
+  const goToPrevious = useCallback(() => {
+    goToIndex(currentIndex - 1);
+  }, [currentIndex, goToIndex]);
 
-    setIsTransitioning(true);
-    scrollToImage(index);
+  const { setIsDisabled } = useCarouselKeyboard({
+    onNext: goToNext,
+    onPrevious: goToPrevious,
+    onClose,
+  });
 
-    // Clear any existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // Monitor scroll completion and update state when animation finishes
-    const checkScrollCompletion = () => {
-      if (carouselRef.current) {
-        const scrollLeft = carouselRef.current.scrollLeft;
-        const imageWidth = carouselRef.current.clientWidth;
-        const targetScrollPosition = index * imageWidth;
-
-        // Check if we're close enough to the target position (within 5px)
-        if (Math.abs(scrollLeft - targetScrollPosition) < 5) {
-          updateCurrentIndex(index);
-          setIsTransitioning(false);
-        } else {
-          // Continue checking
-          scrollTimeoutRef.current = setTimeout(checkScrollCompletion, 50);
-        }
-      }
-    };
-
-    // Start checking after a short delay to let the smooth scroll begin
-    scrollTimeoutRef.current = setTimeout(checkScrollCompletion, 100);
-  };
-
-  const scrollToImage = (index: number) => {
-    if (carouselRef.current) {
-      const imageElement = carouselRef.current.children[index] as HTMLElement;
-      if (imageElement) {
-        imageElement.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "center",
-        });
-      }
-    }
-  };
-
-  // Create throttled scroll handler using useRef for better performance
-  const handleScroll = useCallback(() => {
-    const carousel = carouselRef.current;
-    if (!carousel || isTransitioning) return;
-
-    const scrollLeft = carousel.scrollLeft;
-    const imageWidth = carousel.clientWidth;
-    const newIndex = Math.round(scrollLeft / imageWidth);
-
+  // Sync an externally controlled index back into the scroll position.
+  useEffect(() => {
     if (
-      newIndex !== currentIndex &&
-      newIndex >= 0 &&
-      newIndex < galleryImages.length
+      externalCurrentIndex !== undefined &&
+      externalCurrentIndex !== currentIndex
     ) {
-      updateCurrentIndex(newIndex);
+      setCurrentIndex(externalCurrentIndex);
+      scrollToIndex(externalCurrentIndex);
     }
-  }, [currentIndex, isTransitioning, updateCurrentIndex]);
+  }, [externalCurrentIndex, currentIndex, scrollToIndex]);
 
-  const throttledScrollHandler = useCallback(() => {
-    if (throttleRef.current) return;
-
-    throttleRef.current = setTimeout(() => {
-      handleScroll();
-      throttleRef.current = null;
-    }, 16); // ~60fps throttling
-  }, [handleScroll]);
-
-  // Handle scroll snap detection to update current index
+  // Jump to the requested starting image on first paint.
   useEffect(() => {
-    const carousel = carouselRef.current;
-    if (!carousel) return;
-
-    carousel.addEventListener("scroll", throttledScrollHandler, {
-      passive: true,
-    });
-    return () => carousel.removeEventListener("scroll", throttledScrollHandler);
-  }, [throttledScrollHandler]);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      if (throttleRef.current) {
-        clearTimeout(throttleRef.current);
-      }
-    };
-  }, []);
-
-  // Initialize scroll position
-  useEffect(() => {
-    if (carouselRef.current && initialIndex > 0) {
-      scrollToImage(initialIndex);
+    if (initialIndex > 0) {
+      scrollToIndex(initialIndex);
     }
-  }, [initialIndex]);
+  }, [initialIndex, scrollToIndex]);
 
-  const { start, end } = getVisibleIndices();
-
-  const handleImageClick = () => {
+  const handleImageClick = useCallback(() => {
     setIsModalOpen(true);
     setIsDisabled(true);
-  };
+  }, [setIsDisabled]);
 
-  const handleModalClose = () => {
+  const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
     setIsDisabled(false);
-  };
+  }, [setIsDisabled]);
+
+  // Derived during render: the background is a pure function of the index,
+  // so computing it in an effect only bought an extra commit per navigation.
+  const currentImage = galleryImages[currentIndex] ?? galleryImages[0];
+  const start = Math.max(0, currentIndex - BUFFER_SIZE);
+  const end = Math.min(galleryImages.length - 1, currentIndex + BUFFER_SIZE);
 
   return (
     <>
       <div
-        className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700"
-        style={{
-          backgroundColor: bgColor || galleryImages[0].bgColor,
-        }}
+        className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
+        style={{ backgroundColor: currentImage.bgColor }}
       >
         <CarouselTopBar onClose={onClose} />
 
@@ -228,63 +111,57 @@ export function ImageCarousel({
 
         <div className="flex-1 relative overflow-hidden">
           {/* Main carousel container with scroll snap */}
-          <div
-            ref={carouselRef}
+          <section
+            aria-label="Image gallery"
             className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+            ref={carouselRef}
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
             }}
           >
-            {galleryImages.map((image, index) => {
-              // Only render images within the visible range
-              const shouldRender = index >= start && index <= end;
-
-              return (
-                <div
-                  key={image.src}
-                  className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
-                >
-                  {shouldRender ? (
-                    <CarouselImage
-                      ref={index === currentIndex ? currentImageRef : null}
-                      src={image.src}
-                      alt={image.title}
-                      priority={index === currentIndex}
-                      blurDataURL={image.blurDataURL}
-                      onClick={handleImageClick}
-                    />
-                  ) : (
-                    // Placeholder div to maintain scroll positions
-                    <div className="w-full h-full" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+            {galleryImages.map((image, index) => (
+              <div
+                className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
+                key={image.id}
+              >
+                {index >= start && index <= end ? (
+                  <CarouselImage
+                    alt={image.title}
+                    onClick={handleImageClick}
+                    priority={index === currentIndex}
+                    src={image.src}
+                  />
+                ) : (
+                  // Placeholder keeps the scroll extents stable.
+                  <div className="w-full h-full" />
+                )}
+              </div>
+            ))}
+          </section>
 
           {/* Navigation arrows */}
           <CarouselNavigation
-            onNext={goToNext}
-            onPrevious={goToPrevious}
             canGoNext={currentIndex < galleryImages.length - 1}
             canGoPrevious={currentIndex > 0}
+            onNext={goToNext}
+            onPrevious={goToPrevious}
           />
         </div>
 
         <div className="flex-shrink-0 px-6 pb-10 space-y-4">
-          <ImageInfo image={galleryImages[currentIndex]} />
+          <ImageInfo image={currentImage} />
           <ImageIndicators
-            images={galleryImages}
             currentIndex={currentIndex}
-            onImageSelect={goToImage}
+            images={galleryImages}
+            onImageSelect={goToIndex}
           />
         </div>
       </div>
 
       {/* Full screen image modal */}
       <ImageModal
-        image={galleryImages[currentIndex]}
+        image={currentImage}
         isOpen={isModalOpen}
         onClose={handleModalClose}
       />

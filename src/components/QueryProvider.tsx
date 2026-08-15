@@ -1,8 +1,10 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { prefetchAllViewCounts } from "@/hooks/useViewCount";
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 export default function QueryProvider({
   children,
@@ -14,21 +16,20 @@ export default function QueryProvider({
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes
+            staleTime: STALE_TIME_MS,
             refetchOnWindowFocus: false,
           },
         },
       }),
   );
 
-  // Non-blocking prefetch of all view counts on app start
+  // Warm the view-count cache without blocking the first paint. The effect
+  // already runs after paint, so the extra setTimeout hop it used to make
+  // only delayed the request by a further macrotask.
   useEffect(() => {
-    // Use setTimeout to ensure this doesn't block the initial render
-    const prefetchTimer = setTimeout(() => {
-      prefetchAllViewCounts(queryClient);
-    }, 0);
-
-    return () => clearTimeout(prefetchTimer);
+    prefetchAllViewCounts(queryClient).catch((error: unknown) => {
+      console.error("Failed to prefetch view counts:", error);
+    });
   }, [queryClient]);
 
   return (

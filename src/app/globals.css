@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @plugin "tailwindcss-motion";
 
@@ -71,25 +70,6 @@
 /* Ensure smooth scrolling */
 html {
   scroll-behavior: smooth;
-}
-
-/* Custom scrollbar for indicators if needed */
-.custom-scrollbar::-webkit-scrollbar {
-  height: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
 }
 
 :root {
@@ -218,21 +198,6 @@ html {
 
     .contain-strict {
         contain: strict;
-    }
-}
-
-/* Optimize animations for better performance */
-@layer components {
-    .animate-fade-in {
-        animation: fade-in 0.4s cubic-bezier(0.23, 1, 0.320, 1);
-    }
-
-    .animate-scale-in {
-        animation: scale-in 0.2s cubic-bezier(0.23, 1, 0.320, 1);
-    }
-
-    .animate-slide-in-right {
-        animation: slide-in-right 0.3s cubic-bezier(0.23, 1, 0.320, 1);
     }
 }
 

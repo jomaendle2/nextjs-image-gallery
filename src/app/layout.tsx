@@ -1,46 +1,51 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
+import PlausibleProvider from "next-plausible";
 import "./globals.css";
 import QueryProvider from "@/components/QueryProvider";
-import PlausibleProvider from "next-plausible";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const SITE_URL = "https://images.jomaendle.com";
+const TITLE = "the beauty of earth.";
+const DESCRIPTION =
+  "Images from around the world. Explore the beauty of our planet 🌍";
+const OG_IMAGE = `/api/og?title=${encodeURIComponent(TITLE)}`;
 
 export const metadata: Metadata = {
-  title: "the beauty of earth.",
-  description:
-    "Images from around the world. Explore the beauty of our planet 🌍",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
   openGraph: {
-    title: "the beauty of earth.",
-    description:
-      "Images from around the world. Explore the beauty of our planet 🌍",
-    url: "https://images.jomaendle.com",
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
     images: [
       {
-        url: "/api/og?title=the%20beauty%20of%20earth.",
+        url: OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: "the beauty of earth. - Images from around the world",
+        alt: `${TITLE} - Images from around the world`,
       },
     ],
     type: "website",
   },
   twitter: {
-    title: "the beauty of earth.",
-    description:
-      "Images from around the world. Explore the beauty of our planet 🌍",
+    title: TITLE,
+    description: DESCRIPTION,
     card: "summary_large_image",
-    images: ["/api/og?title=the%20beauty%20of%20earth."],
+    images: [OG_IMAGE],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2a6b7c",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -50,9 +55,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <head>
+        {/* The gallery fetches view counts from its own origin on mount. */}
+        <link href="https://plausible.io" rel="preconnect" />
+      </head>
+      <body className={`${geistSans.variable} antialiased`}>
         <PlausibleProvider domain="thebeautyof.earth">
           <QueryProvider>
             {children}
@@ -61,10 +68,10 @@ export default function RootLayout({
           <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
             © {new Date().getFullYear()}{" "}
             <a
-              href="https://jomaendle.com"
               className="text-white/70 hover:text-white transition-colors duration-200"
-              target="_blank"
+              href="https://jomaendle.com"
               rel="noopener noreferrer"
+              target="_blank"
             >
               Jo Mändle
             </a>
