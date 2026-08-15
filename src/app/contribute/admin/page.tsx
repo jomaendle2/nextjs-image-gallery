@@ -1,11 +1,14 @@
+import { ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { listPendingApplications } from "@/lib/applications/repository";
 import { listContributors } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { listAllPhotos } from "@/lib/photos/repository";
 import { ContributeShell } from "../ContributeShell";
+import { ApplicationRowActions } from "./ApplicationRowActions";
 import { ContributorRowActions } from "./ContributorRowActions";
 import { InviteForm } from "./InviteForm";
 import { PhotoRowActions } from "./PhotoRowActions";
@@ -28,7 +31,8 @@ export default async function AdminPage() {
     notFound();
   }
 
-  const [contributors, photos] = await Promise.all([
+  const [applications, contributors, photos] = await Promise.all([
+    listPendingApplications(),
     listContributors(),
     listAllPhotos(),
   ]);
@@ -38,6 +42,44 @@ export default async function AdminPage() {
       subtitle="Invite photographers, and moderate what appears in the gallery."
       title="Contributors"
     >
+      {applications.length === 0 ? null : (
+        <section className="mb-8">
+          <h2 className="mb-3 font-semibold text-lg tracking-[-0.03em]">
+            Pending applications ({applications.length})
+          </h2>
+          <ul className="space-y-2">
+            {applications.map((application) => (
+              <li
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                key={application.id}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-sm">
+                    {application.display_name}
+                    <a
+                      className="ml-2 inline-flex items-center gap-0.5 text-white/55 underline underline-offset-2 transition-colors hover:text-white"
+                      href={application.site_url}
+                      rel="noopener noreferrer nofollow"
+                      target="_blank"
+                    >
+                      see their work
+                      <ArrowUpRight aria-hidden="true" size={12} />
+                    </a>
+                  </p>
+                  <p className="truncate text-white/45 text-xs">
+                    {application.email}
+                    {application.note === null
+                      ? null
+                      : ` · ${application.note}`}
+                  </p>
+                </div>
+                <ApplicationRowActions id={application.id} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="rounded-3xl border border-white/12 bg-white/5 p-6">
         <h2 className="mb-1 font-semibold text-lg tracking-[-0.03em]">
           Invite a photographer

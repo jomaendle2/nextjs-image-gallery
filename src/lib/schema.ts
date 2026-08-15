@@ -56,6 +56,25 @@ export const MIGRATIONS: readonly string[] = [
    */
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS display_url TEXT;",
 
+  `CREATE TABLE IF NOT EXISTS applications (
+     id           TEXT PRIMARY KEY,
+     email        TEXT NOT NULL,
+     display_name TEXT NOT NULL,
+     site_url     TEXT NOT NULL,
+     note         TEXT,
+     status       TEXT NOT NULL DEFAULT 'pending',
+     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+     reviewed_at  TIMESTAMPTZ
+   );`,
+
+  /*
+   * One open application per address. A resubmission while the first is still
+   * pending is a double-click, not a second application; once reviewed, the
+   * same person may apply again.
+   */
+  `CREATE UNIQUE INDEX IF NOT EXISTS applications_pending_email_idx
+     ON applications (email) WHERE status = 'pending';`,
+
   `CREATE TABLE IF NOT EXISTS login_tokens (
      token_hash     TEXT PRIMARY KEY,
      contributor_id TEXT NOT NULL REFERENCES contributors(id) ON DELETE CASCADE,

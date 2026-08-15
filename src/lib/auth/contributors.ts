@@ -85,6 +85,58 @@ async function nextFreeSlug(base: string): Promise<string> {
   );
 }
 
+export interface ContributorPreview {
+  slug: string;
+  display_name: string;
+  site_url: string | null;
+  photo_count: number;
+  previews: { id: string; blob_url: string; blur_data_url: string }[];
+}
+
+/**
+ * Everyone with published work, each with a few recent photographs.
+ *
+ * One query rather than one per contributor: the lateral join pulls each
+ * person's four most recent photographs alongside their row, so the page
+ * costs a single round trip however many photographers there are.
+ */
+export async function listContributorsWithPreviews(): Promise<
+  ContributorPreview[]
+> {
+  /*
+   * Two lateral joins and no GROUP BY. Grouping by the aggregated previews
+   * fails outright — Postgres has no equality operator for `json` — and
+   * counting in its own subquery is clearer than grouping around it anyway.
+   * The inner join on a positive count is what hides contributors who have
+   * been invited but have not published yet.
+   */
+  const rows = await sql`
+    SELECT c.slug, c.display_name, c.site_url,
+           stats.photo_count,
+           COALESCE(recent.previews, '[]'::json) AS previews
+    FROM contributors c
+    JOIN LATERAL (
+      SELECT COUNT(*)::int AS photo_count
+      FROM photos p
+      WHERE p.author_id = c.id AND p.published_at IS NOT NULL
+    ) stats ON stats.photo_count > 0
+    LEFT JOIN LATERAL (
+      SELECT json_agg(x) AS previews FROM (
+        SELECT r.id,
+               COALESCE(r.display_url, r.blob_url) AS blob_url,
+               r.blur_data_url
+        FROM photos r
+        WHERE r.author_id = c.id AND r.published_at IS NOT NULL
+        ORDER BY r.is_opener DESC, r.published_at DESC
+        LIMIT 4
+      ) x
+    ) recent ON TRUE
+    WHERE c.revoked_at IS NULL
+    ORDER BY stats.photo_count DESC, c.display_name ASC;
+  `;
+  return rows as ContributorPreview[];
+}
+
 export async function setContributorRevoked(
   id: string,
   revoked: boolean,

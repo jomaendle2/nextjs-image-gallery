@@ -8,6 +8,7 @@ import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
+import { GalleryTopBar } from "./carousel/GalleryTopBar";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 import { useCarouselScroll } from "./carousel/useCarouselScroll";
@@ -194,8 +195,10 @@ export function ImageCarousel({
 
         <CarouselTopBar onClose={onClose} />
 
+        {contributor === undefined ? <GalleryTopBar /> : null}
+
         {contributor === undefined ? (
-          <h1 className="relative z-10 px-4 pt-7 text-center font-semibold text-white text-2xl sm:px-8 sm:pt-9 sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
+          <h1 className="relative z-10 px-4 pt-3 text-center font-semibold text-white text-2xl sm:px-8 sm:pt-4 sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
             the beauty of earth.
           </h1>
         ) : (

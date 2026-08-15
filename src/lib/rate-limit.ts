@@ -53,5 +53,23 @@ export function createLimiter(
   };
 }
 
-/** Shared by the sign-in route: limited per IP and per email address. */
+/**
+ * The client IP, as far as it can be trusted.
+ *
+ * `x-forwarded-for` is a comma-separated chain a caller can prepend to, so
+ * using the raw header as a bucket key would let one client mint a fresh
+ * bucket per request. Vercel sets `x-real-ip` to the true client address; the
+ * leftmost forwarded entry is the fallback.
+ */
+export function clientIp(headerList: Headers): string {
+  const realIp = headerList.get("x-real-ip");
+  if (realIp !== null && realIp !== "") {
+    return realIp;
+  }
+  return (
+    (headerList.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "unknown"
+  );
+}
+
+/** Shared by the sign-in and apply routes: limited per IP and per address. */
 export const signInLimiter = createLimiter();

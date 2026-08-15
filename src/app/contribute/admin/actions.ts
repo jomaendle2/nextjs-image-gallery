@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { reviewApplication } from "@/lib/applications/repository";
 import {
   inviteContributor,
   setContributorRevoked,
 } from "@/lib/auth/contributors";
+import { sendApplicationApproved } from "@/lib/auth/email";
 import { requireContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { setOpener, setPublished } from "@/lib/photos/repository";
@@ -75,10 +77,52 @@ export async function invite(
   };
 }
 
+/**
+ * Approving reuses `inviteContributor`, so there stays exactly one code path
+ * that brings a contributor into existence.
+ *
+ * The welcome email points at /contribute rather than carrying a sign-in
+ * token: a token mailed today would sit in an inbox for days, and the
+ * applicant can mint a fresh one the moment they are ready.
+ */
+export async function decideApplication(
+  id: string,
+  decision: "approved" | "declined",
+): Promise<void> {
+  await requireOwner();
+
+  const application = await reviewApplication(id, decision);
+  if (!application) {
+    return;
+  }
+
+  if (decision === "approved") {
+    await inviteContributor({
+      email: application.email,
+      display_name: application.display_name,
+      site_url: application.site_url,
+    });
+
+    try {
+      await sendApplicationApproved(
+        application.email,
+        application.display_name,
+      );
+    } catch (error) {
+      // The invitation exists either way; a failed email is recoverable.
+      console.error("Could not send the welcome email:", error);
+    }
+  }
+
+  revalidatePath("/contribute/admin");
+  revalidatePath("/photographers");
+}
+
 export async function setRevoked(id: string, revoked: boolean): Promise<void> {
   await requireOwner();
   await setContributorRevoked(id, revoked);
   revalidatePath("/contribute/admin");
+  revalidatePath("/photographers");
   // A revoked contributor's photos drop out of the feed, which joins on
   // `revoked_at IS NULL`, so the public pages have to be rebuilt too.
   revalidatePath("/");
