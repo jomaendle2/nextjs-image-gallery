@@ -474,11 +474,45 @@
   },
   "overrides": [
     {
-      "includes": ["src/app/api/**", "src/lib/database.ts"],
+      "includes": [
+        "src/app/api/**",
+        "src/lib/database.ts",
+        "src/lib/auth/**",
+        "src/lib/photos/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**", "vitest.config.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "performance": {
+            "noAwaitInLoops": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "performance": {
+            "useTopLevelRegex": "off"
           }
         }
       }
