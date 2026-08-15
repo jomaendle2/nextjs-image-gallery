@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import "./globals.css";
 import QueryProvider from "@/components/QueryProvider";
+import { siteOrigin } from "@/lib/site-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,7 +12,16 @@ const geistSans = Geist({
   display: "swap",
 });
 
-const SITE_URL = "https://images.jomaendle.com";
+/*
+ * One source of truth for the origin, shared with the magic-link emails.
+ *
+ * This used to be a second, hardcoded domain that disagreed with
+ * `siteOrigin()`. Every canonical URL and every OG image the site served
+ * therefore pointed at a host it was not being served from, which is the
+ * kind of mistake that quietly costs a site its search ranking: crawlers
+ * take `og:url` and the canonical tag at their word.
+ */
+const SITE_URL = siteOrigin();
 const TITLE = "the beauty of earth.";
 const DESCRIPTION =
   "Images from around the world. Explore the beauty of our planet 🌍";
@@ -21,6 +31,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
@@ -56,7 +69,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* The gallery fetches view counts from its own origin on mount. */}
+        {/*
+          Analytics is third-party and on the critical path for nothing, but
+          the handshake still costs a round trip when it does fire. Warming
+          it here keeps that off the first interaction.
+        */}
         <link href="https://plausible.io" rel="preconnect" />
       </head>
       <body className={`${geistSans.variable} antialiased`}>
