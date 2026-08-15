@@ -351,20 +351,55 @@
 }
 
 /*
- * Reduced motion keeps the staging - things still arrive in order, and
- * the dismissal is still quicker than the entrance - but nothing travels
- * or scales. Only the light changes.
+ * Reduced motion.
+ *
+ * Two rules, in this order and for different reasons.
+ *
+ * The first is the blanket: every transition and animation on the site
+ * collapses to nothing. It exists because the version of this block that
+ * came before named exactly three classes — the viewer's entrance — and
+ * everything else carried on moving. Grid tiles zoomed over 500ms on hover,
+ * the photograph scaled under the cursor, every glass button grew and shrank,
+ * and the viewer's *exit* animations, which this block never mentioned, ran
+ * in full.
+ *
+ * Durations are zeroed rather than motion being removed, and that distinction
+ * matters most for the thumbnail dock: its magnification is not decoration,
+ * it is what tells you which photograph is selected. The selected tile stays
+ * larger — it simply arrives at that size instead of travelling to it.
+ * Removing the scale would remove the information with it.
+ *
+ * The second rule then buys one thing back. Things still arrive in order and
+ * the dismissal is still quicker than the entrance, but nothing travels or
+ * scales: only the light changes. A short opacity fade is not motion in the
+ * sense this setting is asking about, and an interface that snaps into
+ * existence is not obviously kinder than one that fades.
+ *
+ * Both carry `!important` so the class selectors win over the universal one
+ * rather than losing to it. globals.css sits outside Biome's remit, which is
+ * what makes that expressible here.
  */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .viewer-backdrop-enter,
   .viewer-frame-enter,
   .viewer-chrome-enter {
-    animation-name: viewer-fade-in;
-    animation-duration: 200ms;
+    animation-name: viewer-fade-in !important;
+    animation-duration: 200ms !important;
   }
 
   .viewer-chrome-enter {
-    animation-delay: 80ms;
+    animation-delay: 80ms !important;
   }
 }
 
