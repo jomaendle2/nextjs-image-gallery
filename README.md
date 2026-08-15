@@ -1,4 +1,4 @@
-# the beauty of earth.
+# the beauty of earth
 
 A full-screen photo gallery, open to a small set of invited photographers.
 Next.js App Router, React 19, Tailwind v4. Photographs live in Vercel Blob;
