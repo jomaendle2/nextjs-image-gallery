@@ -63,6 +63,31 @@ already-built deployment**: Vercel injects the variable set at build time,
 so anything deployed before you added it still has the old environment.
 Push or redeploy after changing one.
 
+### Set `SITE_URL` to the domain you tell people about
+
+**Not cosmetic — every link this site emails is built from it.** With it
+unset, `siteOrigin()` falls back to `VERCEL_PROJECT_PRODUCTION_URL`, and
+production currently resolves that to **`https://images.jomaendle.com`**.
+Checked, not assumed: that is the `og:url` in the live page's metadata right
+now.
+
+So an invitation would tell a photographer to sign in at
+`images.jomaendle.com/contribute` — a domain they have never heard you
+mention, in an unsolicited email offering them an account. That is
+indistinguishable from a phishing attempt, and the people most likely to
+notice are the careful ones.
+
+It also decides the canonical URLs, the sitemap, both feeds, and every
+unsubscribe link.
+
+```bash
+vercel env add SITE_URL production   # https://www.thebeautyof.earth
+```
+
+The origin deliberately never comes from the request `Host` header — see the
+comment in `src/lib/site-url.ts` — so this cannot be inferred at runtime. It
+has to be configured.
+
 ### Fill in the operator address
 
 `src/lib/legal.ts` — `street` and `city` are empty, so `/imprint`,
@@ -125,8 +150,6 @@ UPDATE photos SET announced_at = now() WHERE published_at IS NOT NULL;
 
 ## 4. Worth doing before you share, not blocking
 
-- **`SITE_URL`** — falls back to `VERCEL_PROJECT_PRODUCTION_URL`, which is
-  correct but ugly in the links inside emails.
 - **Invite one or two photographers first.** The gallery reads as a
   community rather than a personal portfolio the moment a second name
   appears, and `/photographers` is the page that says so.
