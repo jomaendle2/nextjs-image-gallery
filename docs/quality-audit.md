@@ -338,9 +338,14 @@ cards, a sitemap, structured data. What is missing is the other half.
 
 ### 1. A way to follow the gallery — feed done, email list open
 
-`1a5bcaf` adds `/feed.xml` with autodiscovery. The email half is **not**
-built, deliberately: it means collecting addresses, consent, and a sending
-path, which is a product decision rather than a cleanup.
+`1a5bcaf` adds `/feed.xml`; `c9d09c9` adds one per photographer at
+`/by/<slug>/feed.xml`, with a visible "follow" beside the link to their own
+site. Per-photographer is the half that matters to a contributor —
+"people can subscribe to you" is the argument for publishing here.
+
+The email half is **not** built, deliberately: it means collecting
+addresses, consent, and a sending path, which is a product decision rather
+than a cleanup.
 
 There is currently no reason to return and no way to subscribe. Every
 visitor is a one-time arrival from a link. That is the single largest gap,
