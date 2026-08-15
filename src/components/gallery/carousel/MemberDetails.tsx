@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -24,7 +24,7 @@ interface Details {
  * carousel moves and back.
  */
 export function MemberDetails({ photoId }: { photoId: string }) {
-  const { data, isPending } = useQuery({
+  const { data, isPlaceholderData } = useQuery({
     queryKey: ["photoDetails", photoId],
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
@@ -39,9 +39,36 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     staleTime: 5 * 60 * 1000,
     // A failed lookup should not retry three times behind a photograph.
     retry: false,
+    /*
+     * Carry the previous photograph's answer across the switch, so the
+     * query key changing does not unmount everything for the length of a
+     * round trip. Whether it is *safe to show* is decided below — stale
+     * membership status is fine, a stale location is not.
+     */
+    placeholderData: keepPreviousData,
   });
 
-  return <Line>{body(isPending, data)}</Line>;
+  /*
+   * What may be shown while the new photograph's answer is in flight.
+   *
+   * Membership is a property of the session, not of the photograph, so the
+   * previous answer's `member` flag is still true or false for this one —
+   * which means a non-member's invitation can stay put across every switch
+   * instead of blinking out and in for ~100ms per swipe. That blink was the
+   * "short layout shift while loading": the link unmounted while the next
+   * fetch ran, the held line under it was 4px shorter than the link's
+   * resting height, and the photograph absorbed the difference.
+   *
+   * The location and technique are the opposite case: they belong to one
+   * photograph, and showing the previous photograph's location under the
+   * next one — even for a tenth of a second — would be quietly wrong in the
+   * one place this site promises precision. So for members the text is
+   * blanked during the fetch and only the line's height is held.
+   */
+  const staleButSafe = isPlaceholderData && data !== undefined && !data.member;
+  const shown = (!isPlaceholderData && data) || staleButSafe ? data : undefined;
+
+  return <Line>{body(shown)}</Line>;
 }
 
 /**
@@ -57,15 +84,24 @@ export function MemberDetails({ photoId }: { photoId: string }) {
  *
  * The exif line two elements up already solved this, with an empty paragraph
  * holding `min-h-4` and a comment describing the identical bug. Same idiom
- * here. `min-h-5` is the resting height of the invitation, whose 44px touch
- * target is pulled back to one line by its negative margins.
+ * here — but the first attempt reserved `min-h-5` for a link that actually
+ * rests at 24.3px, because an inline-flex child sits on a text baseline and
+ * the parent's line-box strut adds ~4px beyond the margin box. That missing
+ * 4px was still a visible jump on every swipe. `flex` removes the strut:
+ * the child's 44px touch target is pulled back to exactly 20px by its
+ * negative margins, matching the reservation, so empty and full are now the
+ * same height to the pixel.
  */
 function Line({ children }: { children: ReactNode }) {
-  return <div className="min-h-5">{children}</div>;
+  return (
+    <div className="flex min-h-5 items-center justify-center lg:justify-end">
+      {children}
+    </div>
+  );
 }
 
-function body(isPending: boolean, data: Details | undefined): ReactNode {
-  if (isPending || data === undefined) {
+function body(data: Details | undefined): ReactNode {
+  if (data === undefined) {
     return null;
   }
 
