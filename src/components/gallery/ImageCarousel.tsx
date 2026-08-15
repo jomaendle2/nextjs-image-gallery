@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { ContributorHeader } from "./ContributorHeader";
 import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
-import { ContributorHeading } from "./carousel/ContributorHeading";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 import { useCarouselScroll } from "./carousel/useCarouselScroll";
@@ -199,10 +199,13 @@ export function ImageCarousel({
             the beauty of earth.
           </h1>
         ) : (
-          <ContributorHeading
-            contributor={contributor}
-            photoCount={images.length}
-          />
+          <div className="relative z-10 mx-auto w-full max-w-[1536px] px-4 sm:px-8">
+            <ContributorHeader
+              contributor={contributor}
+              photoCount={images.length}
+              view="slideshow"
+            />
+          </div>
         )}
 
         <div className="relative z-10 flex-1 overflow-hidden">

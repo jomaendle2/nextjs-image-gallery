@@ -36,7 +36,7 @@ export function CaptionBar({
   linkAuthor,
 }: CaptionBarProps) {
   return (
-    <div className="relative z-10 flex-shrink-0 px-4 pb-6 sm:px-8 sm:pb-7">
+    <div className="relative z-10 mx-auto w-full max-w-[1536px] flex-shrink-0 px-4 pb-6 sm:px-8 sm:pb-7">
       <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-6">
         <ImageInfo image={image} />
 
