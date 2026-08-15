@@ -112,7 +112,12 @@ and closed:
 - session cookie value also stored hashed.
 
 Email sending sits behind one `sendLoginEmail()` adapter. Dev logs the link to
-the console; production needs one provisioned transactional-email provider.
+the console; production needs `RESEND_API_KEY` and `EMAIL_FROM`.
+
+**Added during implementation:** the emailed origin comes from `SITE_URL`, not
+from the request `Host` header. Building it from `Host` would let anyone
+reaching the sign-in form choose where an invited contributor's token is
+delivered.
 
 ## 3. Upload and publish pipeline
 
@@ -131,26 +136,34 @@ default: the file never passes through a function body.
    (`published_at IS NULL`).
 3. The form comes back pre-filled with what was derived. The contributor
    supplies title and description, may correct `bg_color` and `location`, and
-   publishes: `published_at = now()` plus `revalidateTag('photos')`.
+   publishes: `published_at = now()` plus `revalidatePath("/")` and
+   `revalidatePath("/by/<slug>")`.
 
 Deliberately not deferred to a webhook (`onUploadCompleted`), which does not
 fire against localhost and would make the flow untestable in development.
 
 Failure handling: a derive failure deletes the orphaned blob and reports the
-reason; an upload that never reaches step 2 leaves a blob with no row, which a
-`blob:prune` script clears.
+reason; an upload that never reaches step 2 leaves a blob with no row. (Not yet
+built: a prune script for those orphans. See "Known gaps".)
 
 ## 4. Reading path
 
 `src/data/galleryData.ts` keeps the `GalleryImage` interface and replaces the
-constant with `getGalleryImages({ by })`. Each row maps to a
+constant with `getGalleryImages(authorSlug?)`. Each row maps to a
 `StaticImageData`-shaped object — `{ src, width, height, blurDataURL }` — which
 is all `next/image` requires, so `CarouselImage`, `ImageModal`, `ImageInfo` and
 `ImageIndicators` need no change to how they consume an image.
 
-The query is wrapped in `"use cache"` with `cacheTag('photos')`, so visitors
-get a cached render and publishing invalidates it. Ordering is
+Both pages are statically rendered with `export const revalidate = 3600`, and
+publishing calls `revalidatePath`, so the hour is only a backstop — new work
+appears immediately and an anonymous visit never waits on a query. Ordering is
 `is_opener DESC, published_at DESC`.
+
+(Deviation: the spec called for `"use cache"` with `cacheTag`. That needs the
+`cacheComponents` flag, which changes rendering defaults across the whole app
+and would have been a large, unrelated behavioural change to carry. ISR plus
+`revalidatePath` gets the same result — cached renders, invalidated on
+publish — without touching anything outside these two routes.)
 
 `ImageCarousel` currently imports `galleryImages` at module scope from inside a
 `"use client"` file. That import becomes an `images` prop supplied by
@@ -159,7 +172,14 @@ cannot survive a query, so `page.tsx` handles the empty case explicitly rather
 than casting.
 
 The viewer gains a credit line — display name, optional outbound link — and a
-subtle EXIF strip. `/?by=<slug>` filters the stream to one contributor.
+subtle EXIF strip.
+
+**Deviation, applied during implementation:** the contributor filter is the
+route `/by/[slug]`, not `?by=<slug>`. Reading `searchParams` opts a page out
+of static rendering entirely, which would have cost the gallery the cached
+render this section exists to protect. A route segment keeps both `/` and
+`/by/[slug]` static with ISR, and gives each photographer a shareable page
+with its own title — which serves the goal better than a query string.
 
 ## 5. Ownership and moderation
 
@@ -175,11 +195,23 @@ The repo has no test runner; this adds **Vitest** for pure units:
 - token mint/verify: expiry, single use, wrong token, revoked contributor;
 - feed ordering: opener first, then newest, drafts excluded, filter by slug;
 - row-to-`GalleryImage` mapping;
-- derivation against a real fixture from `src/assets`, asserting dimensions, a
-  parseable blur data URL, a `#rrggbb` colour, and **that GPS is absent**.
+- derivation against a fixture **synthesised with GPS tags written into it**,
+  asserting dimensions, a parseable blur data URL, a `#rrggbb` colour, and
+  that the coordinates do not survive. (Deviation: the spec called for a real
+  asset as the fixture. A stock photo has no GPS to begin with, so that test
+  would pass even with the protection removed. Writing the coordinates in
+  ourselves is the only version that can fail on a regression.)
 
 Route handlers and the pipeline are verified by running the flow against the
 real dev server rather than by mocking Blob and Neon.
+
+## Known gaps
+
+- No prune script for blobs whose upload completed but whose draft request
+  never arrived. Rare, harmless, and cheap to add later.
+- The rate limiter is per-instance in memory rather than distributed. Stated
+  plainly in `src/lib/rate-limit.ts`: the single-use, short-lived, hashed
+  token is the security boundary; the limiter only blunts enumeration.
 
 ## Out of scope
 

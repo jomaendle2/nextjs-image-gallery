@@ -1,7 +1,11 @@
 # the beauty of earth.
 
-A full-screen photo gallery. Next.js App Router, React 19, Tailwind v4,
-view counts in Neon Postgres.
+A full-screen photo gallery, open to a small set of invited photographers.
+Next.js App Router, React 19, Tailwind v4. Photographs live in Vercel Blob;
+metadata, contributors and view counts in Neon Postgres.
+
+See [docs/CONTRIBUTING-PHOTOS.md](docs/CONTRIBUTING-PHOTOS.md) for how
+contributions work and what an operator has to set up.
 
 ## Getting started
 
@@ -12,8 +16,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`DATABASE_URL` (a Neon connection string) is required. The view-count API
-creates its table on first call.
+### Environment
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | Neon connection string. |
+| `BLOB_READ_WRITE_TOKEN` | yes | Vercel Blob store. Set automatically once the store is linked to the project. |
+| `SITE_URL` | production | Canonical origin, e.g. `https://beautyofearth.example`. Magic-link emails are built from this and **never** from the request `Host` header. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then localhost. |
+| `RESEND_API_KEY` | to send email | Without it, sign-in links are printed to the server console instead of emailed. |
+| `EMAIL_FROM` | to send email | The verified sender address, e.g. `hello@beautyofearth.example`. |
+
+`vercel env pull .env.local` fetches the first two. Then apply the schema:
+
+```bash
+npm run db:migrate
+```
+
+The migrations are additive and idempotent — re-running them is a no-op.
 
 ## Scripts
 
@@ -26,6 +45,9 @@ creates its table on first call.
 | `npm run lint:fix` | Same, applying every safe fix |
 | `npm run format` | Format only |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest unit tests |
+| `npm run db:migrate` | Apply the additive schema (safe to re-run) |
+| `npm run db:import-assets` | One-off import of the original photos (already run) |
 
 ## Toolchain
 
