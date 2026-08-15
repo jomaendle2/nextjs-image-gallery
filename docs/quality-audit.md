@@ -136,20 +136,47 @@ site, and no link to it from anywhere. Replaced with a typed `manifest.ts`.
 The icons in `public/` were undeclared; the Apple touch icon — the one a
 home-screen bookmark uses — was never referenced.
 
+### Focus trapped in the viewer — `77994ed`
+
+`aria-modal` does nothing to the tab order. Measured: nine of twelve tab
+stops were outside the dialog, the fourth press landing on a navigation link
+behind a blurred backdrop. The first fix was wrong in an instructive way —
+`[tabindex]:not([tabindex="-1"])` does not exclude a `<button>` given
+`tabIndex={-1}`, because it still matches `button:not([disabled])`. The real
+filter is the `tabIndex >= 0` property.
+
+### `main` landmarks on the gallery pages — `cf6a915`
+
+`EmptyGallery` and `StatusPage` had one; the three pages that actually show
+photographs did not.
+
+### Multi-file upload — `8e53153`
+
+See contributor value above. Verified against the real ingest path, and the
+test rows deleted through the interface afterwards.
+
+### Grid view measured
+CLS is exactly 0 on mobile and desktop, including a full scroll to trigger
+lazy loading — `aspect-square` plus blur placeholders. Grid → slideshow hash
+navigation confirmed: clicking the seventh tile opens the slideshow on the
+seventh photograph.
+
 ---
 
 ## Open
 
 Ordered by value, not effort.
 
-### Contributor value — partly done
+### Contributor value — largely done
 `fed93a6` says what a photographer gets, which was four true things the page
 had never said. `cc239ac` adds the one that did not exist: a URL per
-photograph they can send to anyone.
+photograph they can send to anyone. `8e53153` lets them upload a shoot
+rather than a photograph — several files at once, by picker or drop, with
+per-file status.
 
-Still open, and the biggest remaining one: **uploading is work.** Every
-photograph needs a title and a description typed from nothing. See the AI
-Gateway note below — this is the friction worth removing.
+What remains of the friction: every photograph still needs a title and a
+description typed from nothing. That is the AI Gateway candidate below, and
+it is now the largest thing left between a photographer and publishing.
 
 ### Mobile — mostly done, one thing needs hardware
 Safe areas landed in `fc04dd6` but want a real notched device. Speed was
