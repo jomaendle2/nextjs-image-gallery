@@ -4,9 +4,10 @@ import { PhotoCredit } from "./PhotoCredit";
 
 interface ImageInfoProps {
   image: GalleryImage;
+  linkAuthor?: boolean;
 }
 
-export function ImageInfo({ image }: ImageInfoProps) {
+export function ImageInfo({ image, linkAuthor = true }: ImageInfoProps) {
   return (
     <div className="text-center text-white px-6 max-w-2xl mx-auto min-h-24 flex flex-col justify-center gap-1.5">
       {/*
@@ -28,7 +29,7 @@ export function ImageInfo({ image }: ImageInfoProps) {
         the caption, and re-announcing the photographer on every slide would
         be noise.
       */}
-      <PhotoCredit image={image} />
+      <PhotoCredit image={image} linkAuthor={linkAuthor} />
 
       <div className="flex justify-center items-center">
         <ViewCount

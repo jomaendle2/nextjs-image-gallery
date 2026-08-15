@@ -76,16 +76,22 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
     <li className="rounded-3xl border border-white/12 bg-white/5 p-5">
       <div className="flex flex-col gap-5 sm:flex-row">
         <div className="sm:w-[200px] sm:shrink-0">
-          <Image
-            alt={photo.title === "" ? "Uploaded photograph" : photo.title}
-            blurDataURL={photo.blur_data_url}
-            className="h-auto w-full rounded-2xl object-cover"
-            height={photo.height}
-            placeholder="blur"
-            sizes="200px"
-            src={photo.blob_url}
-            width={photo.width}
-          />
+          {/*
+            Fixed 4:3 box. Left to its own aspect ratio, a portrait original
+            made its row three times taller than a landscape one and the list
+            became impossible to scan.
+          */}
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white/5">
+            <Image
+              alt={photo.title === "" ? "Uploaded photograph" : photo.title}
+              blurDataURL={photo.blur_data_url}
+              className="object-cover"
+              fill={true}
+              placeholder="blur"
+              sizes="(max-width: 640px) 100vw, 200px"
+              src={photo.blob_url}
+            />
+          </div>
           <p className="mt-2 text-white/40 text-xs tabular-nums">
             {photo.width} × {photo.height}
           </p>

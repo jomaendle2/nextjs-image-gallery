@@ -37,7 +37,14 @@ function AuthorLink({ author }: { author: GalleryAuthor }) {
   );
 }
 
-export function PhotoCredit({ image }: { image: GalleryImage }) {
+export function PhotoCredit({
+  image,
+  linkAuthor = true,
+}: {
+  image: GalleryImage;
+  /** False on a contributor page, where the link would point at itself. */
+  linkAuthor?: boolean;
+}) {
   const { author, location } = image;
   const exif = exifLine(image);
 
@@ -45,7 +52,11 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
     <div className="flex flex-col items-center gap-1">
       <p className="text-[0.8125rem] text-white/55">
         <span className="text-white/40">by </span>
-        <AuthorLink author={author} />
+        {linkAuthor ? (
+          <AuthorLink author={author} />
+        ) : (
+          <span className="text-white/70">{author.name}</span>
+        )}
         {author.siteUrl === null ? null : (
           <>
             {" "}

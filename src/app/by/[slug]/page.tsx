@@ -42,5 +42,14 @@ export default async function ContributorGallery({ params }: PageProps) {
     return <EmptyGallery authorName={contributor.display_name} />;
   }
 
-  return <ImageCarousel images={images} />;
+  return (
+    <ImageCarousel
+      contributor={{
+        slug: contributor.slug,
+        name: contributor.display_name,
+        siteUrl: contributor.site_url,
+      }}
+      images={images}
+    />
+  );
 }

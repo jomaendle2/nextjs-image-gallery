@@ -27,6 +27,7 @@ export default async function ContributePage({ searchParams }: PageProps) {
 
   return (
     <ContributeShell
+      centred={true}
       subtitle="This gallery is open to invited photographers. Sign in with the address your invitation was sent to."
       title="Contribute"
     >

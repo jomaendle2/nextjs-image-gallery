@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { GalleryImage } from "@/data/galleryData";
+import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
+import { ContributorHeading } from "./carousel/ContributorHeading";
 import { ImageIndicators } from "./carousel/ImageIndicators";
 import { ImageInfo } from "./carousel/ImageInfo";
 import { ImageModal } from "./carousel/ImageModal";
@@ -21,6 +22,12 @@ interface ImageCarouselProps {
    * build-time assets.
    */
   images: readonly GalleryImage[];
+  /**
+   * Set on a contributor page. Without it that page renders identically to
+   * the main gallery, which makes the one URL a photographer actually shares
+   * say nothing about whose work it is.
+   */
+  contributor?: GalleryAuthor;
   initialIndex?: number;
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
@@ -29,6 +36,7 @@ interface ImageCarouselProps {
 
 export function ImageCarousel({
   images,
+  contributor,
   initialIndex = 0,
   currentIndex: externalCurrentIndex,
   onIndexChange,
@@ -159,9 +167,16 @@ export function ImageCarousel({
 
         <CarouselTopBar onClose={onClose} />
 
-        <h1 className="relative z-10 text-center font-semibold text-white text-2xl sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
-          the beauty of earth.
-        </h1>
+        {contributor === undefined ? (
+          <h1 className="relative z-10 text-center font-semibold text-white text-2xl sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
+            the beauty of earth.
+          </h1>
+        ) : (
+          <ContributorHeading
+            contributor={contributor}
+            photoCount={images.length}
+          />
+        )}
 
         <div className="relative z-10 flex-1 overflow-hidden">
           {/* Main carousel container with scroll snap */}
@@ -204,7 +219,10 @@ export function ImageCarousel({
         </div>
 
         <div className="relative z-10 flex-shrink-0 px-6 pb-10 space-y-4">
-          <ImageInfo image={currentImage} />
+          <ImageInfo
+            image={currentImage}
+            linkAuthor={contributor === undefined}
+          />
           <ImageIndicators
             currentIndex={currentIndex}
             images={images}

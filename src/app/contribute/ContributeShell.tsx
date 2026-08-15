@@ -14,11 +14,14 @@ export function ContributeShell({
   subtitle,
   children,
   action,
+  centred = false,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   action?: ReactNode;
+  /** For single-purpose pages, which look abandoned pinned to the top left. */
+  centred?: boolean;
 }) {
   return (
     <div className="min-h-dvh bg-[#12161a] text-white">
@@ -30,7 +33,13 @@ export function ContributeShell({
             "radial-gradient(120% 70% at 50% 0%, oklch(100% 0 0 / 0.07), transparent 60%)",
         }}
       />
-      <div className="relative mx-auto w-full max-w-3xl px-6 py-12 sm:py-16">
+      <div
+        className={
+          centred
+            ? "relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12"
+            : "relative mx-auto w-full max-w-3xl px-6 py-12 sm:py-16"
+        }
+      >
         <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
           <div>
             <Link
