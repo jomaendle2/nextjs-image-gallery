@@ -1,3 +1,4 @@
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -52,7 +53,9 @@ describe.skipIf(!hasDatabase)("subscription lifecycle", () => {
       );
       expect(confirmed?.email).toBe(address);
       expect(confirmed?.unsubscribeSecret).toBeTruthy();
-      expect(await repo.confirmSubscription(pending?.confirmSecret ?? "")).toBeNull();
+      expect(
+        await repo.confirmSubscription(pending?.confirmSecret ?? ""),
+      ).toBeNull();
 
       const afterSend = await repo.listConfirmedSubscribers();
       expect(afterSend.some((row) => row.email === address)).toBe(true);

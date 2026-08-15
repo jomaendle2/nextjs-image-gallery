@@ -120,6 +120,32 @@ export default async function PhotographersPage() {
               Apply to contribute
             </Link>
           </section>
+
+          {/*
+            The other half of the same question.
+
+            This page is the site's one navigational hub — it is where
+            somebody who has just looked at the photographers decides what to
+            do about it, and there are two honest answers: publish here, or
+            hear about it when someone else does. `/subscribe` existed with
+            nothing pointing at it, which is a page nobody can find.
+          */}
+          <section className="mt-10 max-w-prose">
+            <h2 className="font-semibold text-xl tracking-[-0.03em]">
+              Just here to look?
+            </h2>
+            <p className="mt-2 text-pretty text-sm text-white/55 leading-relaxed">
+              We will tell you when new photographs go up, and nothing else.
+              There is a feed too, if you would rather not give us an address.
+            </p>
+            <Link
+              className={`${TOUCH_LINK} mt-3 gap-1.5 font-medium text-sm text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+              href="/subscribe"
+            >
+              Follow the gallery
+              <ArrowRight aria-hidden="true" size={13} />
+            </Link>
+          </section>
         </main>
       </div>
     </div>

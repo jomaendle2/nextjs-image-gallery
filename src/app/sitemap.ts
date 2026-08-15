@@ -29,6 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    {
+      url: `${origin}/subscribe`,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
     { url: `${origin}/contribute`, changeFrequency: "monthly", priority: 0.7 },
     {
       url: `${origin}/contribute/apply`,
