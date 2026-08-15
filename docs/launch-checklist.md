@@ -81,7 +81,20 @@ your inbox. Generate one and add it to production; `vercel.json` already
 schedules the Monday 09:00 call.
 
 Note that the cron only *reminds* you. Nothing is ever mailed to the list
-without you pressing Send on `/contribute/admin`.
+without you pressing the button on `/contribute/admin`.
+
+**Your first announcement will contain all sixteen existing photographs.**
+Nothing has ever been announced, so `announced_at` is null on every row and
+the first send is a catch-up rather than a new-work notice. That is the
+intended behaviour and probably what you want for a first mailing — but the
+subject line will say sixteen, and the body lists twelve with "and four
+more", so it is worth knowing before you press it rather than after. If you
+would rather the first send only covered work published *after* launch, mark
+the existing rows announced first:
+
+```sql
+UPDATE photos SET announced_at = now() WHERE published_at IS NOT NULL;
+```
 
 ---
 
