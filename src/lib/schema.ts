@@ -131,4 +131,34 @@ export const MIGRATIONS: readonly string[] = [
    * email on every /contribute request; revocation deletes by email.
    */
   "CREATE INDEX IF NOT EXISTS sessions_email_idx ON sessions (email);",
+
+  /*
+   * People who asked to hear when new work is published.
+   *
+   * Double opt-in, which is not a nicety here: an address is only ever added
+   * by someone typing it, and anyone can type anyone's. `confirmed_at` stays
+   * null until the person clicks a link sent to that address, so an
+   * unconfirmed row is a request rather than a subscription and is never
+   * mailed anything except its own confirmation.
+   *
+   * `confirm_token_hash` and `unsubscribe_token` follow the same shape as
+   * `login_tokens`: the secret goes in the URL, only its hash is stored, so
+   * a dump of this table cannot be used to confirm or cancel anybody.
+   *
+   * The unsubscribe token does not expire. A footer link that stopped
+   * working after fifteen minutes would be worse than useless — it is the
+   * one link in the email that has to work whenever the person finds it.
+   */
+  `CREATE TABLE IF NOT EXISTS subscribers (
+     email              TEXT PRIMARY KEY,
+     confirm_token_hash TEXT,
+     confirm_expires_at TIMESTAMPTZ,
+     confirmed_at       TIMESTAMPTZ,
+     unsubscribe_hash   TEXT NOT NULL,
+     created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+   );`,
+
+  /* The send reads only confirmed rows, so it never scans the pending ones. */
+  `CREATE INDEX IF NOT EXISTS subscribers_confirmed_idx
+     ON subscribers (confirmed_at) WHERE confirmed_at IS NOT NULL;`,
 ];

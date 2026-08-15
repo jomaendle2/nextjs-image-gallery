@@ -145,3 +145,77 @@ export async function sendApplicationApproved(
     ),
   });
 }
+
+/**
+ * The one message an unconfirmed address is ever sent.
+ *
+ * Deliberately plain about what happened and what to do if it was not them.
+ * The address in the "to" line is the only evidence we have that whoever
+ * typed it owns it, and until this link comes back we assume they do not.
+ */
+export async function sendSubscribeConfirmation(
+  to: string,
+  url: string,
+): Promise<void> {
+  await send({
+    to,
+    subject: "Confirm your subscription",
+    text: [
+      "Someone asked to hear when new photographs are published on",
+      "the beauty of earth. If that was you, confirm here:",
+      "",
+      url,
+      "",
+      "The link expires in a day. If it was not you, ignore this —",
+      "nothing will be sent to this address.",
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
+         Someone asked to hear when new photographs are published. If that was
+         you, confirm below — the link expires in a day.
+       </p>
+       ${button(url, "Confirm subscription")}
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         If it was not you, ignore this. Nothing will be sent to this address.
+       </p>`,
+    ),
+  });
+}
+
+/**
+ * Sent once, on confirmation, carrying the unsubscribe link.
+ *
+ * That link is here as well as in every later message, because the moment
+ * somebody most wants a way out is the moment they realise they did not mean
+ * to sign up at all.
+ */
+export async function sendSubscribeWelcome(
+  to: string,
+  unsubscribeUrl: string,
+): Promise<void> {
+  const gallery = siteOrigin();
+
+  await send({
+    to,
+    subject: "You're subscribed — the beauty of earth.",
+    text: [
+      "You will hear from us when new photographs are published.",
+      "Not often, and never for anything else.",
+      "",
+      gallery,
+      "",
+      `Unsubscribe at any time: ${unsubscribeUrl}`,
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
+         You will hear from us when new photographs are published. Not often,
+         and never for anything else.
+       </p>
+       ${button(gallery, "See the gallery")}
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Unsubscribe</a>
+         at any time.
+       </p>`,
+    ),
+  });
+}

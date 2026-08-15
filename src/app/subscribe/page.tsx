@@ -1,0 +1,48 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ContributeShell } from "@/app/contribute/ContributeShell";
+import { TOUCH_LINK } from "@/components/ui/field";
+import { SubscribeForm } from "./SubscribeForm";
+
+export const metadata: Metadata = {
+  title: "Follow the gallery — the beauty of earth.",
+  description:
+    "Hear when new photographs are published. Not often, and never for anything else.",
+  alternates: { canonical: "/subscribe" },
+};
+
+/**
+ * The email half of following the gallery. `/feed.xml` is the other half,
+ * and it is offered here too — a reader costs us nothing and asks nothing of
+ * the person, which makes it the better option for anyone who has one.
+ */
+export default function SubscribePage() {
+  return (
+    <ContributeShell
+      subtitle="Hear when new photographs are published. Not often, and never for anything else."
+      title="Follow the gallery"
+    >
+      <div className="max-w-md">
+        <SubscribeForm />
+
+        <p className="mt-8 text-sm text-white/45">
+          We send one message when new work goes up, and nothing else. Your
+          address is confirmed before anything is sent, every message carries an
+          unsubscribe link, and unsubscribing deletes the address rather than
+          flagging it.
+        </p>
+
+        <p className="mt-4 text-sm text-white/45">
+          Prefer a reader?{" "}
+          <Link
+            className={`${TOUCH_LINK} text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+            href="/feed.xml"
+          >
+            The feed is here
+          </Link>
+          , and each photographer has one of their own.
+        </p>
+      </div>
+    </ContributeShell>
+  );
+}
