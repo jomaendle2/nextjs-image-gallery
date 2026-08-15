@@ -55,25 +55,54 @@ type inference does not resolve React 19's `useRef` overloads, and those
 guards are genuinely required — the ref is null before mount. Do not enable
 it without re-checking that.
 
+### Caption bar stopped resizing — `55431c4`
+
+The bar sits below the photograph, so its height comes out of the image's.
+Three things in it changed height per photograph — the description wrapping
+to a second line, the EXIF line existing only when there was EXIF, and the
+view counter changing width as NumberFlow animated past a digit boundary.
+All three are reserved now. Measured across all fourteen photographs: one
+unique layout per breakpoint, where before there were two on tablet and four
+on desktop. Load CLS was already ~0 and still is.
+
+### Two authorisation holes closed — `1e1425c`
+
+`/api/photos/draft` checked that a blob URL was ours but not whose it was,
+and published blob URLs are public in the page markup — so one contributor
+could claim another's photograph. `POST /api/views` was unauthenticated,
+unvalidated and unlimited, and would create a row for any string, while the
+read had no `LIMIT` and is fetched by every visitor.
+
+The near-miss worth remembering: the obvious fix for the second was a strict
+nanoid regex on the id. Testing against the real table showed the fourteen
+imported photographs kept numeric ids (`"1"`–`"14"`) and hold every view
+this site has counted — the tight regex would have switched view counting
+off for the whole gallery. The `WHERE EXISTS` gate is the guarantee; the
+regex is only a cheap bound.
+
+### End-to-end pass over every public route
+
+All eight routes render, no console errors, no horizontal overflow. This
+found that **the database had not been migrated**: `getCurrentContributor`
+joins on `sessions.email`, added in `0636edc`, and every `/contribute` route
+was answering 500 with `column s.email does not exist`. `npm run db:migrate`
+fixed it. Worth knowing that the code and the schema are coupled this way at
+deploy time — shipping that commit without running migrations takes the
+whole contributor flow down.
+
+The new `error.tsx` caught it and showed "That didn't load" rather than a
+stack trace, which is exactly the day it was written for.
+
 ---
 
 ## Open
 
 Ordered by value, not effort.
 
-### Layout stability while loading and switching
-The brief calls this out twice. Needs measurement, not assumption: CLS on
-first paint, and what moves when the carousel changes photograph.
-
 ### Contributor value
 "We must provide value such that others contribute." Today the pitch is a
 form. What does a photographer *get* — an audience, a page they are proud
 to link to, stats, a print, a credit that follows the image?
-
-### Security review
-Branch has never had a clean pass. Auth is magic-link + session; uploads go
-through a token route; there is an admin surface. Worth a careful read of
-`src/lib/auth/**`, `src/app/api/**` and the server actions.
 
 ### Mobile polish and speed
 Real-device-shaped checks: touch targets, safe areas, scroll behaviour,
@@ -90,6 +119,19 @@ else's photograph are a product decision, not a feature.
 ### Marketing surfaces
 OG images exist. Missing: a way to share a single photograph, a feed, any
 reason to return.
+
+---
+
+### A unique index on `photos.blob_pathname`
+`1e1425c` closes the attribution hole in application code. The database
+should enforce it too, but `CREATE UNIQUE INDEX` fails if duplicates already
+exist, and the migration list is documented as safe to re-run — so check
+first, then add:
+
+```sql
+SELECT blob_pathname, count(*) FROM photos
+GROUP BY blob_pathname HAVING count(*) > 1;
+```
 
 ---
 
