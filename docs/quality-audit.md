@@ -336,7 +336,11 @@ where the work is good.
 The demand-side foundation now exists — a page per photograph, real OG
 cards, a sitemap, structured data. What is missing is the other half.
 
-### 1. A way to follow the gallery — build this first
+### 1. A way to follow the gallery — feed done, email list open
+
+`1a5bcaf` adds `/feed.xml` with autodiscovery. The email half is **not**
+built, deliberately: it means collecting addresses, consent, and a sending
+path, which is a product decision rather than a cleanup.
 
 There is currently no reason to return and no way to subscribe. Every
 visitor is a one-time arrival from a link. That is the single largest gap,
@@ -393,6 +397,19 @@ Weaker candidates, for the record: ad-free (there are no ads), downloads
 Money flowing to photographers is the strongest recruitment argument there
 is, and it is operationally heavy: fulfilment, tax, returns, disputes. Worth
 wanting, not worth starting before 1–3.
+
+---
+
+## Also done
+
+- **Security headers** — `4dc5320`. The app sent none. Six now, including a
+  `Permissions-Policy` denying geolocation, which is the browser-facing
+  version of the promise the site makes to photographers. A script CSP is
+  deliberately absent and the config says why: nonces need middleware, and
+  middleware ahead of the cache is the cost this codebase already declined
+  to pay for auth.
+- **Touch targets** — `7c8c69c`, `53d74fc`. Eighteen route/viewport
+  combinations, nothing under 44px.
 
 ---
 
