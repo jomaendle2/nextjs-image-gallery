@@ -31,7 +31,9 @@ function exifLine(image: GalleryImage): string | null {
 function AuthorLink({ author }: { author: GalleryAuthor }) {
   return (
     <Link
-      className="rounded-full text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+      /* Vertical padding pulled back out by the negative margin: a taller
+         touch target on a phone without moving the baseline. */
+      className="-my-2 inline-block rounded-full py-2 text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
       href={`/by/${author.slug}`}
     >
       {author.name}

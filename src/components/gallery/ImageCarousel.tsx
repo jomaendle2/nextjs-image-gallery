@@ -195,11 +195,11 @@ export function ImageCarousel({
         <CarouselTopBar onClose={onClose} />
 
         {contributor === undefined ? (
-          <h1 className="relative z-10 text-center font-semibold text-white text-2xl sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
+          <h1 className="relative z-10 px-4 pt-7 text-center font-semibold text-white text-2xl sm:px-8 sm:pt-9 sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
             the beauty of earth.
           </h1>
         ) : (
-          <div className="relative z-10 mx-auto w-full max-w-[1536px] px-4 sm:px-8">
+          <div className="relative z-10">
             <ContributorHeader
               contributor={contributor}
               photoCount={images.length}

@@ -5,8 +5,17 @@ interface CarouselTopBarProps {
 }
 
 export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
+  /*
+   * Nothing to show without a close handler. This used to render an empty
+   * `p-6` box regardless, costing 72px of dead space at the top of every page
+   * and pushing the contributor header out of line with the grid's.
+   */
+  if (!onClose) {
+    return null;
+  }
+
   return (
-    <div className="flex-shrink-0 flex justify-between items-center p-6">
+    <div className="flex flex-shrink-0 items-center justify-between p-6">
       {onClose ? (
         <button
           onClick={onClose}

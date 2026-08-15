@@ -42,24 +42,23 @@ export function PhotoGrid({
         }}
       />
 
-      <div className="relative mx-auto w-full max-w-[1536px] px-4 pb-14 sm:px-8">
-        {/*
-          Sticky, so the view toggle and the photographer's name stay reachable
-          on a phone instead of scrolling away after the first two tiles.
-        */}
-        <div
-          className="-mx-4 sm:-mx-8 sticky top-0 z-20 border-white/[0.06] border-b px-4 py-4 backdrop-blur-xl sm:px-8 sm:py-6"
-          style={{
-            backgroundColor: `color-mix(in oklab, ${GROUND} 82%, transparent)`,
-          }}
-        >
-          <ContributorHeader
-            contributor={contributor}
-            photoCount={images.length}
-            view="grid"
-          />
-        </div>
+      {/*
+        Sticky, so the view toggle and the photographer's name stay reachable
+        on a phone instead of scrolling away after the first two tiles.
 
+        The bar itself — padding, hairline, blur, inner max-width — lives in
+        ContributorHeader, so the slideshow gets exactly the same one. Styling
+        it here is what let the two headers drift apart the first time.
+      */}
+      <div className="sticky top-0 z-20">
+        <ContributorHeader
+          contributor={contributor}
+          photoCount={images.length}
+          view="grid"
+        />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-[1536px] px-4 pb-14 sm:px-8">
         <ul className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {images.map((image, index) => (
             <li key={image.id}>

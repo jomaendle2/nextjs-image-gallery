@@ -26,30 +26,42 @@ const Thumbnail = memo(function ThumbnailButton({
   };
 
   return (
+    /*
+     * The button is the touch target, the span inside it is the picture.
+     *
+     * Splitting them is what lets a 36px tile carry a 48px target: the tile
+     * cannot simply be grown to 44px without turning the strip into a row of
+     * chunky squares, and the button cannot be padded while it still clips
+     * its own children with `overflow-hidden`.
+     */
     <button
       aria-current={isActive}
       aria-label={`Go to image ${index + 1}: ${image.title}`}
-      className={`relative flex-shrink-0 overflow-hidden transition-[width,height,box-shadow,opacity] duration-400 ease-glass ${
-        isActive
-          ? "size-[52px] rounded-[13px] shadow-[0_0_0_1.5px_oklch(100%_0_0_/_0.9),0_8px_22px_-8px_oklch(0%_0_0_/_0.8)] opacity-100"
-          : "size-9 rounded-[10px] opacity-45 shadow-[0_0_0_1px_oklch(100%_0_0_/_0.18)] hover:opacity-90 hover:shadow-[0_0_0_1px_oklch(100%_0_0_/_0.45)] active:scale-95"
-      }`}
+      className="group -m-1.5 relative flex flex-shrink-0 items-center justify-center rounded-2xl p-1.5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/80"
       onClick={handleClick}
       type="button"
     >
-      <Image
-        alt=""
-        className="object-cover"
-        fill={true}
-        loading="lazy"
-        placeholder="blur"
-        sizes="64px"
-        src={image.src}
-      />
-      {/* Specular sheen so the active tile reads as lit glass, not a border. */}
-      {isActive ? (
-        <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-black/25" />
-      ) : null}
+      <span
+        className={`relative block overflow-hidden transition-[width,height,box-shadow,opacity] duration-400 ease-glass ${
+          isActive
+            ? "size-[52px] rounded-[13px] opacity-100 shadow-[0_0_0_1.5px_oklch(100%_0_0_/_0.9),0_8px_22px_-8px_oklch(0%_0_0_/_0.8)]"
+            : "size-9 rounded-[10px] opacity-45 shadow-[0_0_0_1px_oklch(100%_0_0_/_0.18)] group-active:scale-95 hover:opacity-90 hover:shadow-[0_0_0_1px_oklch(100%_0_0_/_0.45)]"
+        }`}
+      >
+        <Image
+          alt=""
+          className="object-cover"
+          fill={true}
+          loading="lazy"
+          placeholder="blur"
+          sizes="64px"
+          src={image.src}
+        />
+        {/* Specular sheen so the active tile reads as lit glass, not a border. */}
+        {isActive ? (
+          <span className="absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-black/25" />
+        ) : null}
+      </span>
     </button>
   );
 });
