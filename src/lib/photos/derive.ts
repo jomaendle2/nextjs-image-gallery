@@ -144,6 +144,20 @@ function buildExif(raw: Record<string, unknown>): PhotoExif | null {
   return Object.keys(exif).length > 0 ? exif : null;
 }
 
+/**
+ * A `PhotoExif | null` as a `jsonb` bind parameter.
+ *
+ * `JSON.stringify(null)` is the four-character string `"null"`, and casting
+ * that to `jsonb` stores the JSON value null rather than SQL NULL. The column
+ * then looks populated to every operator that matters: `WHERE exif IS NULL`
+ * matches nothing, `COALESCE` never fires, and a diagnostic query counting
+ * photographs without camera data quietly returns zero. Returning a real
+ * `null` binds SQL NULL, and `NULL::jsonb` is still NULL.
+ */
+export function exifParam(exif: PhotoExif | null): string | null {
+  return exif === null ? null : JSON.stringify(exif);
+}
+
 async function readExif(buffer: Buffer): Promise<PhotoExif | null> {
   let raw: unknown;
   try {

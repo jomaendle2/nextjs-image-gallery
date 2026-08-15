@@ -17,13 +17,21 @@ const SESSION_MAX_AGE = SESSION_DAYS * 24 * 60 * 60;
  * stays valid until it expires. The lookup only ever runs on /contribute
  * routes, so the cached public gallery pays nothing for it.
  */
-export async function createSession(contributorId: string): Promise<void> {
+export async function createSession(contributor: Contributor): Promise<void> {
   const secret = generateSecret();
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000).toISOString();
 
+  /*
+   * Both columns are written. `email` is what the session is keyed on and
+   * what every read resolves through; `contributor_id` is kept so the
+   * foreign key's ON DELETE CASCADE still cleans up after a deleted
+   * contributor, and so the previous keying remains available if this one
+   * turns out to be wrong.
+   */
   await sql`
-    INSERT INTO sessions (id, contributor_id, expires_at)
-    VALUES (${hashSecret(secret)}, ${contributorId}, ${expiresAt});
+    INSERT INTO sessions (id, contributor_id, email, expires_at)
+    VALUES (${hashSecret(secret)}, ${contributor.id}, ${contributor.email},
+            ${expiresAt});
   `;
 
   const store = await cookies();
@@ -37,11 +45,38 @@ export async function createSession(contributorId: string): Promise<void> {
 }
 
 /**
- * The only way to learn who is signed in.
+ * The address of whoever is signed in, or null.
+ *
+ * This is the identity; everything else is a capability looked up from it.
+ * `getCurrentContributor` is one such lookup, and a later `getCurrentMember`
+ * is another — both resolve from the same cookie and the same session row,
+ * which is the whole point of keying sessions on email rather than on a
+ * contributor id.
+ */
+export async function getSessionEmail(): Promise<string | null> {
+  const store = await cookies();
+  const secret = store.get(SESSION_COOKIE)?.value;
+  if (secret === undefined || secret === "") {
+    return null;
+  }
+
+  const rows = await sql`
+    SELECT email FROM sessions
+    WHERE id = ${hashSecret(secret)} AND expires_at > now();
+  `;
+  return (rows[0]?.["email"] as string | undefined) ?? null;
+}
+
+/**
+ * The contributor capability of the signed-in address, if it has one.
  *
  * Deliberately not middleware: middleware runs ahead of the cache on every
  * request, so an auth check there would tax every anonymous visitor to the
  * gallery for the benefit of a handful of contributors.
+ *
+ * Kept as a single join rather than `getSessionEmail()` followed by a lookup,
+ * because this runs on every /contribute request and one round trip beats
+ * two. The two are equivalent: `sessions.email` is the join key either way.
  */
 export async function getCurrentContributor(): Promise<Contributor | null> {
   const store = await cookies();
@@ -53,7 +88,7 @@ export async function getCurrentContributor(): Promise<Contributor | null> {
   const rows = await sql`
     SELECT c.id, c.email, c.slug, c.display_name, c.site_url, c.role
     FROM sessions s
-    JOIN contributors c ON c.id = s.contributor_id
+    JOIN contributors c ON c.email = s.email
     WHERE s.id = ${hashSecret(secret)}
       AND s.expires_at > now()
       AND c.revoked_at IS NULL;

@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { Contributor } from "@/lib/auth/types";
 import { isOwner } from "@/lib/auth/types";
 import { sql } from "@/lib/database";
+import { exifParam } from "./derive";
 import type {
   DraftPhotoInput,
   OwnPhotoRow,
@@ -91,7 +92,7 @@ export async function insertDraftPhoto(
     VALUES (${id}, ${input.blob_url}, ${input.blob_pathname},
             ${input.display_url}, ${input.width},
             ${input.height}, ${input.blur_data_url}, ${input.bg_color},
-            ${JSON.stringify(input.exif)}::jsonb, ${input.author_id});
+            ${exifParam(input.exif)}::jsonb, ${input.author_id});
   `;
   return id;
 }

@@ -144,7 +144,15 @@ export async function setContributorRevoked(
   const revokedAt = revoked ? new Date().toISOString() : null;
   await sql`UPDATE contributors SET revoked_at = ${revokedAt} WHERE id = ${id};`;
   if (revoked) {
-    // Revocation has to be immediate, so live sessions go with it.
-    await sql`DELETE FROM sessions WHERE contributor_id = ${id};`;
+    /*
+     * Revocation has to be immediate, so live sessions go with it. Deleted
+     * by email, matching the column sessions are keyed and read on — the
+     * `contributor_id` on those rows is a fallback, not the lookup path, and
+     * clearing by it would leave a session that still resolves.
+     */
+    await sql`
+      DELETE FROM sessions
+      WHERE email = (SELECT email FROM contributors WHERE id = ${id});
+    `;
   }
 }

@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { beforeAll, describe, expect, it } from "vitest";
-import { deriveFromBuffer, EXIF_OPTIONS } from "./derive";
+import { deriveFromBuffer, EXIF_OPTIONS, exifParam } from "./derive";
 
 /**
  * The fixture is synthesised rather than committed. A real stock JPEG cannot
@@ -132,5 +132,23 @@ describe("deriveFromBuffer", () => {
     await expect(
       deriveFromBuffer(Buffer.from("this is not an image")),
     ).rejects.toThrow();
+  });
+});
+
+describe("exifParam", () => {
+  it("binds SQL NULL rather than the JSON value null", () => {
+    /*
+     * `JSON.stringify(null)` is the string "null", and "null"::jsonb is a
+     * populated cell. A photograph with no camera data then fails to match
+     * `WHERE exif IS NULL`, which is exactly the bug this closes.
+     */
+    expect(exifParam(null)).toBeNull();
+    expect(exifParam(null)).not.toBe("null");
+  });
+
+  it("still serialises a populated exif block", () => {
+    expect(exifParam({ camera: "SONY ILCE-7M4", iso: 400 })).toBe(
+      '{"camera":"SONY ILCE-7M4","iso":400}',
+    );
   });
 });

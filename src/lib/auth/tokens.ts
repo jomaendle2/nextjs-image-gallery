@@ -14,9 +14,10 @@ const TOKEN_TTL_MINUTES = 15;
  * allowed to become an oracle for who is on the list.
  */
 export async function mintLoginToken(email: string): Promise<string | null> {
+  const address = normaliseEmail(email);
   const rows = await sql`
     SELECT id FROM contributors
-    WHERE email = ${normaliseEmail(email)} AND revoked_at IS NULL;
+    WHERE email = ${address} AND revoked_at IS NULL;
   `;
   const contributorId = rows[0]?.["id"] as string | undefined;
   if (contributorId === undefined) {
@@ -28,9 +29,18 @@ export async function mintLoginToken(email: string): Promise<string | null> {
     Date.now() + TOKEN_TTL_MINUTES * 60 * 1000,
   ).toISOString();
 
+  /*
+   * The token is issued to the *address*. `contributor_id` is still written
+   * for the cascade and as a fallback, but `email` is what redeeming it
+   * resolves through — so the same flow can one day issue a link to someone
+   * who has bought a membership and has no contributors row at all.
+   *
+   * The normalised form is stored, so redemption matches whatever casing the
+   * person typed into the sign-in form.
+   */
   await sql`
-    INSERT INTO login_tokens (token_hash, contributor_id, expires_at)
-    VALUES (${hashSecret(secret)}, ${contributorId}, ${expiresAt});
+    INSERT INTO login_tokens (token_hash, contributor_id, email, expires_at)
+    VALUES (${hashSecret(secret)}, ${contributorId}, ${address}, ${expiresAt});
   `;
 
   return secret;
@@ -43,6 +53,10 @@ export async function mintLoginToken(email: string): Promise<string | null> {
  * write: `WHERE used_at IS NULL` and the write happen in one statement, so
  * two simultaneous clicks on the same link cannot both succeed. A revoked
  * contributor is rejected even holding an unexpired token.
+ *
+ * The token resolves to an address, and the address to a contributor. A token
+ * that somehow carries no address is spent and refused — failing closed costs
+ * one sign-in retry, and the alternative is a token that redeems as nobody.
  */
 export async function consumeLoginToken(
   secret: string,
@@ -56,17 +70,17 @@ export async function consumeLoginToken(
     WHERE token_hash = ${hashSecret(secret)}
       AND used_at IS NULL
       AND expires_at > now()
-    RETURNING contributor_id;
+    RETURNING email;
   `;
-  const contributorId = consumed[0]?.["contributor_id"] as string | undefined;
-  if (contributorId === undefined) {
+  const address = consumed[0]?.["email"] as string | null | undefined;
+  if (address === undefined || address === null) {
     return null;
   }
 
   const rows = await sql`
     SELECT id, email, slug, display_name, site_url, role
     FROM contributors
-    WHERE id = ${contributorId} AND revoked_at IS NULL;
+    WHERE email = ${address} AND revoked_at IS NULL;
   `;
   const [row] = rows;
   if (!row) {

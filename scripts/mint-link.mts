@@ -36,8 +36,8 @@ const tokenHash = createHash("sha256").update(secret).digest("hex");
 const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
 await sql`
-  INSERT INTO login_tokens (token_hash, contributor_id, expires_at)
-  VALUES (${tokenHash}, ${contributor["id"]}, ${expiresAt});
+  INSERT INTO login_tokens (token_hash, contributor_id, email, expires_at)
+  VALUES (${tokenHash}, ${contributor["id"]}, ${email}, ${expiresAt});
 `;
 
 console.log(`Sign-in link for ${contributor["display_name"]} (valid 15 min):`);

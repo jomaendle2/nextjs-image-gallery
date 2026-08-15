@@ -75,6 +75,16 @@ export const MIGRATIONS: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS applications_pending_email_idx
      ON applications (email) WHERE status = 'pending';`,
 
+  /*
+   * Photographs ingested before `exifParam` existed stored the JSON value
+   * null in this column rather than SQL NULL, because `JSON.stringify(null)`
+   * cast to jsonb is a populated cell containing null. `WHERE exif IS NULL`
+   * matched none of them. Idempotent: after the first run the predicate finds
+   * nothing, and correctly-null rows are excluded by `IS NULL` semantics on
+   * the comparison itself.
+   */
+  "UPDATE photos SET exif = NULL WHERE exif::text = 'null';",
+
   `CREATE TABLE IF NOT EXISTS login_tokens (
      token_hash     TEXT PRIMARY KEY,
      contributor_id TEXT NOT NULL REFERENCES contributors(id) ON DELETE CASCADE,
@@ -87,4 +97,38 @@ export const MIGRATIONS: readonly string[] = [
      contributor_id TEXT NOT NULL REFERENCES contributors(id) ON DELETE CASCADE,
      expires_at     TIMESTAMPTZ NOT NULL
    );`,
+
+  /*
+   * Re-key both auth tables on email.
+   *
+   * A person is identified by their address; "contributor" is a capability
+   * attached to it, not the identity itself. Keying tokens and sessions on
+   * `contributor_id` made the two the same thing, so a second capability —
+   * a paying member, who has an address but no contributors row — would have
+   * needed a second login flow, a second cookie and a second set of tokens.
+   * With email as the operative column, the same magic link and the same
+   * session serve both, and each capability is one lookup off the address.
+   *
+   * `contributor_id` stays: still written, still cascading on delete, and
+   * still the thing to fall back to if the cutover proves wrong. It is also
+   * still NOT NULL, which is exactly the constraint that has to be dropped
+   * before a non-contributor can hold a session — that belongs with the
+   * change that introduces one, not here.
+   */
+  "ALTER TABLE login_tokens ADD COLUMN IF NOT EXISTS email TEXT;",
+  "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS email TEXT;",
+
+  `UPDATE login_tokens t SET email = c.email
+     FROM contributors c
+     WHERE c.id = t.contributor_id AND t.email IS NULL;`,
+
+  `UPDATE sessions s SET email = c.email
+     FROM contributors c
+     WHERE c.id = s.contributor_id AND s.email IS NULL;`,
+
+  /*
+   * Sessions are looked up by primary key and joined to a contributor by
+   * email on every /contribute request; revocation deletes by email.
+   */
+  "CREATE INDEX IF NOT EXISTS sessions_email_idx ON sessions (email);",
 ];

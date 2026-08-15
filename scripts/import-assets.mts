@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { put } from "@vercel/blob";
 import { sql } from "../src/lib/database.ts";
-import { deriveFromBuffer } from "../src/lib/photos/derive.ts";
+import { deriveFromBuffer, exifParam } from "../src/lib/photos/derive.ts";
 
 /**
  * Moves the original gallery out of `src/assets` and into Blob + Postgres.
@@ -197,7 +197,7 @@ async function main(): Promise<void> {
       VALUES (${seed.id}, ${blob.url}, ${blob.pathname}, ${derived.width},
               ${derived.height}, ${derived.blur_data_url}, ${seed.bgColor},
               ${seed.title}, ${seed.description},
-              ${JSON.stringify(derived.exif)}::jsonb, ${authorId},
+              ${exifParam(derived.exif)}::jsonb, ${authorId},
               ${publishedAt}, ${index === 0});
     `;
 

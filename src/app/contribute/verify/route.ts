@@ -19,7 +19,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  await createSession(contributor.id);
+  await createSession(contributor);
 
   // Cheap housekeeping on a path that runs rarely, rather than a cron job.
   await pruneLoginTokens();
