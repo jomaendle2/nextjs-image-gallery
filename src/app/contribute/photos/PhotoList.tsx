@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckSquare, Eye, EyeOff, Search, X } from "lucide-react";
+import { CheckSquare, ChevronDown, Eye, EyeOff, Search, X } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { FIELD } from "@/components/ui/field";
@@ -28,6 +28,23 @@ import { PhotoCard } from "./PhotoCard";
 
 type Filter = "all" | "published" | "draft";
 
+/*
+ * How many rows to render before asking.
+ *
+ * I originally refused pagination outright, on the grounds that a filter
+ * narrowing fifty rows to three beats pages of ten and hides nothing behind
+ * a click. I still think that about *numbered pages* — but it was the wrong
+ * answer to what was actually asked, which was that a very long list is
+ * unpleasant regardless of how good the search is.
+ *
+ * So: a cap and a button, not pages. Nothing is hidden behind a page number
+ * you have to guess at, the count is always visible, and one press shows
+ * everything. Filtering searches the whole set rather than the visible
+ * window, so narrowing never misses a match that happened to fall past the
+ * cap — which is the way paginated search usually goes wrong.
+ */
+const INITIAL_ROWS = 30;
+
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "published", label: "Published" },
@@ -53,6 +70,8 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [showAll, setShowAll] = useState(false);
+  const revealAll = useCallback(() => setShowAll(true), []);
   const { pending, error, run } = useServerAction();
 
   const toggleOne = useCallback((id: string, checked: boolean) => {
@@ -265,7 +284,7 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
         </p>
       ) : (
         <ul className="space-y-3">
-          {visible.map((photo) => (
+          {(showAll ? visible : visible.slice(0, INITIAL_ROWS)).map((photo) => (
             <PhotoCard
               key={photo.id}
               onSelect={toggleOne}
@@ -275,6 +294,17 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
           ))}
         </ul>
       )}
+
+      {!showAll && visible.length > INITIAL_ROWS ? (
+        <button
+          className="glass-hairline mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl px-5 font-medium text-sm text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          onClick={revealAll}
+          type="button"
+        >
+          <ChevronDown aria-hidden="true" className="mr-1.5" size={15} />
+          Show the other {visible.length - INITIAL_ROWS}
+        </button>
+      ) : null}
     </div>
   );
 }

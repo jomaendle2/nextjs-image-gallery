@@ -26,7 +26,11 @@ the surprise being silent — but a warning is not isolation.
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
 branch per preview is a dashboard setting, not code.
 
-### 2. Windowing the gallery — past roughly 300 photographs
+### 2. Windowing the *public* gallery — past roughly 300 photographs
+
+(The contributor dashboard is handled: rows are capped at 30 with a reveal
+control, and filtering searches the whole set rather than the visible
+window.)
 
 Measured, not guessed: 136 KB of HTML at 16 photographs, 676 KB at 116.
 **5.4 KB and 5 DOM nodes per photograph, linear.** That projects to about
