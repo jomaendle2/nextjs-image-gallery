@@ -208,6 +208,22 @@ refused with "That link has expired or was already used", which is the
 atomic single-use `UPDATE` doing its job. A signed-in non-owner still gets a
 404 at `/contribute/admin` rather than a 403.
 
+### Reduced motion, everywhere — `a31e4ca`
+
+The block named three class names — the viewer's entrance — and everything
+else kept moving, including the viewer's own exit animations. Now a blanket
+rule with one deliberate exception. Durations are zeroed rather than motion
+removed, because the dock's magnification is information: under `reduce` the
+selected tile is still 1.45×, it just arrives there.
+
+### Pinch to zoom — `a226e91`
+
+The viewer had zoom buttons and double-tap and nothing for the gesture
+everyone actually uses on a phone. Scale derives from the ratio since the
+gesture began rather than accumulating, so a round trip returns to exactly
+1.000. The photograph needs `touch-action: none` or the browser claims the
+two-finger touch for page zoom before any `pointermove` arrives.
+
 ---
 
 ## Open
