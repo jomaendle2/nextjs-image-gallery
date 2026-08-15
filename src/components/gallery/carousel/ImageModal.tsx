@@ -90,12 +90,20 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
   const isZoomed = scale > 1;
   const dragCursor = isDragging ? "grabbing" : "grab";
+  /*
+   * Widen the `sizes` hint as the user zooms so the browser picks a larger
+   * candidate from the srcset. Without this, zooming just upscales the same
+   * ~90vw bitmap: the image gets bigger but no sharper, which reads as the
+   * zoom being broken. Capped at 300vw so we never request the 4K source
+   * for a small step.
+   */
+  const zoomedSizes = `${Math.min(Math.round(90 * scale), 300)}vw`;
 
   return (
     <div
       aria-label={`${image.title}, full screen`}
       aria-modal="true"
-      className={`fixed inset-0 z-[100] flex items-center justify-center motion-duration-300 bg-black/70 backdrop-blur-md transition-all duration-300 ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center motion-duration-300 bg-black/75 backdrop-blur-xl transition-all duration-300 ${
         isClosing ? "opacity-0" : "motion-preset-expand"
       }`}
       role="dialog"
@@ -151,12 +159,12 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
       {/* Image Info - positioned in bottom right corner */}
       <div className="absolute bottom-4 right-4 left-4 z-10">
-        <div className="backdrop-blur-md mx-auto max-w-md bg-black/20 rounded-2xl p-4 border border-white/10">
-          <h3 className="font-semibold text-lg mb-1 text-white/95 tracking-tight">
+        <div className="mx-auto max-w-md glass-thick rounded-[20px] px-4 py-3.5">
+          <h2 className="font-semibold text-base mb-1 text-white tracking-[-0.02em]">
             {image.title}
-          </h3>
+          </h2>
           <div className="flex justify-between items-center mb-2">
-            <p className="text-sm text-white/70 leading-relaxed">
+            <p className="text-[0.8125rem] text-white/65 leading-relaxed">
               {image.description}
             </p>
             <ViewCount
@@ -188,10 +196,16 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
         style={{
           cursor: isZoomed ? dragCursor : "default",
           touchAction: isZoomed ? "none" : "auto",
+          // This surface spans the viewport, so while it is not being used
+          // for panning it has to stay transparent to clicks, otherwise it
+          // swallows every click aimed at the backdrop behind it and
+          // click-outside-to-close silently does nothing. Events from the
+          // image still bubble through it either way.
+          pointerEvents: isZoomed ? "auto" : "none",
         }}
       >
         <div
-          className={`relative transition-opacity duration-300 ease-out ${
+          className={`relative pointer-events-auto transition-opacity duration-300 ease-out ${
             isLoaded ? "opacity-100" : "opacity-0"
           }`}
           ref={contentRef}
@@ -207,7 +221,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
             placeholder="blur"
             priority={true}
             quality={95}
-            sizes="90vw"
+            sizes={zoomedSizes}
             src={image.src}
           />
         </div>

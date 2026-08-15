@@ -20,12 +20,10 @@ export function GlassButton({
       className={cn(
         // Base styles
         "relative inline-flex items-center justify-center",
-        "bg-button-glass/80 border border-glass-border",
-        "text-gallery-text font-medium",
-        "transition-all duration-200 ease-out",
-        "hover:bg-button-glass-hover active:scale-95",
+        "glass-thin text-white font-medium",
+        "transition-[transform,background-color] duration-300 ease-glass",
+        "hover:bg-[var(--glass-fill-hover)] active:scale-95",
         "disabled:opacity-50 disabled:pointer-events-none",
-        "shadow-glass transform-gpu backdrop-blur-md",
 
         // Variants
         variant === "default" && "rounded-2xl",

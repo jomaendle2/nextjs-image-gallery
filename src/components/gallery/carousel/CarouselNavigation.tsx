@@ -17,32 +17,38 @@ export function CarouselNavigation({
     <>
       {/* Previous button */}
       <button
-        onClick={onPrevious}
-        disabled={!canGoPrevious}
-        className={`absolute left-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 transition-all duration-300 ease-out shadow-lg ${
+        className={`absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 grid place-items-center size-12 sm:size-14 rounded-full glass-thin transition-[transform,background-color,opacity] duration-300 ease-glass ${
           canGoPrevious
-            ? "hover:bg-black/50 hover:scale-105 hover:shadow-xl active:scale-95 opacity-100"
-            : "opacity-40 cursor-not-allowed"
+            ? "hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95 opacity-100"
+            : "opacity-30 cursor-not-allowed"
         }`}
+        disabled={!canGoPrevious}
+        onClick={onPrevious}
         aria-label="Previous image"
         type="button"
       >
-        <ChevronLeft className="w-6 h-6 text-white" strokeWidth={2.5} />
+        <ChevronLeft
+          className="size-5 sm:size-6 text-white"
+          strokeWidth={2.25}
+        />
       </button>
 
       {/* Next button */}
       <button
-        onClick={onNext}
-        disabled={!canGoNext}
-        className={`absolute right-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 transition-all duration-300 ease-out shadow-lg ${
+        className={`absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 grid place-items-center size-12 sm:size-14 rounded-full glass-thin transition-[transform,background-color,opacity] duration-300 ease-glass ${
           canGoNext
-            ? "hover:bg-black/50 hover:scale-105 hover:shadow-xl active:scale-95 opacity-100"
-            : "opacity-40 cursor-not-allowed"
+            ? "hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95 opacity-100"
+            : "opacity-30 cursor-not-allowed"
         }`}
+        disabled={!canGoNext}
+        onClick={onNext}
         aria-label="Next image"
         type="button"
       >
-        <ChevronRight className="w-6 h-6 text-white" strokeWidth={2.5} />
+        <ChevronRight
+          className="size-5 sm:size-6 text-white"
+          strokeWidth={2.25}
+        />
       </button>
     </>
   );

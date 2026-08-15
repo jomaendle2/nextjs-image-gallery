@@ -10,11 +10,11 @@ export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
       {onClose ? (
         <button
           onClick={onClose}
-          className="p-3 rounded-full bg-black/30 backdrop-blur-xl border border-white/15 hover:bg-black/50 transition-all duration-300 ease-out hover:scale-105 active:scale-95 shadow-lg"
+          className="grid place-items-center size-11 rounded-full glass-thin transition-[transform,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95"
           aria-label="Close gallery"
           type="button"
         >
-          <X className="w-5 h-5 text-white" strokeWidth={2.5} />
+          <X className="size-5 text-white" strokeWidth={2.25} />
         </button>
       ) : null}
     </div>

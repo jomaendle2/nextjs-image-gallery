@@ -29,10 +29,10 @@ const Thumbnail = memo(function ThumbnailButton({
     <button
       aria-current={isActive}
       aria-label={`Go to image ${index + 1}: ${image.title}`}
-      className={`relative flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ease-out ${
+      className={`relative flex-shrink-0 overflow-hidden transition-[width,height,box-shadow,opacity] duration-400 ease-glass ${
         isActive
-          ? "w-16 h-16 ring-2 ring-white/50 shadow-lg scale-110"
-          : "w-12 h-12 ring-1 ring-white/20 hover:ring-white/40 hover:scale-105 active:scale-95"
+          ? "size-[58px] rounded-[15px] shadow-[0_0_0_2px_oklch(100%_0_0_/_0.9),0_6px_18px_-6px_oklch(0%_0_0_/_0.7)] opacity-100"
+          : "size-11 rounded-xl opacity-65 shadow-[0_0_0_1px_oklch(100%_0_0_/_0.22)] hover:opacity-100 hover:shadow-[0_0_0_1px_oklch(100%_0_0_/_0.5)] active:scale-95"
       }`}
       onClick={handleClick}
       type="button"
@@ -46,13 +46,9 @@ const Thumbnail = memo(function ThumbnailButton({
         sizes="64px"
         src={image.src}
       />
+      {/* Specular sheen so the active tile reads as lit glass, not a border. */}
       {isActive ? (
-        <>
-          {/* Current image overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          {/* Active indicator dot */}
-          <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white/80 rounded-full shadow-sm" />
-        </>
+        <div className="absolute inset-0 bg-gradient-to-b from-white/25 via-transparent to-black/25" />
       ) : null}
     </button>
   );
@@ -108,13 +104,8 @@ export function ImageIndicators({
   return (
     <div className="flex justify-center pb-4">
       <div
-        className="flex items-center gap-3 p-3 h-[90px] bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 max-w-full overflow-x-auto scrollbar-hide shadow-lg"
+        className="flex items-center gap-2.5 px-3 h-[86px] glass-regular rounded-[22px] max-w-full overflow-x-auto scrollbar-hide"
         ref={containerRef}
-        style={{
-          WebkitBackdropFilter: "blur(24px)",
-          backdropFilter: "blur(24px)",
-          isolation: "isolate",
-        }}
       >
         {images.map((image, index) => (
           <Thumbnail

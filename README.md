@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# the beauty of earth.
 
-## Getting Started
+A full-screen photo gallery. Next.js App Router, React 19, Tailwind v4,
+view counts in Neon Postgres.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`DATABASE_URL` (a Neon connection string) is required. The view-count API
+creates its table on first call.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Dev server (Turbopack, the default in Next 16) |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Biome: lint + format check + import sorting |
+| `npm run lint:fix` | Same, applying every safe fix |
+| `npm run format` | Format only |
+| `npm run typecheck` | `tsc --noEmit` |
 
-To learn more about Next.js, take a look at the following resources:
+## Toolchain
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Biome 2 replaces ESLint and Prettier and does linting, formatting and
+import sorting in one pass. The configuration is deliberately strict:
+381 rules across a11y, complexity, correctness, performance, security,
+style and suspicious, plus the `next`, `react`, `project` and `types`
+domains. `types` enables the rules that need type inference.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+TypeScript runs with `strict` plus `noUncheckedIndexedAccess`,
+`verbatimModuleSyntax`, `noImplicitOverride` and
+`noPropertyAccessFromIndexSignature`.
 
-## Deploy on Vercel
+### Rules that are off, and why
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Every exception is deliberate. Do not re-enable one without reading the
+reason first.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Rule | Why |
+| --- | --- |
+| `noReactSpecificProps` | Written for Solid. It flags `className`, and its autofix rewrites it to `class`, which silently unstyles the entire app. The Qwik/Solid/Vue/Svelte rule families are excluded wholesale for the same reason. |
+| `noUnnecessaryConditions` | Narrows `ref.current` to its initializer and never widens it, so every `if (!ref.current) return` guard is reported as dead code. Following it would reintroduce null dereferences. |
+| `useLiteralKeys` | Directly contradicts `noPropertyAccessFromIndexSignature`, which requires bracket access for index-signature reads such as `process.env[...]`. The type-level rule wins: it catches typos the style rule cannot. |
+| `useImportExtensions` | Wants explicit file extensions. Next resolves `@/*` through the bundler, so extensionless specifiers are correct here. |
+| `noDefaultExport` | Next requires default exports for page, layout, route and config modules. |
+| `useNamingConvention` | Database columns are `snake_case` and cross into TypeScript unchanged. |
+| `noMagicNumbers`, `noJsxLiterals`, `noTernary`, `useExportsLast`, `useComponentExportOnlyModules`, `noProcessEnv` | Style preferences that fight ordinary React and Tailwind code. |
+
+`src/app/globals.css` is excluded from Biome's CSS parser, which does not
+yet understand Tailwind v4's `@plugin`, `@custom-variant` and
+`@theme inline` at-rules.
+
+## Design: liquid glass
+
+Glass is defined once in `globals.css` as three weights — `glass-thin`,
+`glass-regular`, `glass-thick` — each combining a blur, a saturation
+boost, a specular inset edge and a drop shadow. The saturation is what
+makes a panel pick up the colour of the photo behind it instead of going
+grey.
+
+Glass is applied only to chrome that genuinely floats over an image.
+`backdrop-filter` makes the compositor snapshot and blur everything
+behind an element every frame; on a 90px strip that is nearly free, on a
+full-viewport layer it is one of the most expensive things a page can do.
+
+`prefers-reduced-transparency` drops every glass surface to a flat fill.
+`prefers-reduced-motion` disables the spinners and the colour transition.
+
+## Known follow-up
+
+`next-plausible` is held at v3. v4 replaces the `domain` prop with a
+site-specific script URL (`https://plausible.io/js/pa-XXXXX.js`) that has
+to be copied from the Plausible dashboard. Upgrading without it would
+silently stop analytics.

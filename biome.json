@@ -37,7 +37,7 @@
       "types": "all"
     },
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
         "noAccessKey": "error",
         "noAmbiguousAnchorText": "error",
@@ -127,7 +127,7 @@
         "useDateNow": "error",
         "useFlatMap": "error",
         "useIndexOf": "error",
-        "useLiteralKeys": "error",
+        "useLiteralKeys": "off",
         "useMaxParams": "error",
         "useNumericLiterals": "error",
         "useOptionalChain": "error",

@@ -44,6 +44,128 @@
     --color-button-glass-hover: hsl(var(--button-glass-hover));
 }
 
+/* ------------------------------------------------------------------ *
+ * Liquid glass
+ *
+ * One definition, three weights. Glass is applied only to chrome that
+ * genuinely floats over photography, because `backdrop-filter` makes the
+ * compositor snapshot and blur everything behind the element on every
+ * frame. Used on a full-viewport layer it is one of the most expensive
+ * things a page can do; used on a 90px strip it is nearly free.
+ *
+ * Each weight is three effects stacked:
+ *   1. blur + saturate  - the refraction. Saturation is what makes the
+ *      panel pick up the colour of the photo behind it rather than
+ *      turning grey, and it is the single biggest reason this reads as
+ *      Apple glass instead of a frosted rectangle.
+ *   2. a specular edge  - bright inset hairline along the top, dim along
+ *      the bottom, imitating a light source above the surface.
+ *   3. a soft drop shadow - separates the panel from the image beneath.
+ * ------------------------------------------------------------------ */
+
+@theme {
+  --glass-blur-thin: 14px;
+  --glass-blur-regular: 22px;
+  --glass-blur-thick: 32px;
+
+  --glass-saturate: 180%;
+
+  /* Neutrals tinted a touch warm so the glass never reads clinical. */
+  --glass-fill-thin: oklch(100% 0.004 90 / 0.10);
+  --glass-fill-regular: oklch(100% 0.004 90 / 0.14);
+  --glass-fill-thick: oklch(100% 0.004 90 / 0.18);
+
+  --glass-fill-hover: oklch(100% 0.004 90 / 0.24);
+
+  --glass-edge-top: oklch(100% 0 0 / 0.42);
+  --glass-edge-bottom: oklch(100% 0 0 / 0.06);
+  --glass-ring: oklch(100% 0 0 / 0.16);
+
+  --glass-shadow: 0 8px 32px -10px oklch(0% 0 0 / 0.5);
+  --glass-shadow-lifted: 0 16px 48px -12px oklch(0% 0 0 / 0.6);
+
+  /* Apple-ish deceleration. No overshoot: photographs are not springy. */
+  --ease-glass: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@utility glass-thin {
+  background-color: var(--glass-fill-thin);
+  backdrop-filter: blur(var(--glass-blur-thin)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thin))
+    saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-ring);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-edge-top),
+    inset 0 -1px 0 0 var(--glass-edge-bottom),
+    var(--glass-shadow);
+  isolation: isolate;
+}
+
+@utility glass-regular {
+  background-color: var(--glass-fill-regular);
+  backdrop-filter: blur(var(--glass-blur-regular))
+    saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-regular))
+    saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-ring);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-edge-top),
+    inset 0 -1px 0 0 var(--glass-edge-bottom),
+    var(--glass-shadow);
+  isolation: isolate;
+}
+
+@utility glass-thick {
+  background-color: var(--glass-fill-thick);
+  backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-thick))
+    saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-ring);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-edge-top),
+    inset 0 -1px 0 0 var(--glass-edge-bottom),
+    var(--glass-shadow-lifted);
+  isolation: isolate;
+}
+
+/*
+ * Transparency is a preference, not a given. Some people get motion sick
+ * or simply cannot read text over a live blur, and the OS lets them say
+ * so. Drop to a flat fill: cheaper to paint and far easier to read.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-thin,
+  .glass-regular,
+  .glass-thick {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: oklch(22% 0.01 250 / 0.92);
+  }
+}
+
+/*
+ * Scrims. White captions have to stay readable over a photograph that
+ * might be a snow field or a night sky, so the chrome sits on a gradient
+ * that is invisible over dark images and just enough over bright ones.
+ */
+@utility scrim-top {
+  background: linear-gradient(
+    to bottom,
+    oklch(0% 0 0 / 0.38) 0%,
+    oklch(0% 0 0 / 0.14) 55%,
+    transparent 100%
+  );
+}
+
+@utility scrim-bottom {
+  background: linear-gradient(
+    to top,
+    oklch(0% 0 0 / 0.44) 0%,
+    oklch(0% 0 0 / 0.16) 55%,
+    transparent 100%
+  );
+}
+
 /* Hide scrollbars for carousel */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */

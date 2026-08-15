@@ -12,13 +12,22 @@ interface UseCarouselScrollOptions {
   itemCount: number;
   currentIndex: number;
   onIndexChange: (index: number) => void;
+  /**
+   * Beyond this many images away, animating the scroll stops being a
+   * transition and becomes a blur of everything in between.
+   */
+  smoothScrollDistance: number;
 }
 
 interface UseCarouselScroll {
   carouselRef: RefObject<HTMLDivElement | null>;
   goToIndex: (index: number) => void;
-  scrollToIndex: (index: number) => void;
+  scrollToIndex: (index: number, behavior?: ScrollBehavior) => void;
 }
+
+const prefersReducedMotion = () =>
+  typeof globalThis.matchMedia === "function" &&
+  globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
  * Owns every read of and write to the carousel's scroll position.
@@ -40,6 +49,7 @@ export function useCarouselScroll({
   itemCount,
   currentIndex,
   onIndexChange,
+  smoothScrollDistance,
 }: UseCarouselScrollOptions): UseCarouselScroll {
   const carouselRef = useRef<HTMLDivElement>(null);
   const isTransitioningRef = useRef(false);
@@ -53,16 +63,19 @@ export function useCarouselScroll({
   const onIndexChangeRef = useRef(onIndexChange);
   onIndexChangeRef.current = onIndexChange;
 
-  const scrollToIndex = useCallback((index: number) => {
-    const target = carouselRef.current?.children[index];
-    if (target instanceof HTMLElement) {
-      target.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
-    }
-  }, []);
+  const scrollToIndex = useCallback(
+    (index: number, behavior: ScrollBehavior = "smooth") => {
+      const target = carouselRef.current?.children[index];
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({
+          behavior,
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    },
+    [],
+  );
 
   const goToIndex = useCallback(
     (index: number) => {
@@ -78,7 +91,33 @@ export function useCarouselScroll({
       }
 
       isTransitioningRef.current = true;
-      scrollToIndex(index);
+
+      /*
+       * Only neighbours animate.
+       *
+       * Sliding from image 2 to image 10 means travelling eight viewport
+       * widths, and since only the images either side of the current one
+       * are mounted, most of that journey is empty placeholders flickering
+       * past. Photos.app has the same split: swiping between adjacent
+       * shots animates, picking a distant one from the scrubber cuts
+       * straight to it. The arrival still reads as a transition because
+       * the backdrop colour crossfades over 700ms and the incoming image
+       * fades up as it decodes.
+       */
+      const distance = Math.abs(index - currentIndexRef.current);
+      const jump = distance > smoothScrollDistance || prefersReducedMotion();
+
+      scrollToIndex(index, jump ? "instant" : "smooth");
+
+      if (jump) {
+        // The reposition already happened; commit on the next frame so the
+        // new index and the settled scroll position land together.
+        requestAnimationFrame(() => {
+          isTransitioningRef.current = false;
+          onIndexChangeRef.current(index);
+        });
+        return;
+      }
 
       const settle = () => {
         if (fallbackTimerRef.current) {
@@ -95,7 +134,7 @@ export function useCarouselScroll({
       // smooth scroll resolves to a no-op and never emits the event.
       fallbackTimerRef.current = setTimeout(settle, SCROLL_SETTLE_FALLBACK_MS);
     },
-    [itemCount, scrollToIndex],
+    [itemCount, scrollToIndex, smoothScrollDistance],
   );
 
   // Track the index while the user scrolls or swipes freely.

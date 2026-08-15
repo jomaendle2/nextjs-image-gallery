@@ -44,6 +44,9 @@ export function ImageCarousel({
     itemCount: galleryImages.length,
     currentIndex,
     onIndexChange: updateCurrentIndex,
+    // Animate only as far as we actually keep images mounted. Past that the
+    // journey is placeholders, so we cut instead.
+    smoothScrollDistance: BUFFER_SIZE,
   });
 
   const goToNext = useCallback(() => {
@@ -74,7 +77,8 @@ export function ImageCarousel({
   // Jump to the requested starting image on first paint.
   useEffect(() => {
     if (initialIndex > 0) {
-      scrollToIndex(initialIndex);
+      // Initial placement is setup, not a transition.
+      scrollToIndex(initialIndex, "instant");
     }
   }, [initialIndex, scrollToIndex]);
 
@@ -96,20 +100,46 @@ export function ImageCarousel({
 
   return (
     <>
+      {/*
+        No backdrop-blur on this layer. It used to blur the whole viewport
+        behind an opaque fill: full-frame compositing work every frame for
+        pixels nobody could ever see.
+      */}
       <div
-        className="fixed inset-0 backdrop-blur-sm z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
+        className="fixed inset-0 z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
         style={{ backgroundColor: currentImage.bgColor }}
       >
+        {/*
+          Ambient depth. Two neutral radial washes over the flat photo
+          colour: a soft light from above, a heavier fall-off at the base.
+          Neutral rather than tinted, so it works for all fourteen colours
+          without a per-image gradient.
+        */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{
+            background:
+              "radial-gradient(120% 85% at 50% 18%, oklch(100% 0 0 / 0.12), transparent 58%), radial-gradient(100% 95% at 50% 118%, oklch(0% 0 0 / 0.38), transparent 62%)",
+          }}
+        />
+        {/* Keeps white chrome legible over pale images. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 z-0 scrim-top"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-64 z-0 scrim-bottom"
+        />
+
         <CarouselTopBar onClose={onClose} />
 
-        <h1
-          className="text-3xl text-center font-bold text-white"
-          style={{ letterSpacing: "-0.05em" }}
-        >
+        <h1 className="relative z-10 text-center font-semibold text-white text-2xl sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
           the beauty of earth.
         </h1>
 
-        <div className="flex-1 relative overflow-hidden">
+        <div className="relative z-10 flex-1 overflow-hidden">
           {/* Main carousel container with scroll snap */}
           <section
             aria-label="Image gallery"
@@ -149,7 +179,7 @@ export function ImageCarousel({
           />
         </div>
 
-        <div className="flex-shrink-0 px-6 pb-10 space-y-4">
+        <div className="relative z-10 flex-shrink-0 px-6 pb-10 space-y-4">
           <ImageInfo image={currentImage} />
           <ImageIndicators
             currentIndex={currentIndex}

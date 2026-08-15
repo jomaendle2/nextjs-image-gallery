@@ -11,10 +11,10 @@ export function ImageInfo({ image }: ImageInfoProps) {
       aria-live="polite"
       className="text-center text-white px-6 max-w-2xl mx-auto h-24 flex flex-col justify-center"
     >
-      <h3 className="font-semibold text-xl mb-2 text-white/95 tracking-tight text-pretty leading-tight">
+      <h2 className="font-semibold text-lg sm:text-xl mb-1.5 text-white tracking-[-0.02em] text-pretty leading-tight [text-shadow:0_1px_12px_oklch(0%_0_0_/_0.4)]">
         {image.title}
-      </h3>
-      <p className="text-sm text-white/70 leading-tight mb-3 font-medium text-balance">
+      </h2>
+      <p className="text-[0.8125rem] sm:text-sm text-white/65 leading-snug mb-2.5 text-balance">
         {image.description}
       </p>
       <div className="flex justify-center items-center">

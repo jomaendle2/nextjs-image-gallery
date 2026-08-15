@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 const MAX_SCALE = 5;
 const MIN_SCALE = 0.5;
@@ -16,14 +22,20 @@ interface PanZoomTransform {
 /**
  * Zoom and pan for the full-screen viewer.
  *
- * The pan offset deliberately lives in a ref and is written straight to the
- * element's `transform`, instead of living in state. Driving it through React
- * meant every `mousemove` scheduled a render of the entire modal — including
- * the toolbar, the caption and the `<Image>` — just to move one element by a
- * few pixels. Here a drag touches exactly one style property, once per frame.
+ * The pan offset lives in a ref and is written straight to the element's
+ * `transform` rather than being held in state. Driving it through React
+ * meant every pointer move scheduled a render of the entire modal, toolbar
+ * and caption included, to shift one element by a few pixels.
  *
- * `scale` stays in state because the rest of the UI reacts to it (the cursor,
- * whether dragging is allowed at all), and it changes only on discrete steps.
+ * There are therefore two ways the transform reaches the DOM, and the split
+ * matters:
+ *
+ *   - Discrete changes (zoom buttons, double click, reset) go through state
+ *     and are painted in `useLayoutEffect`, which runs after React commits.
+ *     Scheduling that write from a `requestAnimationFrame` instead races the
+ *     commit, and React intermittently wins and drops the transform.
+ *   - Continuous changes (dragging) cause no render at all, so nothing can
+ *     overwrite them, and they are coalesced to one write per frame with rAF.
  */
 export function usePanZoom(isOpen: boolean) {
   const [scale, setScale] = useState(1);
@@ -34,10 +46,7 @@ export function usePanZoom(isOpen: boolean) {
   const dragOriginRef = useRef({ x: 0, y: 0 });
   const frameRef = useRef<number | null>(null);
 
-  transformRef.current.scale = scale;
-
   const paint = useCallback(() => {
-    frameRef.current = null;
     const node = contentRef.current;
     if (!node) {
       return;
@@ -46,15 +55,34 @@ export function usePanZoom(isOpen: boolean) {
     node.style.transform = `translate(${x}px, ${y}px) scale(${currentScale})`;
   }, []);
 
+  /*
+   * Reassert the transform after every commit. One string write, and it
+   * guarantees React can never leave a stale or missing transform behind
+   * no matter what caused the render.
+   */
+  useLayoutEffect(paint);
+
   const schedulePaint = useCallback(() => {
-    frameRef.current ??= requestAnimationFrame(paint);
+    frameRef.current ??= requestAnimationFrame(() => {
+      frameRef.current = null;
+      paint();
+    });
   }, [paint]);
 
-  const resetTransform = useCallback(() => {
+  // Read the live scale off the ref, never off a captured `scale`, so the
+  // handlers stay stable and can't act on a stale value.
+  const applyScale = useCallback((next: number) => {
+    transformRef.current.scale = next;
+    setScale(next);
+  }, []);
+
+  const reset = useCallback(() => {
     transformRef.current = { x: 0, y: 0, scale: 1 };
     setScale(1);
-    schedulePaint();
-  }, [schedulePaint]);
+    // setScale is a no-op when we are already at 1, which would mean no
+    // commit and no layout effect, so paint the recentred position now.
+    paint();
+  }, [paint]);
 
   // Reset whenever the viewer is (re)opened.
   useEffect(() => {
@@ -64,11 +92,6 @@ export function usePanZoom(isOpen: boolean) {
       setIsDragging(false);
     }
   }, [isOpen]);
-
-  // Keep the painted transform in step with button-driven scale changes.
-  useEffect(() => {
-    schedulePaint();
-  }, [schedulePaint]);
 
   useEffect(
     () => () => {
@@ -80,22 +103,12 @@ export function usePanZoom(isOpen: boolean) {
   );
 
   const zoomIn = useCallback(() => {
-    setScale((prev) => {
-      const next = Math.min(prev * SCALE_STEP, MAX_SCALE);
-      transformRef.current.scale = next;
-      schedulePaint();
-      return next;
-    });
-  }, [schedulePaint]);
+    applyScale(Math.min(transformRef.current.scale * SCALE_STEP, MAX_SCALE));
+  }, [applyScale]);
 
   const zoomOut = useCallback(() => {
-    setScale((prev) => {
-      const next = Math.max(prev / SCALE_STEP, MIN_SCALE);
-      transformRef.current.scale = next;
-      schedulePaint();
-      return next;
-    });
-  }, [schedulePaint]);
+    applyScale(Math.max(transformRef.current.scale / SCALE_STEP, MIN_SCALE));
+  }, [applyScale]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent) => {
     if (transformRef.current.scale <= 1) {
@@ -106,15 +119,13 @@ export function usePanZoom(isOpen: boolean) {
       y: event.clientY - transformRef.current.y,
     };
     setIsDragging(true);
-    // Keeps receiving moves even if the pointer leaves the element.
+    // Keeps delivering moves even if the pointer leaves the element.
     event.currentTarget.setPointerCapture(event.pointerId);
   }, []);
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
-      if (
-        !(event.currentTarget.hasPointerCapture?.(event.pointerId) ?? false)
-      ) {
+      if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         return;
       }
       if (transformRef.current.scale <= 1) {
@@ -138,14 +149,12 @@ export function usePanZoom(isOpen: boolean) {
     (event: React.MouseEvent) => {
       event.preventDefault();
       if (transformRef.current.scale === 1) {
-        transformRef.current.scale = DOUBLE_CLICK_SCALE;
-        setScale(DOUBLE_CLICK_SCALE);
-        schedulePaint();
+        applyScale(DOUBLE_CLICK_SCALE);
       } else {
-        resetTransform();
+        reset();
       }
     },
-    [resetTransform, schedulePaint],
+    [applyScale, reset],
   );
 
   return {
@@ -154,7 +163,7 @@ export function usePanZoom(isOpen: boolean) {
     isDragging,
     zoomIn,
     zoomOut,
-    reset: resetTransform,
+    reset,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
