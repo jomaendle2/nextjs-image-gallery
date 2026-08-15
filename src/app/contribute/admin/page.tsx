@@ -1,6 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { listPendingApplications } from "@/lib/applications/repository";
@@ -10,11 +9,11 @@ import { isOwner } from "@/lib/auth/types";
 import { listAllPhotos, listUnannouncedPhotos } from "@/lib/photos/repository";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 import { ContributeShell } from "../ContributeShell";
+import { AllPhotos } from "./AllPhotos";
 import { AnnounceActions } from "./AnnounceActions";
 import { ApplicationRowActions } from "./ApplicationRowActions";
 import { ContributorRowActions } from "./ContributorRowActions";
 import { InviteForm } from "./InviteForm";
-import { PhotoRowActions } from "./PhotoRowActions";
 
 export const metadata: Metadata = {
   title: "Contributors — the beauty of earth.",
@@ -143,60 +142,7 @@ export default async function AdminPage() {
         </ul>
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-semibold text-lg tracking-[-0.03em]">
-          Every photograph ({photos.length})
-        </h2>
-        <ul className="space-y-2">
-          {photos.map((photo) => (
-            <li
-              className="glass-hairline flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
-              key={photo.id}
-            >
-              {/*
-                The photograph itself, because this is the row where somebody
-                decides whether it stays up.
-
-                Moderating by title alone is workable right up until two
-                photographs share one — there are already two called
-                "Böblingen, Germany" in this list, indistinguishable, sitting
-                next to an Unpublish button. Forty pixels of the actual image
-                is the difference between a decision and a guess.
-              */}
-              <div className="flex min-w-0 items-center gap-3">
-                <Image
-                  alt=""
-                  blurDataURL={photo.blur_data_url}
-                  className="size-10 flex-shrink-0 rounded-lg object-cover"
-                  height={40}
-                  placeholder="blur"
-                  // Well below the fold on a list this long, and the operator
-                  // scrolls to what they came for.
-                  loading="lazy"
-                  sizes="40px"
-                  src={photo.blob_url}
-                  width={40}
-                />
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-sm">
-                    {photo.title === "" ? "Untitled draft" : photo.title}
-                    {photo.is_opener ? (
-                      <span className="ml-2 text-white/50">opener</span>
-                    ) : null}
-                    {photo.published_at === null ? (
-                      <span className="ml-2 text-white/40">draft</span>
-                    ) : null}
-                  </p>
-                  <p className="truncate text-white/45 text-xs">
-                    {photo.author_name}
-                  </p>
-                </div>
-              </div>
-              <PhotoRowActions photo={photo} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      <AllPhotos photos={photos} />
     </ContributeShell>
   );
 }
