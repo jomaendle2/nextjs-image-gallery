@@ -170,19 +170,39 @@ if (photoId !== undefined) {
 }
 
 /*
- * 7. The two routes that mint Stripe URLs must refuse an anonymous caller.
+ * 7. The portal must refuse an anonymous caller.
  *
- * The portal one matters most: a session there exposes a customer's billing
- * history and cards, so the id it is scoped to must come from our own row
- * for the signed-in address and never from the request.
+ * A portal session exposes a customer's billing history and cards, so the id
+ * it is scoped to has to come from our own row for the signed-in address and
+ * never from the request. This is the one route where anonymity is fatal.
  */
-for (const path of ["/api/stripe/checkout", "/api/stripe/portal"]) {
-  const response = await fetch(`${origin}${path}`, { method: "POST" });
-  check(`${path} refuses an anonymous caller`, response.status === 401);
+const anonymousPortal = await fetch(`${origin}/api/stripe/portal`, {
+  method: "POST",
+});
+check("the portal refuses an anonymous caller", anonymousPortal.status === 401);
+const portalBody = (await anonymousPortal.json()) as Record<string, unknown>;
+check("and hands out no URL to follow", !("url" in portalBody));
 
-  const body = (await response.json()) as Record<string, unknown>;
-  check(`${path} returns no URL to follow`, !("url" in body));
-}
+/*
+ * 8. Checkout, by contrast, must *accept* one.
+ *
+ * Requiring a session here was a deadlock: signing in needs an existing
+ * contributor or member row, so demanding one before somebody could become a
+ * member meant nobody new could ever buy anything. Paying grants nothing on
+ * its own — the membership is still unlocked only by a link sent to the
+ * address on the payment — so the check that matters happens at sign-in, not
+ * here.
+ */
+const anonymousCheckout = await fetch(`${origin}/api/stripe/checkout`, {
+  method: "POST",
+});
+const checkoutBody = (await anonymousCheckout.json()) as { url?: string };
+check("a new visitor can start checkout", anonymousCheckout.ok);
+check(
+  "and is sent to Stripe to give an address",
+  typeof checkoutBody.url === "string" &&
+    checkoutBody.url.startsWith("https://checkout.stripe.com/"),
+);
 
 await sql`DELETE FROM members WHERE email = ${address};`;
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} FAILED`);

@@ -85,15 +85,39 @@ export default async function MembershipPage({
         )}
 
         {justPaid ? (
-          <p
+          <div
             aria-live="polite"
-            className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70"
+            className="glass-hairline space-y-3 rounded-2xl px-4 py-3 text-sm text-white/70"
           >
-            Payment received — Stripe is confirming it now, which usually takes
-            a few seconds. Reload this page and the location will be there.
-            Nothing more is needed from you, and you have not been charged
-            twice.
-          </p>
+            <p>
+              Payment received — Stripe is confirming it now, which usually
+              takes a few seconds. You have not been charged twice.
+            </p>
+            {email === null ? (
+              /*
+               * A new member, still anonymous: the payment is done and they
+               * have no session, so reloading would show them nothing. The
+               * next step is signing in with the address they just paid
+               * with, and this is the only place they will be told.
+               */
+              <p>
+                One step left:{" "}
+                <Link
+                  className="text-white/85 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+                  href="/contribute"
+                >
+                  sign in with the address you paid with
+                </Link>{" "}
+                to unlock it. We will email you a link — there is no password to
+                choose.
+              </p>
+            ) : (
+              <p>
+                Reload this page in a moment and the locations will be there.
+                Nothing more is needed from you.
+              </p>
+            )}
+          </div>
         ) : null}
 
         <section>
@@ -144,14 +168,21 @@ function SubscribeSection({ signedIn }: { signedIn: boolean }) {
     <section>
       <SubscribeButton signedIn={signedIn} />
       {signedIn ? null : (
+        /*
+         * For somebody who is already a member on another device, not for
+         * the buyer. Signing in used to be a precondition of paying; now it
+         * is only the way back to a membership you already have, and saying
+         * otherwise would send new members down a route that refuses them.
+         */
         <p className="mt-3 text-sm text-white/45">
+          Already a member?{" "}
           <Link
             className={`${TOUCH_LINK} text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
             href="/contribute"
           >
             Sign in
           </Link>{" "}
-          and come back — it takes one email.
+          instead — it takes one email.
         </p>
       )}
     </section>

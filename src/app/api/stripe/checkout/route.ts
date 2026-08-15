@@ -6,23 +6,47 @@ import { siteOrigin } from "@/lib/site-url";
 import { membershipPriceId, stripeClient } from "@/lib/stripe";
 
 /**
- * Starts a subscription checkout for whoever is signed in.
+ * Starts a subscription checkout, for a signed-in member or a new one.
  *
- * Signing in first is deliberate. The membership is keyed on an email
- * address — the same address that receives the magic link — so letting
- * somebody type a different one at Stripe's checkout would buy access for
- * an inbox they may not own, and leave the payment attached to a person who
- * cannot sign in to use it.
+ * This used to require a session, on the reasoning that the membership is
+ * keyed on an email address and letting somebody type a different one would
+ * buy access for an inbox they may not own. That reasoning was sound and the
+ * rule built from it was not: signing in requires already being a
+ * contributor or a member, so requiring a session to *become* a member made
+ * the two conditions circular and nobody new could ever buy anything.
  *
- * `customer_email` is passed rather than collected for the same reason:
- * Stripe shows it as fixed, and the address that comes back on the webhook
- * is the one we already trust.
+ * So an anonymous buyer is allowed, and Stripe collects the address. The
+ * protection the old rule was reaching for survives intact, because it never
+ * lived here: buying grants nothing by itself. Membership is only usable
+ * through a session, a session only comes from a link sent to the address on
+ * the payment, and so control of that inbox still has to be proved before
+ * anything is unlocked. Paying for the wrong address costs the buyer a
+ * refund request, not somebody else their privacy.
+ *
+ * A signed-in buyer still gets their address fixed rather than collected —
+ * there is no reason to ask again for something we already know.
  */
+/**
+ * How Stripe should address the buyer, of which there are exactly three
+ * kinds: one we have billed before, one we know but have not billed, and one
+ * we have never met.
+ *
+ * Only the last is asked for an address. Fixing it where we already know it
+ * means Stripe shows it as unchangeable, so a signed-in person cannot end up
+ * with a subscription attached to an inbox their session does not open.
+ */
+function whoIsBuying(
+  customerId: string | null,
+  email: string | null,
+): { customer: string } | { customer_email: string } | Record<string, never> {
+  if (customerId !== null) {
+    return { customer: customerId };
+  }
+  return email === null ? {} : { customer_email: email };
+}
+
 export async function POST(): Promise<NextResponse> {
   const email = await getSessionEmail();
-  if (email === null) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
 
   /*
    * Somebody Stripe is already billing does not need a second subscription.
@@ -30,8 +54,13 @@ export async function POST(): Promise<NextResponse> {
    * access and a `past_due` one does not, but both already have a
    * subscription that will charge them, and starting another would bill
    * twice for the same month.
+   *
+   * Only checkable for a signed-in buyer. An anonymous one is identified by
+   * whatever they type at Stripe, which we do not learn until the webhook —
+   * so the duplicate check for them is Stripe's own, plus the 409 they will
+   * get if they sign in and try again.
    */
-  const existing = await getMemberByEmail(email);
+  const existing = email === null ? null : await getMemberByEmail(email);
   if (hasLiveSubscription(existing)) {
     return NextResponse.json(
       { error: "That address already has a membership." },
@@ -50,17 +79,21 @@ export async function POST(): Promise<NextResponse> {
        * switch off every other method a subscriber might have used.
        */
       line_items: [{ price: membershipPriceId(), quantity: 1 }],
-      customer_email: existing?.stripe_customer_id ? undefined : email,
-      ...(existing?.stripe_customer_id
-        ? { customer: existing.stripe_customer_id }
-        : {}),
+      ...whoIsBuying(existing?.stripe_customer_id ?? null, email),
       /*
-       * Carried through to the webhook. Stripe's own `customer_email` can be
-       * absent on later subscription events, and this is the field that ties
-       * a payment back to a session on this site.
+       * Carried through to the webhook when we have it. Stripe's own
+       * `customer_email` can be absent on later subscription events, and
+       * this is the field that ties a payment back to a session on this
+       * site. Omitted entirely for an anonymous buyer rather than written as
+       * null — the webhook falls back to the address Stripe collected, and
+       * an empty string here would look like an answer.
        */
-      subscription_data: { metadata: { email } },
-      metadata: { email },
+      ...(email === null
+        ? {}
+        : {
+            subscription_data: { metadata: { email } },
+            metadata: { email },
+          }),
       success_url: `${origin}/membership?welcome=1`,
       cancel_url: `${origin}/membership`,
     });

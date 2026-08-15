@@ -13,20 +13,23 @@ import { useStripeRedirect } from "@/hooks/useStripeRedirect";
 export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
   const { go, busy, error } = useStripeRedirect("/api/stripe/checkout");
 
-  if (!signedIn) {
-    return (
-      <p className="text-sm text-white/55">
-        Membership is tied to your email address, so sign in first — the same
-        one-time link contributors use.
-      </p>
-    );
-  }
-
   return (
     <div>
       <GlassButton disabled={busy} onClick={go}>
         {busy ? "Opening checkout…" : "Become a member"}
       </GlassButton>
+      {signedIn ? null : (
+        /*
+         * Said before paying, not after. A membership is tied to an address
+         * and unlocked by a link sent to it, so which address you type at
+         * Stripe is a decision rather than a detail — and finding that out
+         * on the receipt is too late to change it.
+         */
+        <p className="mt-3 text-sm text-white/45">
+          Use an address you can read: your membership is unlocked by a link
+          sent there, and it is how you will sign in afterwards.
+        </p>
+      )}
       {error === null ? null : (
         <p className="mt-2 text-sm text-white/70" role="alert">
           {error}

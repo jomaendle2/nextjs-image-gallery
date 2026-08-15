@@ -38,7 +38,17 @@ function emailFrom(subscription: Stripe.Subscription): string | null {
 
 async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
   const { customer } = session;
-  const email = session.metadata?.["email"] ?? session.customer_email;
+  /*
+   * In preference order: the address we fixed at checkout for a signed-in
+   * buyer, then the one Stripe collected from an anonymous one.
+   * `customer_details.email` is where Stripe puts what the buyer actually
+   * typed; `customer_email` only holds what we passed in, so for a new
+   * member it is null and the details are the only record of who paid.
+   */
+  const email =
+    session.metadata?.["email"] ??
+    session.customer_details?.email ??
+    session.customer_email;
   if (typeof email !== "string" || typeof customer !== "string") {
     console.error("Checkout completed without an email or customer id.");
     return;
@@ -67,6 +77,28 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
     currentPeriodEnd:
       subscription === null ? null : subscriptionPeriodEnd(subscription),
   });
+
+  /*
+   * Write the address onto the subscription when we did not set it at
+   * checkout, which is every anonymous purchase.
+   *
+   * Without this, later events for that subscription carry no email and can
+   * only be matched on the customer id — which works only for as long as the
+   * row written just above survives. With it, any future renewal or
+   * cancellation is self-describing and can rebuild the row from scratch.
+   * Failing to record it is not worth losing the payment over, so it does not
+   * throw: the row is already correct, and this only affects what happens
+   * next time.
+   */
+  if (subscriptionId !== null && session.metadata?.["email"] === undefined) {
+    try {
+      await stripeClient().subscriptions.update(subscriptionId, {
+        metadata: { email },
+      });
+    } catch (error) {
+      console.error("Could not label the subscription with its email:", error);
+    }
+  }
 }
 
 async function handleSubscription(
