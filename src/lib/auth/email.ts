@@ -71,6 +71,22 @@ async function send({ to, subject, text, html }: Message): Promise<void> {
   const from = process.env["EMAIL_FROM"];
 
   if (apiKey === undefined || from === undefined) {
+    /*
+     * Printing the message is a development convenience and a production
+     * incident. The body of a sign-in email *is* a valid credential for the
+     * next fifteen minutes, so writing it to a platform log hands anybody
+     * with log access a way into any account that asks for a link — and the
+     * person waiting is told "check your inbox" while nothing was sent.
+     *
+     * So in production this is a failure, loudly. Throwing surfaces it to
+     * the caller, which already knows how to show an error, rather than
+     * letting the site quietly stop being able to sign anybody in.
+     */
+    if (process.env["NODE_ENV"] === "production") {
+      throw new Error(
+        "Email is not configured: set RESEND_API_KEY and EMAIL_FROM.",
+      );
+    }
     console.warn(`\n  [no email provider configured] to ${to}: ${subject}\n`);
     console.warn(`${text}\n`);
     return;

@@ -142,6 +142,53 @@ check(
   pastDue[0]?.["status"] === "past_due",
 );
 
+/*
+ * 4b. The same, driven by an invoice rather than a subscription event.
+ *
+ * This is the path Stripe actually uses when a renewal fails, and it was a
+ * silent no-op: `invoice.subscription` no longer exists — it is
+ * `invoice.parent.subscription_details.subscription` — and an
+ * `as unknown as` cast hid that from the compiler. The earlier check passed
+ * only because it sends a subscription event, which is not what dunning
+ * sends. So this one has to carry the real invoice shape.
+ */
+const invoiceEvent = await post(
+  {
+    id: `evt_${Math.random().toString(36).slice(2)}`,
+    type: "invoice.payment_failed",
+    data: {
+      object: {
+        id: "in_smoke",
+        object: "invoice",
+        customer: customerId,
+        parent: {
+          type: "subscription_details",
+          subscription_details: { subscription: "sub_does_not_exist" },
+        },
+      },
+    },
+  },
+  { sign: true },
+);
+
+/*
+ * A 500 is the pass here, and a 200 is the bug.
+ *
+ * The subscription named above is deliberately fake, so a handler that
+ * resolves the id must fail trying to fetch it — which is what a 500 means,
+ * and Stripe would simply retry. A 200 would mean the id was never found in
+ * the first place and the event was quietly dropped, which is precisely the
+ * regression: `invoice.subscription` no longer exists, and reading it
+ * through a cast made both invoice branches do nothing at all.
+ *
+ * The extraction itself is pinned properly by unit tests in
+ * `src/lib/stripe.test.ts`; this only guards the wiring.
+ */
+check(
+  "an invoice event is no longer silently ignored",
+  invoiceEvent.status === 500,
+);
+
 // 5. Cancellation ends it.
 await post(
   subscriptionEvent("customer.subscription.deleted", "canceled", inAnHour),

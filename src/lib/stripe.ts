@@ -94,3 +94,39 @@ export function subscriptionPeriodEnd(
       .current_period_end,
   );
 }
+
+/**
+ * The subscription an invoice belongs to.
+ *
+ * Stripe moved this. It is no longer `invoice.subscription` but
+ * `invoice.parent.subscription_details.subscription`, and the code here read
+ * the old place through an `as unknown as` cast — so it resolved to
+ * `undefined` on every event and both invoice handlers did nothing at all.
+ * A member's card could fail, Stripe could move them to `past_due`, and the
+ * status would never be written by this path.
+ *
+ * This is the second time a cast around a moved Stripe field has hidden a
+ * silent failure in this file — see `subscriptionPeriodEnd`. Both were the
+ * library reporting a real API change and being overruled. Neither cast is
+ * gone here, because the runtime shape genuinely varies by account API
+ * version, but both now read the current location first and fall back, and
+ * both are covered by a smoke test that sends the real event shape.
+ */
+export function subscriptionFromInvoice(
+  invoice: Stripe.Invoice,
+): string | null {
+  const parent = invoice.parent?.subscription_details?.subscription;
+  const legacy = (
+    invoice as unknown as { subscription?: string | { id: string } }
+  ).subscription;
+
+  for (const candidate of [parent, legacy]) {
+    if (typeof candidate === "string" && candidate !== "") {
+      return candidate;
+    }
+    if (typeof candidate === "object" && candidate !== null) {
+      return candidate.id;
+    }
+  }
+  return null;
+}

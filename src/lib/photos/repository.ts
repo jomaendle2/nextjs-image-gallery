@@ -240,15 +240,51 @@ export async function setPublished(
   return (rows[0]?.["slug"] as string | undefined) ?? null;
 }
 
+/** What a deletion leaves behind for the caller to clean up. */
+export interface DeletedPhoto {
+  /** The original upload. */
+  blob_pathname: string;
+  /** The re-encoded copy the gallery actually served, if there was one. */
+  display_url: string | null;
+  /** Whose page needs revalidating — not necessarily the actor's. */
+  author_slug: string;
+}
+
+/**
+ * Removes a photograph and reports what else has to go.
+ *
+ * Returns three things rather than one, and each fixes a real leak. The
+ * display copy is a second blob written at upload; returning only
+ * `blob_pathname` orphaned it forever, since nothing referenced it once the
+ * row was gone. And the author's slug is not the actor's: the owner may
+ * delete anybody's photograph, so revalidating the actor's page left the
+ * deleted work on the real author's page and in their feed for an hour.
+ *
+ * `RETURNING` from the DELETE rather than reading first, so the row cannot
+ * change between the two.
+ */
 export async function deletePhoto(
   id: string,
   actor: Contributor,
-): Promise<string | null> {
+): Promise<DeletedPhoto | null> {
   const rows = isOwner(actor)
-    ? await sql`DELETE FROM photos WHERE id = ${id} RETURNING blob_pathname;`
-    : await sql`DELETE FROM photos WHERE id = ${id}
-                AND author_id = ${actor.id} RETURNING blob_pathname;`;
-  return (rows[0]?.["blob_pathname"] as string | undefined) ?? null;
+    ? await sql`DELETE FROM photos p USING contributors c
+                WHERE c.id = p.author_id AND p.id = ${id}
+                RETURNING p.blob_pathname, p.display_url, c.slug;`
+    : await sql`DELETE FROM photos p USING contributors c
+                WHERE c.id = p.author_id AND p.id = ${id}
+                  AND p.author_id = ${actor.id}
+                RETURNING p.blob_pathname, p.display_url, c.slug;`;
+
+  const [row] = rows;
+  if (row === undefined) {
+    return null;
+  }
+  return {
+    blob_pathname: row["blob_pathname"] as string,
+    display_url: (row["display_url"] as string | null) ?? null,
+    author_slug: row["slug"] as string,
+  };
 }
 
 /**

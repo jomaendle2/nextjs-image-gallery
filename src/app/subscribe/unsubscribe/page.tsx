@@ -1,40 +1,62 @@
 import type { Metadata } from "next";
+import { unsubscribeAction } from "@/app/subscribe/actions";
 import { StatusPage } from "@/components/StatusPage";
-import { unsubscribe } from "@/lib/subscribers/repository";
+import { GlassButton } from "@/components/ui/glass-button";
 
 export const metadata: Metadata = {
-  title: "Unsubscribed — the beauty of earth.",
+  title: "Unsubscribe — the beauty of earth.",
   robots: { index: false },
 };
 
 /**
- * One click, no confirmation step, no sign-in.
+ * One click, no sign-in — but a click, not a page load.
  *
- * Asking somebody to confirm that they meant to leave is a dark pattern with
- * a polite face. The token is unguessable and does nothing except this, so
- * the worst a stray click can cost is a re-subscription that takes one
- * field.
+ * This page used to delete the row while rendering the GET. That is one
+ * click fewer and quietly catastrophic: corporate link scanners fetch every
+ * URL in an inbound message before the recipient sees it, so the first
+ * announcement sent to anybody behind SafeLinks or Proofpoint would have
+ * unsubscribed them automatically, with the token spent and no way back.
  *
- * Unsubscribing deletes the row. Keeping an address after its owner asked to
- * be forgotten is the opposite of what they asked for.
+ * Deleting from a POST fixes that, because scanners do not POST. What it
+ * deliberately does not add is a confirmation step — asking somebody to
+ * confirm that they meant to leave is a dark pattern with a polite face.
+ * The button on this page is the unsubscribe itself.
  */
 export default async function UnsubscribePage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; state?: string }>;
 }) {
-  const { token } = await searchParams;
-  const removed = token === undefined ? false : await unsubscribe(token);
+  const { token, state } = await searchParams;
 
-  return removed ? (
+  if (state === "gone") {
+    return (
+      <StatusPage
+        detail="Your address has been deleted, not just flagged. Nothing further will be sent to it."
+        title="Unsubscribed"
+      />
+    );
+  }
+
+  if (state === "unknown" || token === undefined || token === "") {
+    return (
+      <StatusPage
+        detail="That link did not match a subscription — it may already have been used, in which case nothing is being sent to you anyway."
+        title="Nothing to unsubscribe"
+      />
+    );
+  }
+
+  return (
     <StatusPage
-      detail="Your address has been deleted, not just flagged. Nothing further will be sent to it."
-      title="Unsubscribed"
-    />
-  ) : (
-    <StatusPage
-      detail="That link did not match a subscription — it may already have been used, in which case nothing is being sent to you anyway."
-      title="Nothing to unsubscribe"
+      action={
+        <form action={unsubscribeAction}>
+          <input name="token" type="hidden" value={token} />
+          <GlassButton type="submit">Unsubscribe</GlassButton>
+        </form>
+      }
+      detail="One click and your address is deleted rather than flagged. You will not be asked to confirm twice, and you can subscribe again any time with one field."
+      title="Unsubscribe?"
     />
   );
 }

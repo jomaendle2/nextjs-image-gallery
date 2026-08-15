@@ -16,6 +16,8 @@ const GROUND = "#0b0e12";
  * is a bound on input rather than a guess about content.
  */
 const MAX_TITLE = 70;
+/** The subtitle is one line under the title; more than this never shows. */
+const MAX_SUBTITLE = 90;
 
 const WORDMARK = "the beauty of earth.";
 
@@ -44,7 +46,14 @@ export function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const rawTitle = searchParams.get("title") ?? WORDMARK;
     const title = truncate(rawTitle, MAX_TITLE);
-    const subtitle = searchParams.get("subtitle");
+    /*
+     * Bounded like the title. This endpoint is public, uncredentialed and
+     * cacheable, so an unbounded string here is an invitation to make the
+     * layout engine chew through a hundred kilobytes per request.
+     */
+    const rawSubtitle = searchParams.get("subtitle");
+    const subtitle =
+      rawSubtitle === null ? null : truncate(rawSubtitle, MAX_SUBTITLE);
     const isWordmark = title === WORDMARK;
 
     return new ImageResponse(

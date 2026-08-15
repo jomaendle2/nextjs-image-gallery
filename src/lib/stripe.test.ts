@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { describe, expect, it } from "vitest";
 import { hasLiveSubscription, isActive } from "@/lib/members/status";
-import { subscriptionPeriodEnd } from "@/lib/stripe";
+import { subscriptionFromInvoice, subscriptionPeriodEnd } from "@/lib/stripe";
 
 /** Only the fields the function reads; the real object has ~40 more. */
 function subscriptionWith(
@@ -101,5 +101,65 @@ describe("isActive", () => {
         current_period_end: "2020-01-01T00:00:00.000Z",
       }),
     ).toBe(false);
+  });
+});
+
+describe("subscriptionFromInvoice", () => {
+  const invoice = (shape: unknown) => shape as Stripe.Invoice;
+
+  /*
+   * The regression. Stripe moved the field onto `parent`, the code kept
+   * reading the top level through a cast, and so both invoice handlers were
+   * silent no-ops: a card could fail and the member row would never change.
+   */
+  it("reads the subscription from the invoice's parent", () => {
+    expect(
+      subscriptionFromInvoice(
+        invoice({
+          parent: {
+            type: "subscription_details",
+            subscription_details: { subscription: "sub_123" },
+          },
+        }),
+      ),
+    ).toBe("sub_123");
+  });
+
+  it("falls back to the old top-level field", () => {
+    expect(subscriptionFromInvoice(invoice({ subscription: "sub_old" }))).toBe(
+      "sub_old",
+    );
+  });
+
+  it("accepts an expanded subscription object", () => {
+    expect(
+      subscriptionFromInvoice(
+        invoice({
+          parent: {
+            subscription_details: { subscription: { id: "sub_expanded" } },
+          },
+        }),
+      ),
+    ).toBe("sub_expanded");
+  });
+
+  it("is null for an invoice with no subscription at all", () => {
+    expect(subscriptionFromInvoice(invoice({ parent: null }))).toBe(null);
+    expect(subscriptionFromInvoice(invoice({}))).toBe(null);
+  });
+
+  /*
+   * A one-off invoice has a parent of a different type. Returning its
+   * `quote_details` id would send the handler looking up a subscription that
+   * does not exist.
+   */
+  it("is null when the parent is not a subscription", () => {
+    expect(
+      subscriptionFromInvoice(
+        invoice({
+          parent: { type: "quote_details", subscription_details: null },
+        }),
+      ),
+    ).toBe(null);
   });
 });

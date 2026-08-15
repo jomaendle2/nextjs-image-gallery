@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import {
   sendSubscribeConfirmation,
   sendSubscribeWelcome,
@@ -10,6 +11,7 @@ import { siteOrigin } from "@/lib/site-url";
 import {
   confirmSubscription,
   requestSubscription,
+  unsubscribe,
 } from "@/lib/subscribers/repository";
 import { validateSubscription } from "@/lib/subscribers/validate";
 
@@ -104,4 +106,33 @@ export async function confirm(token: string): Promise<boolean> {
   }
 
   return true;
+}
+
+/**
+ * Removes an address, from a POST rather than a page load.
+ *
+ * The unsubscribe link goes out in email, and corporate link scanners —
+ * SafeLinks, Proofpoint, Barracuda — fetch every URL in an inbound message
+ * before the recipient sees it. A GET that deletes would therefore
+ * unsubscribe whole organisations silently, on the first announcement, with
+ * the token spent before anybody read the mail.
+ *
+ * Scanners issue GET and not POST, so moving the deletion here fixes that
+ * without adding a confirmation step. It is still one click: the page the
+ * link opens is a single button. Asking somebody to confirm that they meant
+ * to leave would be a dark pattern with a polite face, and this is not that
+ * — the click *is* the unsubscribe, not permission to perform it.
+ */
+export async function unsubscribeAction(formData: FormData): Promise<void> {
+  const token = formData.get("token");
+  const removed =
+    typeof token === "string" && token !== ""
+      ? await unsubscribe(token)
+      : false;
+
+  /*
+   * The token leaves the URL either way. It is single-use and now spent, but
+   * a browser history entry is not a place it needs to persist.
+   */
+  redirect(`/subscribe/unsubscribe?state=${removed ? "gone" : "unknown"}`);
 }

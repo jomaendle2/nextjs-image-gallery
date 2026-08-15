@@ -48,13 +48,18 @@ export function isActive(member: Member | null): boolean {
  * Access and billing are different questions and this codebase asks them
  * separately.
  */
-const LIVE_STATUSES = new Set([
-  "active",
-  "trialing",
-  "past_due",
-  "unpaid",
-  "incomplete",
-]);
+/*
+ * `incomplete` is deliberately absent, and it is the one that took thought.
+ *
+ * It looks like it belongs — Stripe considers the subscription to exist —
+ * but it is the status where the *first* payment never cleared, so nothing
+ * has been billed. Including it meant somebody whose card was declined at
+ * checkout had no access and could not start another checkout either, until
+ * Stripe expired the attempt about a day later. That is the worst possible
+ * response to a failed payment: refusing the person's second attempt to give
+ * you money.
+ */
+const LIVE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
 
 /** Whether a new checkout would duplicate a subscription that already bills. */
 export function hasLiveSubscription(member: Member | null): boolean {

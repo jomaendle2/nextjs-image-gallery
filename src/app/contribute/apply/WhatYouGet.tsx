@@ -30,15 +30,24 @@ const OFFERS: readonly Offer[] = [
     detail:
       "Your name sits on every photograph wherever it appears, linking out to your own site. Nothing here is published anonymously.",
   },
+  /*
+   * This used to say "GPS is stripped from every upload", which the bullet
+   * directly below it contradicted: the original is kept exactly as sent,
+   * and stripping it would mean altering the file we promise not to touch.
+   * Both cannot be true, and the one people rely on for their own safety is
+   * the one that had to become precise. What is actually guaranteed: the
+   * coordinates are never read into the database, and the copy the gallery
+   * publishes carries no metadata at all.
+   */
   {
-    title: "Your coordinates never leave your camera",
+    title: "Where you stood stays yours",
     detail:
-      "GPS is stripped from every upload — not filtered, never read. Camera and exposure details are kept; where you were standing is nobody's business but yours.",
+      "The GPS block in your file is never read, so no coordinate ever reaches our database or the page. What the gallery publishes is a fresh copy carrying no metadata at all — downloading it tells nobody where you were. Camera and exposure are kept, because those are about the photograph rather than about you.",
   },
   {
     title: "You keep control",
     detail:
-      "Publish directly, with no approval queue. Edit, unpublish or delete your own photographs at any time. Your original file is stored exactly as you sent it, never re-encoded.",
+      "Publish directly, with no approval queue. Edit, unpublish or delete your own photographs at any time. Your original is kept exactly as you sent it — untouched, never re-encoded, and never linked from the site.",
   },
 ];
 

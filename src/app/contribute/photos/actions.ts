@@ -97,18 +97,37 @@ export async function togglePublished(
 
 export async function removePhoto(id: string): Promise<void> {
   const actor = await requireContributor();
-  const pathname = await deletePhoto(id, actor);
-  if (pathname === null) {
+  const deleted = await deletePhoto(id, actor);
+  if (deleted === null) {
     return;
   }
 
-  // The row is the source of truth; a blob with no row is unreachable, so it
-  // goes too. Failure here is logged rather than surfaced — the photo is
-  // already gone from the site, which is what the contributor asked for.
-  await del(pathname).catch((error: unknown) => {
-    console.error("Could not delete the blob:", error);
-  });
+  /*
+   * Both blobs, not one. An upload writes the original and a re-encoded
+   * display copy; deleting only the original left multiple megabytes behind
+   * with no row pointing at them, which meant nothing could ever find them
+   * again to clean up.
+   *
+   * The row is the source of truth, so a blob with no row is unreachable and
+   * goes too. Failure is logged rather than surfaced — the photograph is
+   * already off the site, which is what was asked for.
+   */
+  const blobs = [deleted.blob_pathname, deleted.display_url].filter(
+    (target): target is string => target !== null,
+  );
+  await Promise.all(
+    blobs.map((target) =>
+      del(target).catch((error: unknown) => {
+        console.error(`Could not delete the blob ${target}:`, error);
+      }),
+    ),
+  );
 
-  revalidateFeeds(actor.slug);
+  /*
+   * The author's page, not the actor's. The owner may delete anybody's
+   * photograph, and revalidating their own page left the deleted work
+   * showing on the real author's page and in their feed for an hour.
+   */
+  revalidateFeeds(deleted.author_slug);
   revalidatePath("/");
 }

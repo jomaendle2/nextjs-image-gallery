@@ -67,9 +67,18 @@ const nextConfig: NextConfig = {
     // it replaced, and the optimizer can still cache it for a year.
     minimumCacheTTL: 31_536_000,
     remotePatterns: [
+      /*
+       * This store, not every store on the platform.
+       *
+       * The wildcard here used to be `*.public.blob.vercel-storage.com`,
+       * which matches any Vercel Blob store anybody can create for free.
+       * That turns our image optimizer into a public one: upload anything
+       * under `/photos/` to your own store and this site will fetch,
+       * transform and cache it for a year, on our bill.
+       */
       {
         protocol: "https",
-        hostname: "*.public.blob.vercel-storage.com",
+        hostname: "hqthnmomxieqm6os.public.blob.vercel-storage.com",
         pathname: "/photos/**",
       },
     ],

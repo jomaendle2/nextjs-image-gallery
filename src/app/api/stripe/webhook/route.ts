@@ -3,7 +3,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { updateMemberByCustomer, upsertMember } from "@/lib/members/repository";
-import { stripeClient, subscriptionPeriodEnd } from "@/lib/stripe";
+import {
+  stripeClient,
+  subscriptionFromInvoice,
+  subscriptionPeriodEnd,
+} from "@/lib/stripe";
 
 /**
  * Stripe's account of who has paid, which is the only account that counts.
@@ -180,14 +184,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
          * again after a retry. Reading the subscription means access follows
          * Stripe's own dunning rules rather than a rule invented here.
          */
-        const invoice = event.data.object;
-        const subscriptionId = (
-          invoice as unknown as { subscription?: string | { id: string } }
-        ).subscription;
-        const id =
-          typeof subscriptionId === "string"
-            ? subscriptionId
-            : (subscriptionId?.id ?? null);
+        const id = subscriptionFromInvoice(event.data.object);
         if (id !== null) {
           await handleSubscription(
             await stripeClient().subscriptions.retrieve(id),
