@@ -217,6 +217,43 @@ describe("I11 — endpoints that spend money are rate limited", () => {
   );
 });
 
+describe("I2 — bulk writes carry the same authorization as single ones", () => {
+  const actions = read("app", "contribute", "photos", "actions.ts");
+  const bulk = actions.slice(
+    actions.indexOf("export async function bulkSetPublished"),
+  );
+
+  /*
+   * A bulk endpoint is where per-row authorization quietly gets lost: it is
+   * tempting to write one `UPDATE ... WHERE id = ANY($1)` and be done, which
+   * would publish any id in the list regardless of who owns it. Going
+   * through `setPublished` per row keeps `AND author_id = ...` inside the
+   * statement, so a forged id updates nothing rather than somebody else's
+   * photograph.
+   */
+  it("delegates to the row-level helper rather than writing its own SQL", () => {
+    expect(bulk).toContain("setPublished(id, published, actor)");
+    expect(bulk).not.toMatch(/sql`/);
+    expect(bulk).not.toMatch(/ANY\(/);
+  });
+
+  it("establishes the actor before touching anything", () => {
+    const beforeLoop = bulk.slice(0, bulk.indexOf("for (const id"));
+    expect(beforeLoop).toContain("await requireContributor()");
+  });
+
+  /*
+   * Deleting is irreversible and takes the stored file with it. A checkbox
+   * is exactly the control that makes a misclick easy, so there is no bulk
+   * form of it — and that absence is load-bearing rather than an oversight.
+   */
+  it("offers no bulk delete", () => {
+    expect(actions).not.toMatch(
+      /export async function (bulkRemove|bulkDelete)/,
+    );
+  });
+});
+
 describe("I3 — anything the interface refuses, the server refuses", () => {
   /*
    * Revoking an owner was prevented only by hiding the button. Doing it
