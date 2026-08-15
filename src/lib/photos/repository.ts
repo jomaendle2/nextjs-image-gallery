@@ -13,7 +13,8 @@ import type {
 const ID_LENGTH = 12;
 
 const FEED_COLUMNS = `
-  p.id, p.blob_url, p.width, p.height, p.blur_data_url, p.bg_color,
+  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif,
   c.slug AS author_slug, c.display_name AS author_name,
   c.site_url AS author_site_url
@@ -52,7 +53,8 @@ export async function listOwnPhotos(
   contributorId: string,
 ): Promise<OwnPhotoRow[]> {
   const rows = await sql`
-    SELECT p.id, p.blob_url, p.width, p.height, p.blur_data_url, p.bg_color,
+    SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+           p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
            p.is_opener, p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
@@ -67,7 +69,8 @@ export async function listOwnPhotos(
 /** Every photo on the site, for the owner's moderation view. */
 export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
   const rows = await sql`
-    SELECT p.id, p.blob_url, p.width, p.height, p.blur_data_url, p.bg_color,
+    SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+           p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
            p.is_opener, p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
@@ -95,9 +98,10 @@ export async function insertDraftPhoto(
 ): Promise<string> {
   const id = nanoid(ID_LENGTH);
   await sql`
-    INSERT INTO photos (id, blob_url, blob_pathname, width, height,
-                        blur_data_url, bg_color, exif, author_id)
-    VALUES (${id}, ${input.blob_url}, ${input.blob_pathname}, ${input.width},
+    INSERT INTO photos (id, blob_url, blob_pathname, display_url, width,
+                        height, blur_data_url, bg_color, exif, author_id)
+    VALUES (${id}, ${input.blob_url}, ${input.blob_pathname},
+            ${input.display_url}, ${input.width},
             ${input.height}, ${input.blur_data_url}, ${input.bg_color},
             ${JSON.stringify(input.exif)}::jsonb, ${input.author_id});
   `;

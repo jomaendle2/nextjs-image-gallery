@@ -21,16 +21,26 @@ export interface PhotoExif {
  * right aspect ratio, and without `blur_data_url` there is no placeholder.
  */
 export interface DerivedPhoto {
+  /** Dimensions of the display copy, which is what the browser renders. */
   width: number;
   height: number;
   blur_data_url: string;
   bg_color: string;
   exif: PhotoExif | null;
+  /** Re-encoded copy for the optimizer; the original is kept untouched. */
+  display: Buffer;
 }
 
 /** Matches the placeholder width next/image generates for static imports. */
 const BLUR_WIDTH = 8;
 const BLUR_QUALITY = 40;
+
+/**
+ * The largest width next/image will ever ask for is 3840. Anything beyond
+ * that in the source is bytes the optimizer downloads and throws away.
+ */
+const DISPLAY_MAX_EDGE = 3840;
+const DISPLAY_QUALITY = 85;
 const RGB_MAX = 255;
 const HEX_RADIX = 16;
 const ONE_SECOND = 1;
@@ -149,12 +159,45 @@ async function readExif(buffer: Buffer): Promise<PhotoExif | null> {
 }
 
 /**
+ * A re-encoded copy for the image optimizer to work from.
+ *
+ * The originals are 9–13 MB. Next's optimizer downloads the source for every
+ * distinct width it serves, and its fetch has a timeout: a cold page asking
+ * for fifteen thumbnails at once made fifteen concurrent multi-megabyte
+ * downloads and six of them timed out, so those thumbnails rendered broken.
+ *
+ * The original is still stored and still what a contributor uploaded. This is
+ * only what the gallery renders from, capped at the largest width next/image
+ * can ask for, which is why it costs no visible quality.
+ */
+export async function makeDisplayBuffer(buffer: Buffer): Promise<Buffer> {
+  return await sharp(buffer, { failOn: "error" })
+    .rotate()
+    .resize({
+      width: DISPLAY_MAX_EDGE,
+      height: DISPLAY_MAX_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: DISPLAY_QUALITY, mozjpeg: true })
+    .toBuffer();
+}
+
+/**
  * Reads an uploaded photo once and returns everything the gallery needs to
  * render it. Throws if the buffer is not a decodable image, which is what
  * the upload route turns into a 422 (after deleting the orphaned blob).
  */
 export async function deriveFromBuffer(buffer: Buffer): Promise<DerivedPhoto> {
-  const image = sharp(buffer, { failOn: "error" });
+  /*
+   * Everything downstream describes the display copy, not the original,
+   * because that is the file the browser actually renders. It matters for
+   * more than size: `.rotate()` bakes in EXIF orientation, which swaps width
+   * and height for a rotated photo, so reading dimensions off the source
+   * would report the wrong aspect ratio and reintroduce layout shift.
+   */
+  const display = await makeDisplayBuffer(buffer);
+  const image = sharp(display, { failOn: "error" });
 
   const { width, height } = await image.metadata();
   if (
@@ -173,6 +216,7 @@ export async function deriveFromBuffer(buffer: Buffer): Promise<DerivedPhoto> {
       .webp({ quality: BLUR_QUALITY })
       .toBuffer(),
     image.clone().stats(),
+    // Read from the original: re-encoding drops most metadata.
     readExif(buffer),
   ]);
 
@@ -184,5 +228,6 @@ export async function deriveFromBuffer(buffer: Buffer): Promise<DerivedPhoto> {
     blur_data_url: `data:image/webp;base64,${blur.toString("base64")}`,
     bg_color: `#${toHex(dominant.r)}${toHex(dominant.g)}${toHex(dominant.b)}`,
     exif,
+    display,
   };
 }

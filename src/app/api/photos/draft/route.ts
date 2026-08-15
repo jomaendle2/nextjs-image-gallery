@@ -1,4 +1,4 @@
-import { del } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { deriveFromBuffer } from "@/lib/photos/derive";
@@ -77,9 +77,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const derived = await deriveFromBuffer(buffer);
 
+    /*
+     * The original stays exactly as uploaded; this is the copy the gallery
+     * renders from. Serving 13 MB originals through the image optimizer made
+     * concurrent thumbnail requests time out.
+     */
+    const display = await put(
+      `photos/display/${pathname.split("/").pop()}`,
+      derived.display,
+      {
+        access: "public",
+        addRandomSuffix: true,
+        contentType: "image/jpeg",
+      },
+    );
+
     const id = await insertDraftPhoto({
       blob_url: blobUrl,
       blob_pathname: pathname,
+      display_url: display.url,
       width: derived.width,
       height: derived.height,
       blur_data_url: derived.blur_data_url,

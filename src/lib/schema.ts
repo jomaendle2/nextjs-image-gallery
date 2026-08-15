@@ -48,6 +48,14 @@ export const MIGRATIONS: readonly string[] = [
 
   "CREATE INDEX IF NOT EXISTS photos_author_idx ON photos (author_id);",
 
+  /*
+   * Added after the originals turned out to be 9-13 MB each: the optimizer
+   * downloads the source for every width it serves, and fifteen concurrent
+   * multi-megabyte fetches exceeded its timeout. The original stays in
+   * `blob_url`; the gallery renders from this.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS display_url TEXT;",
+
   `CREATE TABLE IF NOT EXISTS login_tokens (
      token_hash     TEXT PRIMARY KEY,
      contributor_id TEXT NOT NULL REFERENCES contributors(id) ON DELETE CASCADE,

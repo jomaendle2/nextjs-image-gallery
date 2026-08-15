@@ -7,6 +7,7 @@ import type { PhotoExif } from "./derive";
  */
 export interface PhotoRow {
   id: string;
+  /** Already COALESCEd to the display copy by the query. */
   blob_url: string;
   width: number;
   height: number;
@@ -43,6 +44,7 @@ export interface OwnPhotoRow {
 export interface DraftPhotoInput {
   blob_url: string;
   blob_pathname: string;
+  display_url: string;
   width: number;
   height: number;
   blur_data_url: string;
