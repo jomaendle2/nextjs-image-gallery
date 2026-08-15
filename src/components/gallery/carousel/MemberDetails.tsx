@@ -65,10 +65,38 @@ export function MemberDetails({ photoId }: { photoId: string }) {
    * one place this site promises precision. So for members the text is
    * blanked during the fetch and only the line's height is held.
    */
-  const staleButSafe = isPlaceholderData && data !== undefined && !data.member;
-  const shown = (!isPlaceholderData && data) || staleButSafe ? data : undefined;
+  const shown = whatToShow(data, isPlaceholderData);
 
   return <Line>{body(shown)}</Line>;
+}
+
+/**
+ * Which answer may be displayed, given one that might belong to the previous
+ * photograph.
+ *
+ * The two cases differ because the two fields differ in what they describe.
+ * Membership is a property of the session, so a stale `member` flag is still
+ * true or false for this photograph and the invitation can stay put rather
+ * than blinking on every swipe. A location belongs to one photograph, and
+ * showing the previous one's under the next — even for a tenth of a second —
+ * would be quietly wrong in the one place this site promises precision.
+ *
+ * Its own function because the inline version had grown into a condition
+ * mixing an object with a boolean, and this file has already been the site
+ * of one subtle bug that read as deliberate.
+ */
+function whatToShow(
+  data: Details | undefined,
+  isStale: boolean,
+): Details | undefined {
+  if (data === undefined) {
+    return undefined;
+  }
+  if (!isStale) {
+    return data;
+  }
+  // Stale: safe for a non-member's invitation, never for a member's location.
+  return data.member ? undefined : data;
 }
 
 /**
