@@ -112,6 +112,48 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
         />
       </div>
 
+      {/*
+        The two member-only fields, kept together and marked as such. They
+        sit below the public ones because that is the order somebody fills
+        them in: what everybody sees, then what only members do.
+      */}
+      <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] p-3.5">
+        <legend className="px-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+          Members only
+        </legend>
+
+        <div className="space-y-1.5">
+          <label className={LABEL} htmlFor={`precise-${photo.id}`}>
+            Where you stood <span className={LABEL_HINT}>(optional)</span>
+          </label>
+          <input
+            className={FIELD}
+            defaultValue={photo.precise_location ?? ""}
+            id={`precise-${photo.id}`}
+            name="precise_location"
+            placeholder="The pull-off below the second switchback"
+          />
+          <p className="text-[0.75rem] text-white/35 leading-relaxed">
+            Only members see this, and only if you fill it in. Nothing is ever
+            read from the file — your coordinates are still discarded.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className={LABEL} htmlFor={`technique-${photo.id}`}>
+            How you made it <span className={LABEL_HINT}>(optional)</span>
+          </label>
+          <textarea
+            className={FIELD}
+            defaultValue={photo.technique ?? ""}
+            id={`technique-${photo.id}`}
+            name="technique"
+            placeholder="Waited about forty minutes for the cloud to clear the ridge."
+            rows={2}
+          />
+        </div>
+      </fieldset>
+
       <div className="flex flex-wrap gap-3">
         <div className="flex-1 space-y-1.5">
           <label className={LABEL} htmlFor={`location-${photo.id}`}>

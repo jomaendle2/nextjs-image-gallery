@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewCount } from "@/components/gallery/ViewCount";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { MemberDetails } from "./MemberDetails";
 import { SharePhoto } from "./SharePhoto";
 
 /**
@@ -123,6 +124,13 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
       <p className="hidden min-h-4 max-w-full truncate text-[0.625rem] text-white/30 uppercase leading-4 tabular-nums tracking-[0.12em] sm:block">
         {exif}
       </p>
+
+      {/*
+        Where it was taken and how, for members. Its own request — see
+        `MemberDetails` — so the page stays cacheable and the data never
+        reaches somebody who has not paid for it.
+      */}
+      <MemberDetails photoId={image.id} />
     </div>
   );
 }

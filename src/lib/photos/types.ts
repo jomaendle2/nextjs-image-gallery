@@ -38,6 +38,8 @@ export interface OwnPhotoRow {
   exif: PhotoExif | null;
   published_at: string | null;
   is_opener: boolean;
+  precise_location: string | null;
+  technique: string | null;
   author_id: string;
   author_name: string;
   author_slug: string;
@@ -60,4 +62,8 @@ export interface PublishInput {
   description: string;
   location: string | null;
   bg_color: string;
+  /** Member-only. Typed by the photographer, never read from the file. */
+  precise_location: string | null;
+  /** Member-only. How the photograph was made. */
+  technique: string | null;
 }

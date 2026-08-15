@@ -57,7 +57,7 @@ export async function listOwnPhotos(
     SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
            p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.author_id,
+           p.is_opener, p.precise_location, p.technique, p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
     FROM photos p
     JOIN contributors c ON c.id = p.author_id
@@ -73,13 +73,43 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
     SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
            p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.author_id,
+           p.is_opener, p.precise_location, p.technique, p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
     FROM photos p
     JOIN contributors c ON c.id = p.author_id
     ORDER BY p.created_at DESC;
   `;
   return rows as OwnPhotoRow[];
+}
+
+/**
+ * The two fields a membership pays for.
+ *
+ * Deliberately absent from `FEED_COLUMNS`, so they are not in the payload of
+ * any page and cannot leak by being rendered conditionally. The only caller
+ * is the route that checks for an active membership first.
+ *
+ * Returns nulls rather than nothing for a photograph whose photographer has
+ * filled in neither: a member is entitled to know there is nothing to know,
+ * which is different from being told they cannot see it.
+ */
+export async function getMemberDetails(id: string): Promise<{
+  precise_location: string | null;
+  technique: string | null;
+} | null> {
+  const rows = await sql`
+    SELECT p.precise_location, p.technique
+    FROM photos p JOIN contributors c ON c.id = p.author_id
+    WHERE p.id = ${id} AND p.published_at IS NOT NULL
+      AND c.revoked_at IS NULL;
+  `;
+  const [row] = rows;
+  return row === undefined
+    ? null
+    : {
+        precise_location: (row["precise_location"] as string | null) ?? null,
+        technique: (row["technique"] as string | null) ?? null,
+      };
 }
 
 /**
@@ -171,6 +201,8 @@ export async function publishPhoto(
         UPDATE photos p SET title = ${input.title},
                description = ${input.description},
                location = ${input.location},
+               precise_location = ${input.precise_location},
+               technique = ${input.technique},
                bg_color = ${input.bg_color},
                published_at = COALESCE(p.published_at, now())
         FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
@@ -179,6 +211,8 @@ export async function publishPhoto(
         UPDATE photos p SET title = ${input.title},
                description = ${input.description},
                location = ${input.location},
+               precise_location = ${input.precise_location},
+               technique = ${input.technique},
                bg_color = ${input.bg_color},
                published_at = COALESCE(p.published_at, now())
         FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}

@@ -485,7 +485,8 @@
         "src/lib/database.ts",
         "src/lib/auth/**",
         "src/lib/photos/**",
-        "src/lib/site-url.ts"
+        "src/lib/site-url.ts",
+        "src/lib/stripe.ts"
       ],
       "linter": {
         "rules": {

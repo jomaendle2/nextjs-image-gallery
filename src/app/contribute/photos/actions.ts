@@ -15,6 +15,8 @@ export interface PhotoFormState {
 
 const MAX_TITLE = 120;
 const MAX_DESCRIPTION = 300;
+/* Room for a paragraph about how a photograph was made, not an essay. */
+const MAX_TECHNIQUE = 600;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 /** Both feeds a photo can appear in. */
@@ -52,6 +54,13 @@ export async function savePhoto(
 
   const location = text(formData, "location", MAX_TITLE);
 
+  /*
+   * The two member-only fields. Optional, and empty for most photographs —
+   * a photographer says where they stood only when they want to.
+   */
+  const preciseLocation = text(formData, "precise_location", MAX_TITLE);
+  const technique = text(formData, "technique", MAX_TECHNIQUE);
+
   // publishPhoto scopes the UPDATE to the actor unless they are the owner,
   // so a forged id changes nothing and returns null.
   const slug = await publishPhoto(
@@ -60,6 +69,8 @@ export async function savePhoto(
       title,
       description,
       location: location === "" ? null : location,
+      precise_location: preciseLocation === "" ? null : preciseLocation,
+      technique: technique === "" ? null : technique,
       bg_color: bgColor,
     },
     actor,
