@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
+import { Notice } from "@/components/ui/Notice";
 import { legalIsComplete, OPERATOR } from "@/lib/legal";
 
 /**
@@ -29,14 +30,14 @@ export function LegalPage({
   return (
     <ContributeShell subtitle={subtitle} title={title}>
       {legalIsComplete() ? null : (
-        <p className="mb-8 max-w-prose rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-amber-100/90 text-sm">
+        <Notice className="mb-8 max-w-prose" tone="warning">
           <strong className="font-semibold">Unfinished.</strong> The operator's
           postal address has not been filled in, so this notice does not yet
           meet §5 DDG. Set <code className="text-amber-100">street</code> and{" "}
           <code className="text-amber-100">city</code> in{" "}
           <code className="text-amber-100">src/lib/legal.ts</code> before taking
           real payments.
-        </p>
+        </Notice>
       )}
 
       <div className="max-w-prose space-y-8 text-[0.9375rem] text-white/65 leading-relaxed">
