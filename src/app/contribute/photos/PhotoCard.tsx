@@ -2,7 +2,7 @@
 
 import { ChevronDown, Pin } from "lucide-react";
 import Image from "next/image";
-import { type ChangeEvent, useCallback } from "react";
+import { type ChangeEvent, useCallback, useState } from "react";
 import type { PhotoExif } from "@/lib/photos/derive";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoEditForm } from "./PhotoEditForm";
@@ -72,6 +72,28 @@ export function PhotoCard({
   const exif = exifSummary(photo.exif);
   const untitled = (photo.title ?? "").trim() === "";
 
+  /*
+   * The form is mounted on first open and kept thereafter.
+   *
+   * `<details>` hides its children; it does not stop them rendering. So the
+   * collapse fixed the list visually and left every row still shipping a
+   * complete edit form — measured at 114 photographs: 1,374 inputs in the
+   * DOM with nothing open, and 1.7 MB of HTML for a page showing 114
+   * one-line rows.
+   *
+   * The cost of this is a real trade rather than a free win: a form that
+   * only exists after JavaScript runs cannot be submitted without it, and
+   * the earlier note here claimed no-JS support as a virtue. On balance
+   * 1.7 MB over hotel wifi is the worse failure, and it is one everybody
+   * pays rather than a few. The summary — title, location, status — still
+   * renders server-side for every row.
+   *
+   * Kept mounted once opened, so a half-typed caption survives collapsing
+   * the row by accident.
+   */
+  const [opened, setOpened] = useState(false);
+  const handleToggle = useCallback(() => setOpened(true), []);
+
   /* Stable, so ticking one box does not re-render every other row. */
   const handleSelect = useCallback(
     (event: ChangeEvent<HTMLInputElement>) =>
@@ -101,7 +123,7 @@ export function PhotoCard({
         </label>
       )}
 
-      <details className="group min-w-0 flex-1">
+      <details className="group min-w-0 flex-1" onToggle={handleToggle}>
         {/*
           `list-none` plus the explicit chevron: the native triangle differs
           on every platform and none of them match this. `min-h-16` keeps the
@@ -150,33 +172,37 @@ export function PhotoCard({
           />
         </summary>
 
-        <div className="border-white/[0.06] border-t p-5">
-          <div className="flex flex-col gap-5 sm:flex-row">
-            <div className="sm:w-[200px] sm:shrink-0">
-              {/*
+        {opened ? (
+          <div className="border-white/[0.06] border-t p-5">
+            <div className="flex flex-col gap-5 sm:flex-row">
+              <div className="sm:w-[200px] sm:shrink-0">
+                {/*
                 Fixed 4:3 box. Left to its own aspect ratio, a portrait
                 original made its row three times taller than a landscape one
                 and the list became impossible to scan.
               */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white/5">
-                <Image
-                  alt={untitled ? "Uploaded photograph" : photo.title}
-                  blurDataURL={photo.blur_data_url}
-                  className="object-cover"
-                  fill={true}
-                  placeholder="blur"
-                  sizes="(max-width: 640px) 100vw, 200px"
-                  src={photo.blob_url}
-                />
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white/5">
+                  <Image
+                    alt={untitled ? "Uploaded photograph" : photo.title}
+                    blurDataURL={photo.blur_data_url}
+                    className="object-cover"
+                    fill={true}
+                    placeholder="blur"
+                    sizes="(max-width: 640px) 100vw, 200px"
+                    src={photo.blob_url}
+                  />
+                </div>
+                {exif === null ? null : (
+                  <p className="mt-2 text-pretty text-white/40 text-xs">
+                    {exif}
+                  </p>
+                )}
               </div>
-              {exif === null ? null : (
-                <p className="mt-2 text-pretty text-white/40 text-xs">{exif}</p>
-              )}
-            </div>
 
-            <PhotoEditForm photo={photo} />
+              <PhotoEditForm photo={photo} />
+            </div>
           </div>
-        </div>
+        ) : null}
       </details>
     </li>
   );
