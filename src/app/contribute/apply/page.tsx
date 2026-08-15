@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { ContributeShell } from "../ContributeShell";
 import { ApplyForm } from "./ApplyForm";
+import { WhatYouGet } from "./WhatYouGet";
 
 export const metadata: Metadata = {
   title: "Apply to contribute — the beauty of earth.",
@@ -16,6 +17,8 @@ export default function ApplyPage() {
       subtitle="The gallery is small and invited on purpose. If your work belongs here, show us — four fields, no account to create."
       title="Apply to contribute"
     >
+      <WhatYouGet />
+
       <ApplyForm />
 
       <p className="mt-8 text-sm text-white/45">
