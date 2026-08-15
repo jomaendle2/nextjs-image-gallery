@@ -3,8 +3,9 @@ import Link from "next/link";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { getCurrentMember, getSessionEmail } from "@/lib/auth/session";
+import { getMemberByEmail } from "@/lib/members/repository";
 import { membershipConfigured } from "@/lib/stripe";
-import { SubscribeButton } from "./SubscribeButton";
+import { ManageButton, SubscribeButton } from "./SubscribeButton";
 
 export const metadata: Metadata = {
   title: "Membership — the beauty of earth.",
@@ -31,6 +32,15 @@ export default async function MembershipPage({
     getSessionEmail(),
     getCurrentMember(),
   ]);
+
+  /*
+   * The billing record, which outlives the entitlement.
+   *
+   * Deliberately not `member`: somebody whose card is failing has no access
+   * and the most urgent reason of anyone to reach the portal. Gating the way
+   * out on having access would lock the people who need it out of it.
+   */
+  const billing = email === null ? null : await getMemberByEmail(email);
 
   /*
    * Just back from checkout, but the webhook has not landed yet.
@@ -117,6 +127,8 @@ export default async function MembershipPage({
         {member === null && !justPaid ? (
           <SubscribeSection signedIn={email !== null} />
         ) : null}
+
+        {billing === null ? null : <ManageButton />}
 
         <p className="text-sm text-white/45">
           The gallery, the feeds and the photographs stay free and always will.

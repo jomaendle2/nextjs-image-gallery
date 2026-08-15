@@ -49,5 +49,17 @@ export async function GET(
     console.error("Could not record a member view:", error);
   });
 
-  return NextResponse.json({ member: true, ...details });
+  /*
+   * Never stored by anything between here and the member who asked.
+   * The response varies by session cookie, and the one thing that must not
+   * happen is a shared cache holding a member's copy and handing it to the
+   * next anonymous reader. Vercel does not cache route handlers by default,
+   * so this changes nothing today — it is here so that a future edge cache,
+   * a proxy, or a browser back-button does not turn a correct gate into a
+   * leak without anybody editing this file.
+   */
+  return NextResponse.json(
+    { member: true, ...details },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

@@ -1,11 +1,8 @@
 import process from "node:process";
 import { cookies } from "next/headers";
 import { sql } from "@/lib/database";
-import {
-  getMemberByEmail,
-  isActive,
-  type Member,
-} from "@/lib/members/repository";
+import { getMemberByEmail } from "@/lib/members/repository";
+import { isActive, type Member } from "@/lib/members/status";
 import { generateSecret, hashSecret } from "./secrets";
 import type { Contributor, ContributorRole } from "./types";
 

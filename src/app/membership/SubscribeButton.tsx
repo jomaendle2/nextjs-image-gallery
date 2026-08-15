@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
+import { useStripeRedirect } from "@/hooks/useStripeRedirect";
 
 /**
  * Sends somebody to Stripe's hosted checkout.
@@ -11,28 +11,7 @@ import { GlassButton } from "@/components/ui/glass-button";
  * loosen for one that would only ever run here.
  */
 export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const start = useCallback(() => {
-    setBusy(true);
-    setError(null);
-    fetch("/api/stripe/checkout", { method: "POST" })
-      .then(async (response) => {
-        const body = (await response.json()) as {
-          url?: string;
-          error?: string;
-        };
-        if (!response.ok || body.url === undefined) {
-          throw new Error(body.error ?? "Could not start checkout.");
-        }
-        globalThis.location.assign(body.url);
-      })
-      .catch((cause: unknown) => {
-        setBusy(false);
-        setError(cause instanceof Error ? cause.message : "Something failed.");
-      });
-  }, []);
+  const { go, busy, error } = useStripeRedirect("/api/stripe/checkout");
 
   if (!signedIn) {
     return (
@@ -45,9 +24,38 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
 
   return (
     <div>
-      <GlassButton disabled={busy} onClick={start}>
+      <GlassButton disabled={busy} onClick={go}>
         {busy ? "Opening checkout…" : "Become a member"}
       </GlassButton>
+      {error === null ? null : (
+        <p className="mt-2 text-sm text-white/70" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Sends a member to Stripe's billing portal.
+ *
+ * Cancelling has to be as easy as subscribing — both because it is the law
+ * where this is sold from, and because a membership you cannot leave without
+ * emailing someone is a worse product than one you can.
+ */
+export function ManageButton() {
+  const { go, busy, error } = useStripeRedirect("/api/stripe/portal");
+
+  return (
+    <div>
+      <button
+        className="-my-3 inline-flex min-h-11 items-center rounded-full py-3 text-sm text-white/60 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:opacity-50"
+        disabled={busy}
+        onClick={go}
+        type="button"
+      >
+        {busy ? "Opening…" : "Manage or cancel your membership"}
+      </button>
       {error === null ? null : (
         <p className="mt-2 text-sm text-white/70" role="alert">
           {error}

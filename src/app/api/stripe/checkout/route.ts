@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/auth/session";
 import { getMemberByEmail } from "@/lib/members/repository";
+import { hasLiveSubscription } from "@/lib/members/status";
 import { siteOrigin } from "@/lib/site-url";
 import { membershipPriceId, stripeClient } from "@/lib/stripe";
 
@@ -23,9 +24,15 @@ export async function POST(): Promise<NextResponse> {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  // Somebody who already has an active membership does not need another.
+  /*
+   * Somebody Stripe is already billing does not need a second subscription.
+   * This asks about billing rather than access: a `trialing` member has
+   * access and a `past_due` one does not, but both already have a
+   * subscription that will charge them, and starting another would bill
+   * twice for the same month.
+   */
   const existing = await getMemberByEmail(email);
-  if (existing !== null && existing.status === "active") {
+  if (hasLiveSubscription(existing)) {
     return NextResponse.json(
       { error: "That address already has a membership." },
       { status: 409 },

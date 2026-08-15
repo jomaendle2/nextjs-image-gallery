@@ -1,12 +1,16 @@
 import { normaliseEmail } from "@/lib/auth/slug";
 import { sql } from "@/lib/database";
+import type { Member } from "./status";
 
-export interface Member {
-  email: string;
-  stripe_customer_id: string;
-  status: string;
-  current_period_end: string | null;
-}
+export type { Member } from "./status";
+
+/*
+ * `isActive` and `hasLiveSubscription` live in `./status`, which imports no
+ * database, so the rules deciding access and billing can be tested without a
+ * connection string. Import them from there directly: re-exporting through
+ * this module would drag Postgres into anything that only wanted to ask a
+ * question about a status.
+ */
 
 /**
  * Membership, as Stripe reports it.
@@ -15,27 +19,6 @@ export interface Member {
  * called from a success page or a redirect, because arriving at a URL is not
  * evidence of having paid — anyone can guess `?success=true`.
  */
-
-/**
- * True when the subscription entitles somebody to member-only content.
- *
- * `active` and `trialing` both count; `past_due` deliberately does not.
- * Stripe keeps retrying a failed payment for days, and continuing to serve
- * paid content through that window is a decision, not a default — the
- * period end is the honest boundary.
- */
-export function isActive(member: Member | null): boolean {
-  if (member === null) {
-    return false;
-  }
-  if (member.status !== "active" && member.status !== "trialing") {
-    return false;
-  }
-  return (
-    member.current_period_end === null ||
-    new Date(member.current_period_end).getTime() > Date.now()
-  );
-}
 
 export async function getMemberByEmail(
   rawEmail: string,

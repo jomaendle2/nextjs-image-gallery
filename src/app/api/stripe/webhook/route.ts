@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { updateMemberByCustomer, upsertMember } from "@/lib/members/repository";
-import { periodEndToIso, stripeClient } from "@/lib/stripe";
+import { stripeClient, subscriptionPeriodEnd } from "@/lib/stripe";
 
 /**
  * Stripe's account of who has paid, which is the only account that counts.
@@ -64,10 +64,8 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
     stripeCustomerId: customer,
     stripeSubscriptionId: subscriptionId,
     status: subscription?.status ?? "active",
-    currentPeriodEnd: periodEndToIso(
-      (subscription as unknown as { current_period_end?: number } | null)
-        ?.current_period_end,
-    ),
+    currentPeriodEnd:
+      subscription === null ? null : subscriptionPeriodEnd(subscription),
   });
 }
 
@@ -78,10 +76,7 @@ async function handleSubscription(
     typeof subscription.customer === "string"
       ? subscription.customer
       : subscription.customer.id;
-  const periodEnd = periodEndToIso(
-    (subscription as unknown as { current_period_end?: number })
-      .current_period_end,
-  );
+  const periodEnd = subscriptionPeriodEnd(subscription);
   const email = emailFrom(subscription);
 
   /*

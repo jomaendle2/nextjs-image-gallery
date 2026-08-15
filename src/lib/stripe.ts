@@ -55,3 +55,42 @@ export function periodEndToIso(
     ? new Date(seconds * 1000).toISOString()
     : null;
 }
+
+/**
+ * When the paid-for period actually ends.
+ *
+ * Stripe moved `current_period_end` off the subscription and onto its items,
+ * so reading it from the top level — as this did — returned `undefined`
+ * every time and stored NULL for every member. Nothing looked broken,
+ * because `isActive` reads a null period end as "no expiry recorded" and
+ * falls back to the status, and the status is correct in the ordinary case.
+ * The cost was silent: the period end was documented as a second line of
+ * defence and was in fact never populated, so a missed
+ * `customer.subscription.deleted` would have meant access with no end.
+ *
+ * Items are read rather than the subscription because that is where the
+ * field lives now. The latest end across items is the right one for a
+ * multi-item subscription: access should outlast the last thing paid for,
+ * not the first.
+ */
+export function subscriptionPeriodEnd(
+  subscription: Stripe.Subscription,
+): string | null {
+  const ends = subscription.items.data
+    .map((item) => item.current_period_end)
+    .filter((value): value is number => typeof value === "number");
+
+  if (ends.length > 0) {
+    return periodEndToIso(Math.max(...ends));
+  }
+
+  /*
+   * Older API versions put it on the subscription itself. Kept as a
+   * fallback so an account pinned to an earlier version still records a
+   * boundary rather than silently recording none.
+   */
+  return periodEndToIso(
+    (subscription as unknown as { current_period_end?: number })
+      .current_period_end,
+  );
+}
