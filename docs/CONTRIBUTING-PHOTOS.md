@@ -7,7 +7,14 @@ contributor publishes directly.
 ## What a contributor does
 
 1. Goes to `/contribute` and enters the address the invitation was sent to.
-2. Receives a sign-in link. It works **once** and expires after 15 minutes.
+2. Receives a sign-in link, opens it, and presses **Sign in** on the page it
+   lands on. The link works **once** and expires after 15 minutes.
+
+   The button is not ceremony. Corporate mail gateways — SafeLinks,
+   Proofpoint and the like — fetch every URL in an inbound message before
+   the recipient sees it, and a link that signs you in on arrival would be
+   spent by the scanner. The real click would then land on "expired", with
+   no way to tell it had never had a chance.
 3. Lands on `/contribute/photos` and adds photographs — several at once, by
    picker or by dropping them on the panel. JPEG, PNG, WebP or AVIF, up to
    25 MB each. The browser uploads straight to storage, so a file is never
@@ -15,12 +22,26 @@ contributor publishes directly.
    than in parallel, and each reports its own progress; one failing does not
    take the others with it.
 4. The server reads each file once and works out its dimensions, a blur
-   placeholder, a backdrop colour, and the camera and exposure details. The
-   contributor supplies a title and a description, adjusts the backdrop
-   colour if the derived one is wrong, and publishes.
-5. The photograph appears at the top of the gallery, credited, on the
-   contributor's own page at `/by/<their-slug>`, at a URL of its own at
-   `/photo/<id>`, and in both feeds.
+   placeholder, a backdrop colour, and the camera and exposure details.
+5. Each photograph is a row in the list. Opening one reveals its form: a
+   title, a description, a location, and the backdrop colour if the derived
+   one is wrong. Two further fields are optional and shown only to members —
+   where exactly the photograph was taken, and how it was made. Both are
+   blank by default and nothing is ever read from the file to fill them.
+6. Publish, and the photograph appears at the top of the gallery, credited,
+   on the contributor's own page at `/by/<their-slug>`, at a URL of its own
+   at `/photo/<id>`, and in both feeds.
+
+### Working with a lot of photographs
+
+Past four photographs the list gains a search box and a status filter with
+counts. Search matches titles and locations. Tick the checkboxes to publish
+or unpublish several at once, which is the thing people otherwise do ten
+times in a row after a batch upload.
+
+There is deliberately **no bulk delete**. Deleting is irreversible and takes
+the stored file with it, so it stays one photograph at a time behind its own
+confirmation — a checkbox is exactly the control that makes a misclick easy.
 
 Contributors can edit, unpublish and delete their own photographs, and only
 their own. That rule is enforced in the SQL, not in the interface.
