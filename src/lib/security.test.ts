@@ -77,6 +77,27 @@ describe("I1 — state changes on POST, never on GET", () => {
       });
     expect(offenders).toEqual([]);
   });
+
+  /*
+   * The gap that let a third instance through.
+   *
+   * The check above only reads `route.ts`, so it never looked at pages — and
+   * a page render *is* a GET. `/subscribe/confirm` confirmed a subscription
+   * while rendering for months after the identical bug was fixed in
+   * `/subscribe/unsubscribe`, two directories away, because the test that
+   * was supposed to prevent exactly this could not see it.
+   *
+   * A page may call these only inside a server action, which is a POST. The
+   * marker is a bare `await` on one at render time.
+   */
+  it("no page mutates while rendering", () => {
+    const mutators =
+      /await\s+(confirm|unsubscribe|consumeLoginToken|removePhoto|setPublished)\s*\(/;
+    const offenders = allSourceFiles()
+      .filter((file) => file.endsWith("page.tsx"))
+      .filter((file) => mutators.test(readFileSync(file, "utf8")));
+    expect(offenders.map((f) => f.replace(SRC, ""))).toEqual([]);
+  });
 });
 
 describe("I6 — paid content is never in a cacheable payload", () => {

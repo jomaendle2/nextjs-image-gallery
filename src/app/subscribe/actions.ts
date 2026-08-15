@@ -136,3 +136,26 @@ export async function unsubscribeAction(formData: FormData): Promise<void> {
    */
   redirect(`/subscribe/unsubscribe?state=${removed ? "gone" : "unknown"}`);
 }
+
+/**
+ * Confirms a subscription, from a POST rather than a page load.
+ *
+ * The third instance of the same mistake: unsubscribe deleted on GET, the
+ * magic link signed you in on GET, and this confirmed on GET. Mail gateways
+ * fetch every URL in an inbound message, so all three were carried out by a
+ * scanner before the recipient touched them.
+ *
+ * The harm here is subtler than the other two, and worse in one respect.
+ * Nothing is destroyed — the person did ask to subscribe — but the record of
+ * consent becomes a machine rather than a human, which is the entire point
+ * of double opt-in and the basis the privacy policy claims. Meanwhile the
+ * token is spent, so their real click lands on "that link didn't work",
+ * reporting failure at the moment it actually succeeded.
+ */
+export async function confirmAction(formData: FormData): Promise<void> {
+  const token = formData.get("token");
+  const confirmed =
+    typeof token === "string" && token !== "" ? await confirm(token) : false;
+
+  redirect(`/subscribe/confirm?state=${confirmed ? "done" : "unknown"}`);
+}
