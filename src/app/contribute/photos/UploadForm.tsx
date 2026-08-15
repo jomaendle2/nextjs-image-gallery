@@ -1,6 +1,7 @@
 "use client";
 
 import { upload } from "@vercel/blob/client";
+import { AlertCircle, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
@@ -10,6 +11,7 @@ import {
   useState,
 } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
+import { Notice } from "@/components/ui/Notice";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/avif";
 const ACCEPTED_TYPES = new Set(ACCEPT.split(","));
@@ -49,6 +51,47 @@ function itemId(file: File, index: number): string {
  * saturate the connection, make every progress bar meaningless, and lose the
  * whole batch to one flaky moment.
  */
+/**
+ * How one file is doing.
+ *
+ * A failure used to render in the same grey as a success: "added" and
+ * "could not be read" were the same weight, the same colour, in the same
+ * column. After dropping ten files you could not see at a glance which ones
+ * did not make it, which is the whole reason to show a list at all.
+ *
+ * Its own component because the parent was already at the edge of the
+ * complexity limit, and three branches of colour plus three of content is
+ * exactly the kind of thing that pushes a render function over.
+ */
+function ItemStatus({
+  item,
+  percent,
+}: {
+  item: { status: string; error?: string | null };
+  percent: number;
+}) {
+  if (item.status === "uploading") {
+    return <span className="flex-shrink-0 text-white/45">{percent}%</span>;
+  }
+  if (item.status === "waiting") {
+    return <span className="flex-shrink-0 text-white/45">waiting</span>;
+  }
+  if (item.status === "done") {
+    return (
+      <span className="flex flex-shrink-0 items-center gap-1.5 text-emerald-200/80">
+        <Check aria-hidden="true" size={14} />
+        added
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-shrink-0 items-center gap-1.5 text-red-200">
+      <AlertCircle aria-hidden="true" size={14} />
+      {item.error ?? "failed"}
+    </span>
+  );
+}
+
 export function UploadForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -236,9 +279,10 @@ export function UploadForm() {
       <h2 className="font-semibold text-lg tracking-[-0.03em]">Add photos</h2>
       <p className="mt-1 mb-4 text-sm text-white/55">
         Drag them here, or choose them below. JPEG, PNG, WebP or AVIF, up to 25
-        MB each. Upload the full-size originals — they are stored as you sent
-        them. Camera and exposure details are read from the file; any GPS
-        coordinates are discarded.
+        MB each. Upload the full-size originals — they are stored exactly as you
+        sent them. Camera and exposure details are read from the file; the GPS
+        block is never read, and the copy the gallery publishes carries no
+        metadata at all.
       </p>
 
       <input
@@ -262,12 +306,7 @@ export function UploadForm() {
               <span className="min-w-0 flex-1 truncate text-white/70">
                 {item.name}
               </span>
-              <span className="flex-shrink-0 text-white/45">
-                {item.status === "uploading" ? `${percent}%` : null}
-                {item.status === "waiting" ? "waiting" : null}
-                {item.status === "done" ? "added" : null}
-                {item.status === "failed" ? (item.error ?? "failed") : null}
-              </span>
+              <ItemStatus item={item} percent={percent} />
             </li>
           ))}
         </ul>
@@ -292,17 +331,21 @@ export function UploadForm() {
       ) : null}
 
       {finished ? (
-        <p
-          className="mt-4 text-sm text-white/55"
-          role={failures.length > 0 ? "alert" : undefined}
+        <Notice
+          className="mt-4"
+          tone={failures.length > 0 ? "error" : "success"}
         >
-          {failures.length === 0
-            ? "All added. Give them titles below."
-            : `${items.length - failures.length} added, ${failures.length} could not be used.`}{" "}
-          <GlassButton className="ml-2" onClick={dismiss} size="sm">
-            Done
-          </GlassButton>
-        </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <span>
+              {failures.length === 0
+                ? "All added. Give them titles below."
+                : `${items.length - failures.length} added, ${failures.length} could not be used.`}
+            </span>
+            <GlassButton className="ml-auto" onClick={dismiss} size="sm">
+              Done
+            </GlassButton>
+          </div>
+        </Notice>
       ) : null}
     </div>
   );

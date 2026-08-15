@@ -16,6 +16,16 @@ interface DraftRequest {
 }
 
 /**
+ * An error whose message is meant for the person uploading.
+ *
+ * Everything else — a failed fetch, a sharp decode, a storage timeout — is
+ * logged in full and replaced with a sentence somebody can act on. The
+ * distinction has to be explicit, because `error.message` cannot tell the
+ * difference between a sentence we wrote and one libvips did.
+ */
+class TellTheUser extends Error {}
+
+/**
  * Turns a freshly uploaded blob into a draft row.
  *
  * Fetches the file once, derives everything the gallery needs from it, and
@@ -96,7 +106,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength > MAX_BYTES) {
-      throw new Error("That file is larger than 25 MB.");
+      throw new TellTheUser("That file is larger than 25 MB.");
     }
 
     const derived = await deriveFromBuffer(buffer);
@@ -149,12 +159,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     console.error("Draft creation failed:", error);
+
+    /*
+     * Only messages written for a person reach a person.
+     *
+     * This returned `error.message` for anything that was an Error, which
+     * meant a photographer who uploaded a damaged file was shown
+     * "vipspng: libpng read error" — a C library's internal complaint,
+     * beside their own filename. It says nothing they can act on and names
+     * software they did not know was involved. The full error is still
+     * logged above, which is where it is useful.
+     */
     return NextResponse.json(
       {
         error:
-          error instanceof Error
+          error instanceof TellTheUser
             ? error.message
-            : "That file could not be read as an image.",
+            : "That file could not be read as an image. It may be damaged, or saved in a format the camera wrote unusually.",
       },
       { status: 422 },
     );
