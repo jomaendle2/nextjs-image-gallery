@@ -44,9 +44,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Neon connection string. |
 | `BLOB_READ_WRITE_TOKEN` | yes | Vercel Blob store. Set automatically once the store is linked to the project. |
-| `SITE_URL` | production | Canonical origin, e.g. `https://beautyofearth.example`. Magic-link emails are built from this and **never** from the request `Host` header. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then localhost. |
-| `RESEND_API_KEY` | to send email | Without it, sign-in links are printed to the server console instead of emailed. |
-| `EMAIL_FROM` | to send email | The verified sender address, e.g. `hello@beautyofearth.example`. |
+| `SITE_URL` | **production build fails without it** | Canonical origin. Every link the site emails is built from this and **never** from the request `Host` header, so a magic link cannot be pointed at an attacker's domain. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then localhost — which is why production refuses to build without it rather than emailing people an unfamiliar domain. |
+| `RESEND_API_KEY` | **production build fails without it** | In development a missing key prints messages to the terminal, which is how you read a sign-in link locally. In production it throws. |
+| `EMAIL_FROM` | **production build fails without it** | The verified sender, e.g. `contact@thebeautyof.earth`. Required alongside the key: with either missing nothing sends. |
 | `CRON_SECRET` | for the weekly reminder | Vercel sends it as `Authorization: Bearer …` to `/api/cron/announce-reminder`. Without it the route refuses to run rather than becoming a public way to ring the owner's inbox. |
 
 `vercel env pull .env.local` fetches the first two. Then apply the schema:

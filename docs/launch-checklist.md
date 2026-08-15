@@ -164,7 +164,7 @@ UPDATE photos SET announced_at = now() WHERE published_at IS NOT NULL;
   community rather than a personal portfolio the moment a second name
   appears, and `/photographers` is the page that says so.
 - **Check the announcement renders in a real client** —
-  `scripts/smoke-email.mts` sends all six templates to an address you name.
+  `scripts/smoke-email.mts` sends all seven templates to an address you name.
 
 ---
 
@@ -198,7 +198,7 @@ inferred:
 - **Membership** — 20 checks against real Stripe signatures covering
   forgery, replay, dunning, out-of-order delivery and row takeover; 7 more
   for the billing portal.
-- **Email** — all six templates delivered through Resend to a real inbox.
+- **Email** — all seven templates delivered through Resend to a real inbox.
 - **Legal pages, navigation, mobile layout** — every route 200, no
   horizontal scroll at 390px, no console errors.
 
