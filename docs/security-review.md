@@ -111,6 +111,46 @@ database — which is why it had no unit tests. Moved to
 immediately, and they caught nothing, which is the point: they are there for
 the next change.
 
+## Second pass: what a fresh reviewer found
+
+A later independent review found eight more, which says something about the
+first pass: I reviewed the code I had just written, and the two worst
+findings were in the parts I was most confident about.
+
+**The same mistake twice, in the same file.** `invoice.subscription` no
+longer exists — it is `invoice.parent.subscription_details.subscription` —
+and an `as unknown as` cast let the old read compile. Both invoice branches
+resolved `undefined` and did nothing, so a failed renewal never reached the
+member row. This is exactly the `current_period_end` bug found an hour
+earlier, in the same file, and I did not go looking for siblings after
+fixing the first one. **The lesson worth keeping: when a cast around a
+third-party type turns out to hide a moved field, every other cast in that
+file is a suspect.** Both are now in `src/lib/stripe.ts` with unit tests.
+
+**My own smoke test was reassuring rather than useful.** It asserted "a
+failed payment is recorded as past_due" and passed throughout — because it
+sent a `customer.subscription.updated`, and real dunning sends an invoice
+event. A test that never exercises the shape production sends is not
+covering the thing its name claims.
+
+Also fixed: `incomplete` in `LIVE_STATUSES` locked a declined buyer out of
+retrying for a day; deletion revalidated the actor's page rather than the
+author's; deletion orphaned the display blob permanently; the image
+optimizer accepted any tenant's blob store; the OG endpoint bounded its
+title but not its subtitle.
+
+Two that were about people rather than code:
+
+- **The unsubscribe link deleted on GET.** Corporate link scanners fetch
+  every URL in inbound mail, so the first announcement to anybody behind
+  SafeLinks would have unsubscribed them before they read it, with the token
+  spent. Now a POST, which scanners do not issue — and still one click,
+  because a confirmation step would be a dark pattern with a polite face.
+- **Missing mail config failed open in production**, printing live
+  magic-link tokens into the platform log — each a valid credential for
+  fifteen minutes — while telling people to check an inbox nothing had been
+  sent to. Now a hard failure outside development.
+
 ## Added: the customer portal
 
 `/api/stripe/portal` mints a Stripe-hosted billing session. Two properties
