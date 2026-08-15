@@ -118,6 +118,43 @@ describe("I6 — paid content is never in a cacheable payload", () => {
     expect(feedColumns).not.toContain("technique");
   });
 
+  /*
+   * The check above reads one constant, which protects the queries that use
+   * it and nothing else — a *new* public query selecting these columns would
+   * pass it without comment. Same partial-domain shape that let a page
+   * mutate on render and let an unlimited mail sender through.
+   *
+   * So this pins the whole set of files allowed to name them. Adding one is
+   * fine; doing it without noticing is not, and the failure message is where
+   * the next person finds out these two columns are the product.
+   */
+  it("only known files name the paid columns at all", () => {
+    const allowed = [
+      // The gated reader, and the route that calls it.
+      join("/lib", "photos", "repository.ts"),
+      join("/app", "api", "photo", "[id]", "details", "route.ts"),
+      // Where a photographer types them, and the action that saves them.
+      join("/app", "contribute", "photos", "PhotoEditForm.tsx"),
+      join("/app", "contribute", "photos", "actions.ts"),
+      // The component that displays them, which reads the gated API
+      // response rather than the database. Found by this test on its first
+      // run, because the grep I wrote it from covered src/lib and src/app
+      // and forgot src/components — a partial-domain mistake made while
+      // writing a test about partial-domain mistakes.
+      join("/components", "gallery", "carousel", "MemberDetails.tsx"),
+      // Shapes and migrations.
+      join("/lib", "photos", "types.ts"),
+      join("/lib", "schema.ts"),
+    ];
+    const found = allSourceFiles()
+      .filter((file) =>
+        /precise_location|technique/.test(readFileSync(file, "utf8")),
+      )
+      .map((f) => f.replace(SRC, ""))
+      .sort();
+    expect(found).toEqual([...allowed].sort());
+  });
+
   it("only the member-gated route reads them", () => {
     const readers = allSourceFiles().filter((file) => {
       if (file.endsWith(join("photos", "repository.ts"))) {
@@ -227,7 +264,7 @@ describe("I9 — missing security config fails closed", () => {
   });
 });
 
-describe("I11 — endpoints that spend money are rate limited", () => {
+describe("I11 — endpoints that spend money or send mail are limited", () => {
   it.each([["checkout"], ["portal"]])(
     "/api/stripe/%s is limited",
     (route: string) => {
@@ -236,6 +273,36 @@ describe("I11 — endpoints that spend money are rate limited", () => {
       expect(source).toContain("status: 429");
     },
   );
+
+  /*
+   * The other half of the same rule, which this test used to leave out.
+   *
+   * Naming only the two Stripe routes made I11 look enforced while the
+   * mail-sending half of its own sentence went unchecked — the identical
+   * shape of gap that let a page keep mutating on render because the check
+   * only read route handlers. An unlimited endpoint that sends mail is a
+   * way to flood somebody else's inbox using this domain's reputation.
+   *
+   * Two ways to satisfy it: a limiter for anything the public can reach, or
+   * `requireOwner` for anything only one person can. The admin actions take
+   * the second route, which is why they carry no limiter.
+   */
+  it("every action that sends mail is either limited or owner-only", () => {
+    const senders = allSourceFiles()
+      .filter((file) => file.endsWith("actions.ts"))
+      .filter((file) => /\bsend[A-Z]\w*\s*\(/.test(readFileSync(file, "utf8")));
+
+    // If this ever finds nothing, the detection has broken, not the code.
+    expect(senders.length).toBeGreaterThan(0);
+
+    const unguarded = senders.filter((file) => {
+      const source = readFileSync(file, "utf8");
+      return !(
+        /Limiter\.check/.test(source) || /requireOwner\(\)/.test(source)
+      );
+    });
+    expect(unguarded.map((f) => f.replace(SRC, ""))).toEqual([]);
+  });
 });
 
 describe("I2 — bulk writes carry the same authorization as single ones", () => {
