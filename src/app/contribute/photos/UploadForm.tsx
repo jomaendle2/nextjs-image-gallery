@@ -119,14 +119,31 @@ export function UploadForm() {
   );
 
   const uploadOne = useCallback(async (file: File) => {
-    const blob = await upload(`photos/${file.name}`, file, {
-      access: "public",
-      handleUploadUrl: "/api/uploads/token",
-      multipart: true,
-      onUploadProgress: ({ percentage }) => {
-        setPercent(Math.round(percentage));
-      },
-    });
+    /*
+     * The storage client's own failures are not the photographer's language.
+     * It throws things like "Vercel Blob: Access denied" and bare network
+     * errors, and the catch downstream shows `error.message` verbatim beside
+     * their filename — naming infrastructure they have no relationship with
+     * and cannot act on. The same rule the draft route now follows: log the
+     * real thing, show a sentence.
+     *
+     * The draft response's message passes through untouched, because that
+     * one is already written for a person on the server.
+     */
+    let blob: Awaited<ReturnType<typeof upload>>;
+    try {
+      blob = await upload(`photos/${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/uploads/token",
+        multipart: true,
+        onUploadProgress: ({ percentage }) => {
+          setPercent(Math.round(percentage));
+        },
+      });
+    } catch (cause) {
+      console.error("Blob upload failed:", cause);
+      throw new Error("Could not be sent — check your connection and retry.");
+    }
 
     const response = await fetch("/api/photos/draft", {
       method: "POST",

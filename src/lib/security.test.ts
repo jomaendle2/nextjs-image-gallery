@@ -254,6 +254,53 @@ describe("I2 — bulk writes carry the same authorization as single ones", () =>
   });
 });
 
+describe("Honest claims, and errors written for people", () => {
+  /*
+   * "GPS is stripped from every upload" appeared in four places and was
+   * false in all of them: the original is stored exactly as sent,
+   * coordinates intact. Each time it was found I fixed that one and did not
+   * look for the others, so it took three rounds to clear — which is the
+   * argument for this test rather than a fifth correction.
+   *
+   * What is true, and what the copy must say: the block is never *read*.
+   */
+  it("no page claims that GPS is stripped or discarded", () => {
+    const offenders = allSourceFiles()
+      .filter((file) => file.endsWith(".tsx"))
+      .filter((file) => {
+        const source = readFileSync(file, "utf8")
+          // Comments explain the history and may quote the old wording.
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/\/\/[^\n]*/g, "");
+        return /(coordinates|GPS)[^.]{0,60}(stripped|discarded)/i.test(source);
+      });
+    expect(offenders.map((f) => f.replace(SRC, ""))).toEqual([]);
+  });
+
+  /*
+   * A photographer with a damaged file was shown "vipspng: libpng read
+   * error" beside their own filename. Third-party failures get logged and
+   * replaced; only messages we wrote for a person reach one.
+   */
+  it("the upload route only forwards messages meant for people", () => {
+    const route = read("app", "api", "photos", "draft", "route.ts");
+    expect(route).toContain("class TellTheUser extends Error");
+    expect(route).toMatch(/error instanceof TellTheUser/);
+    // The unfiltered form that leaked libvips internals.
+    expect(route).not.toMatch(/error instanceof Error\s*\?\s*error\.message/);
+  });
+
+  it("the storage client's own errors do not reach the uploader", () => {
+    const form = read("app", "contribute", "photos", "UploadForm.tsx");
+    const around = form.slice(
+      form.indexOf("const uploadOne"),
+      form.indexOf("const runOne"),
+    );
+    expect(around).toMatch(/catch \(cause\)/);
+    expect(around).toContain("console.error");
+  });
+});
+
 describe("I3 — anything the interface refuses, the server refuses", () => {
   /*
    * Revoking an owner was prevented only by hiding the button. Doing it

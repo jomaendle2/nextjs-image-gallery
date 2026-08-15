@@ -136,7 +136,8 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
           />
           <p className="text-[0.75rem] text-white/35 leading-relaxed">
             Only members see this, and only if you fill it in. Nothing is ever
-            read from the file — your coordinates are still discarded.
+            read from the file — the GPS block is never opened, so whatever you
+            type here is the only location this site knows.
           </p>
         </div>
 
