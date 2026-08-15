@@ -347,33 +347,30 @@ The email half is built in `190a6fa`: `/subscribe`, double opt-in, one-click
 unsubscribe that deletes rather than flags, reachable from the photographers
 page since `218c5f9`.
 
-**The send itself is not built**, and it is the one thing standing between a
-subscriber list and a subscriber list worth having. Everything it needs
-exists: confirmed rows carry a usable unsubscribe token (`21ac07b`), the
-email helpers and `page`/`button` templates are in `auth/email.ts`, and the
-admin has both `requireOwner` and `useServerAction`.
+**The send is built** — `5011d14`. A button on `/contribute/admin`, and a
+Monday-morning cron at `/api/cron/announce-reminder` that emails *the owner*
+that something is waiting rather than mailing the list itself. That is the
+whole difference between a schedule and an automation: a wrong title reaches
+one person who can still stop it.
 
-Four steps, in order:
+`markAnnounced` runs before the first message, not after. If the send dies
+halfway the choice is between some subscribers getting a second copy and
+some photographs never being announced, and the duplicate is worse — the
+photograph is still on the site, in both feeds and in the sitemap.
 
-1. `ALTER TABLE photos ADD COLUMN IF NOT EXISTS announced_at TIMESTAMPTZ;`
-2. `listUnannouncedPhotos()` and `markAnnounced(ids)` in
-   `photos/repository.ts` — the first ordered *oldest first*, because an
-   announcement reads in the order the work appeared, which is the opposite
-   of the gallery
-3. `sendNewWorkAnnouncement(to, photos, unsubscribeUrl)` beside the existing
-   helpers
-4. An owner-gated action and a button in `/contribute/admin`
+The body is a pure function in `lib/announcement.ts`, tested like `feed.ts`:
+every value in it was typed by a contributor and lands inside HTML in
+somebody else's mail client, so the escaping is the risk and it is tested
+directly. Twelve photographs listed, the rest counted.
 
-**Owner-triggered rather than automatic**, deliberately. On-publish would
-mail the list once per photograph when a photographer uploads a shoot;
-weekly presumes a cadence nobody has chosen. A button cannot surprise
-anybody, and automation can be layered on it later.
+One flaw found by driving it rather than designing it: the panel was first
+rendered by the page on `pending > 0`, so sending dropped the count to zero,
+the section unmounted, and the "sent to N" confirmation went with it. The
+component owns its own visibility now, so the result outlives what produced
+it.
 
-**Mark the photographs announced *before* sending, not after.** If the
-process dies halfway, the choice is between some subscribers getting a
-second copy and some photographs never being announced — and the duplicate
-costs more. The photographs are still on the site, in the feed and in the
-sitemap; the trust is harder to get back.
+Needs `CRON_SECRET` set in production; without it the route refuses to run
+rather than becoming a public way to ring the owner's inbox.
 
 There is currently no reason to return and no way to subscribe. Every
 visitor is a one-time arrival from a link. That is the single largest gap,
