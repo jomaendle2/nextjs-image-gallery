@@ -142,7 +142,9 @@ export function UploadForm() {
       });
     } catch (cause) {
       console.error("Blob upload failed:", cause);
-      throw new Error("Could not be sent — check your connection and retry.");
+      throw new Error("Could not be sent — check your connection and retry.", {
+        cause,
+      });
     }
 
     const response = await fetch("/api/photos/draft", {

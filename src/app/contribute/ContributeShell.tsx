@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/SiteFooter";
+import { EnvironmentBanner } from "@/components/ui/EnvironmentBanner";
 import { TOUCH_LINK } from "@/components/ui/field";
 
 /**
@@ -67,6 +68,7 @@ function Frame({
 }: ShellProps & { className: string }) {
   return (
     <div className="min-h-dvh bg-surface text-white">
+      <EnvironmentBanner />
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0"
