@@ -93,6 +93,49 @@ whole contributor flow down.
 The new `error.tsx` caught it and showed "That didn't load" rather than a
 stack trace, which is exactly the day it was written for.
 
+### Contributor value said out loud — `fed93a6`
+
+Four things that were already true and never stated: their own page, a
+credit linking to their site, GPS stripped from every upload, and direct
+publishing with full control. Written specifically enough to become wrong if
+the behaviour changes.
+
+### A URL per photograph — `cc239ac`
+
+`/photo/[id]`, with the photograph's own OG image, plus a share control.
+Sitemap went from 6 URLs to 24. Two things learned by testing: the share
+rule has to key on pointer type rather than `navigator.share` existing
+(desktop Chrome exposes it, so feature-detection left the button dead), and
+the control has to be icon-only or its label changes width inside the bar
+that was just made immovable.
+
+### Alt text — `8aa97cd`
+
+Every photograph used its title as alt text, and titles are places. A screen
+reader user got a gazetteer. Now description-then-place, from a tested
+helper. Notable because this was the obvious "let a model do it" candidate
+and the contributors had already written the text.
+
+### Safe areas — `fc04dd6`
+
+`viewport-fit: cover` plus three `safe-*` utilities that take the larger of
+the design's padding and the device inset. No change where insets are zero,
+verified. **Wants confirmation on real notched hardware.**
+
+### One near-black instead of three — `acbb6ae`
+
+`--ground` for the viewer, `--color-surface` for documents, and the literal
+that had been retyped in three files is gone. The global error boundary
+keeps a hand-written copy because it renders when the stylesheet may not
+have loaded, and says so.
+
+### Manifest and icons — `6a8d232`
+
+`public/site.webmanifest` had an empty name, white colours on a near-black
+site, and no link to it from anywhere. Replaced with a typed `manifest.ts`.
+The icons in `public/` were undeclared; the Apple touch icon — the one a
+home-screen bookmark uses — was never referenced.
+
 ---
 
 ## Open
@@ -108,9 +151,11 @@ Still open, and the biggest remaining one: **uploading is work.** Every
 photograph needs a title and a description typed from nothing. See the AI
 Gateway note below — this is the friction worth removing.
 
-### Mobile polish and speed
-Real-device-shaped checks: touch targets, safe areas, scroll behaviour,
-image weight on a slow connection, interaction latency.
+### Mobile — mostly done, one thing needs hardware
+Safe areas landed in `fc04dd6` but want a real notched device. Speed was
+measured and is not a problem: mobile LCP 848ms, FCP 180ms, TTFB 113ms, and
+all ten AVIF images on first load total 26KB. Still unchecked: behaviour on
+a genuinely slow connection, and interaction latency under CPU throttling.
 
 ### Vercel AI Gateway — evaluated, one candidate worth building
 
