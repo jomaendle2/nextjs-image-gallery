@@ -147,6 +147,59 @@ export async function sendApplicationApproved(
 }
 
 /**
+ * The "new work is up" message, to one subscriber.
+ *
+ * The body is built by `lib/announcement.ts` and passed in already
+ * assembled, so the escaping can be tested without a mail provider — see
+ * the note there. This function's only job is delivery.
+ */
+export async function sendNewWorkAnnouncement(
+  to: string,
+  message: { subject: string; text: string; html: string },
+): Promise<void> {
+  await send({
+    to,
+    subject: message.subject,
+    text: message.text,
+    html: page(message.html),
+  });
+}
+
+/**
+ * Tells the owner there is something worth announcing.
+ *
+ * Sent by the weekly cron, and deliberately not to the list: the cron
+ * prompts, a person decides. Nothing reaches a subscriber without somebody
+ * pressing a button.
+ */
+export async function sendAnnouncementReminder(
+  to: string,
+  count: number,
+): Promise<void> {
+  const url = `${siteOrigin()}/contribute/admin`;
+  const noun = count === 1 ? "photograph" : "photographs";
+
+  await send({
+    to,
+    subject: `${count} ${noun} waiting to be announced`,
+    text: [
+      `${count} ${noun} have been published since the last announcement.`,
+      "",
+      `Send it, or leave it for next week: ${url}`,
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
+         ${count} ${noun} have been published since the last announcement.
+       </p>
+       ${button(url, "Review and send")}
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         Nothing goes out until you press send.
+       </p>`,
+    ),
+  });
+}
+
+/**
  * The one message an unconfirmed address is ever sent.
  *
  * Deliberately plain about what happened and what to do if it was not them.

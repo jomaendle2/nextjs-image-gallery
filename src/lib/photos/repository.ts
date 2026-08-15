@@ -83,6 +83,44 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
 }
 
 /**
+ * Published photographs the subscriber list has not been told about yet.
+ *
+ * Ordered oldest first, which is the opposite of the gallery and correct
+ * here: an announcement is read as a catch-up, in the order the work
+ * appeared, rather than as a front page where the newest matters most.
+ *
+ * Revoked contributors are excluded on the same join the feed uses, so
+ * revoking somebody also stops their work being announced.
+ */
+export async function listUnannouncedPhotos(): Promise<PhotoRow[]> {
+  const rows = await sql.query(
+    `SELECT ${FEED_COLUMNS}
+     FROM photos p JOIN contributors c ON c.id = p.author_id
+     WHERE p.published_at IS NOT NULL AND p.announced_at IS NULL
+       AND c.revoked_at IS NULL
+     ORDER BY p.published_at ASC`,
+  );
+  return rows as PhotoRow[];
+}
+
+/**
+ * Marks photographs as announced.
+ *
+ * The caller does this *before* the messages go out. If the send dies
+ * halfway through, the choice is between some subscribers receiving a
+ * second copy later and some photographs never being announced at all —
+ * and the duplicate is the worse outcome. An unannounced photograph is
+ * still on the site, in both feeds and in the sitemap; a list that mails
+ * people twice is harder to win back.
+ */
+export async function markAnnounced(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) {
+    return;
+  }
+  await sql`UPDATE photos SET announced_at = now() WHERE id = ANY(${ids});`;
+}
+
+/**
  * Whether some photo row already points at this blob.
  *
  * Blob URLs of published photographs are public — they are in the markup of

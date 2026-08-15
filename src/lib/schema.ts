@@ -178,4 +178,14 @@ export const MIGRATIONS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS subscribers_confirmed_idx
      ON subscribers (confirmed_at) WHERE confirmed_at IS NOT NULL;`,
 
+  /*
+   * When a photograph went out in an announcement.
+   *
+   * Separate from `published_at` because publishing and announcing are
+   * different decisions made by different people at different times: a
+   * photographer publishes whenever they like, and the owner chooses when
+   * the list hears about it. This column is the only thing stopping the same
+   * work being mailed twice.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS announced_at TIMESTAMPTZ;",
 ];

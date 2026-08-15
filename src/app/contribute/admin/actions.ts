@@ -1,15 +1,34 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
 import {
   inviteContributor,
   setContributorRevoked,
 } from "@/lib/auth/contributors";
-import { sendApplicationApproved } from "@/lib/auth/email";
+import {
+  sendApplicationApproved,
+  sendNewWorkAnnouncement,
+} from "@/lib/auth/email";
 import { requireContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
-import { setOpener, setPublished } from "@/lib/photos/repository";
+import { toGalleryImage } from "@/lib/photos/map";
+import {
+  listUnannouncedPhotos,
+  markAnnounced,
+  setOpener,
+  setPublished,
+} from "@/lib/photos/repository";
+import { siteOrigin } from "@/lib/site-url";
+import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
+
+/** What a send did, for the button to report. */
+export interface AnnounceResult {
+  sent: number;
+  failed: number;
+  photographs: number;
+}
 
 export interface AdminFormState {
   message: string | null;
@@ -146,4 +165,57 @@ export async function ownerSetPublished(
   if (slug !== null) {
     revalidatePath(`/by/${slug}`);
   }
+}
+
+/**
+ * Sends the announcement to every confirmed subscriber.
+ *
+ * Owner-only, and the only path by which anything reaches the list. The
+ * weekly cron does not send — it emails the owner that there is something
+ * to send, and this is what they press.
+ */
+export async function announceNewWork(): Promise<AnnounceResult> {
+  await requireOwner();
+
+  const rows = await listUnannouncedPhotos();
+  if (rows.length === 0) {
+    return { sent: 0, failed: 0, photographs: 0 };
+  }
+
+  const subscribers = await listConfirmedSubscribers();
+  const images = rows.map(toGalleryImage);
+  const origin = siteOrigin();
+
+  /*
+   * Marked before a single message goes out, not after.
+   *
+   * If this dies halfway through the list, the choice is between some
+   * subscribers getting a second copy next week and these photographs never
+   * being announced. The duplicate is the worse one: an unannounced
+   * photograph is still on the site, in both feeds and in the sitemap, while
+   * a list that mails people twice is harder to win back.
+   */
+  await markAnnounced(rows.map((row) => row.id));
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const subscriber of subscribers) {
+    const message = buildAnnouncement(
+      images,
+      origin,
+      `${origin}/subscribe/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribe_token)}`,
+    );
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: one message per recipient, and a provider is happier with a queue than a burst
+      await sendNewWorkAnnouncement(subscriber.email, message);
+      sent += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(`Announcement to ${subscriber.email} failed:`, error);
+    }
+  }
+
+  revalidatePath("/contribute/admin");
+  return { sent, failed, photographs: images.length };
 }

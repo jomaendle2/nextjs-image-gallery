@@ -47,6 +47,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `SITE_URL` | production | Canonical origin, e.g. `https://beautyofearth.example`. Magic-link emails are built from this and **never** from the request `Host` header. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then localhost. |
 | `RESEND_API_KEY` | to send email | Without it, sign-in links are printed to the server console instead of emailed. |
 | `EMAIL_FROM` | to send email | The verified sender address, e.g. `hello@beautyofearth.example`. |
+| `CRON_SECRET` | for the weekly reminder | Vercel sends it as `Authorization: Bearer …` to `/api/cron/announce-reminder`. Without it the route refuses to run rather than becoming a public way to ring the owner's inbox. |
 
 `vercel env pull .env.local` fetches the first two. Then apply the schema:
 
