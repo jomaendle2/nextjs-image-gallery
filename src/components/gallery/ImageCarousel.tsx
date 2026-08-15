@@ -166,7 +166,14 @@ export function ImageCarousel({
         behind an opaque fill: full-frame compositing work every frame for
         pixels nobody could ever see.
       */}
-      <div
+      {/*
+        A `main` landmark, like every other page here has. The viewer is a
+        fixed full-screen layer rather than a document, which is presumably
+        why it ended up as a bare `div` — but it is still the main content of
+        the page, and without the landmark there is nothing for a screen
+        reader to jump to and nothing a skip link could ever target.
+      */}
+      <main
         className="fixed inset-0 z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
         style={{
           backgroundColor: photoGround(currentImage.bgColor),
@@ -238,7 +245,7 @@ export function ImageCarousel({
           images={images}
           onImageSelect={goToIndex}
         />
-      </div>
+      </main>
 
       {/* Full screen image modal */}
       <ImageModal

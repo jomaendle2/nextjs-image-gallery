@@ -59,7 +59,11 @@ export function PhotoGrid({
         />
       </div>
 
-      <div className="relative mx-auto w-full max-w-[1536px] px-4 pb-14 sm:px-8">
+      {/*
+        The landmark starts below the sticky header, which is navigation and
+        identity rather than content — so `main` is the contact sheet itself.
+      */}
+      <main className="relative mx-auto w-full max-w-[1536px] px-4 pb-14 sm:px-8">
         <ul className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {images.map((image, index) => (
             <li key={image.id}>
@@ -93,7 +97,7 @@ export function PhotoGrid({
             </li>
           ))}
         </ul>
-      </div>
+      </main>
     </div>
   );
 }
