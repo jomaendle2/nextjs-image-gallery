@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface Details {
   member: boolean;
@@ -40,11 +41,30 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     retry: false,
   });
 
-  /*
-   * Nothing at all until the answer is known. A placeholder that resolves
-   * into an invitation would be a second thing moving in a bar this codebase
-   * spent a long time making immovable.
-   */
+  return <Line>{body(isPending, data)}</Line>;
+}
+
+/**
+ * Holds the line whether or not there is anything to put on it.
+ *
+ * This used to return `null` while the request was in flight, on the
+ * reasoning that a placeholder resolving into an invitation would be one
+ * more thing moving in a bar this codebase worked hard to make still. That
+ * had it backwards: rendering nothing and then something *is* the movement,
+ * and because the lookup is per photograph it happened on every single image
+ * change — the caption bar grew by a line a moment after each one, and the
+ * photograph above absorbed the difference.
+ *
+ * The exif line two elements up already solved this, with an empty paragraph
+ * holding `min-h-4` and a comment describing the identical bug. Same idiom
+ * here. `min-h-5` is the resting height of the invitation, whose 44px touch
+ * target is pulled back to one line by its negative margins.
+ */
+function Line({ children }: { children: ReactNode }) {
+  return <div className="min-h-5">{children}</div>;
+}
+
+function body(isPending: boolean, data: Details | undefined): ReactNode {
   if (isPending || data === undefined) {
     return null;
   }
