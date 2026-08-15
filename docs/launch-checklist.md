@@ -21,22 +21,22 @@ That silently breaks:
 - the subscribe confirmation, so nobody can ever join the list
 - the "you're in" mail when you approve an applicant
 
-Verify `thebeautyof.earth` at <https://resend.com/domains> — preferably that
-rather than `jomaendle.com`, so the mail comes from the site people think
-they are dealing with — then set `EMAIL_FROM` to an address on it.
+`thebeautyof.earth` has been added to Resend and is **pending** — the DKIM
+record is still propagating through GoDaddy. Nothing can send until it
+flips to Verified. Check at <https://resend.com/domains>; it usually takes
+minutes rather than the hours the warning suggests, but it is DNS, so it
+cannot be hurried.
 
-### Set `EMAIL_FROM` on Vercel
+The other domains on the account (`links.jomaendle.com`,
+`immokaepsele.de`, `updates.mycvs.xyz`) are verified and would work today
+if you needed to test sooner.
 
-It exists nowhere on the project. `RESEND_API_KEY` alone is not enough:
-both are required, and **since the fail-closed change, production now
-throws rather than pretending to send.** That is deliberate — the previous
-behaviour wrote live sign-in tokens into the platform log and told people to
-check an empty inbox — but it does mean sign-in is hard-down until this is
-set.
+### ~~Set `EMAIL_FROM` on Vercel~~ — done
 
-```bash
-vercel env add EMAIL_FROM production
-```
+Set on Preview and Production. Note that **env changes do not reach an
+already-built deployment**: Vercel injects the variable set at build time,
+so anything deployed before you added it still has the old environment.
+Push or redeploy after changing one.
 
 ### Fill in the operator address
 
@@ -110,3 +110,37 @@ The parts most likely to surprise you, all deliberate:
   the webhook records the payment, and the link sent to that address is what
   unlocks it. `/membership?welcome=1` says so explicitly.
 - **The first announcement is manual.** By design — see §3.
+
+
+---
+
+## 6. Verified working, as of 16 August
+
+Driven end to end against the real database and the real services, not
+inferred:
+
+- **Sign in** — magic link minted, redeemed through the button, session
+  established, lands on the dashboard. Single-use holds; a link scanner's
+  GET no longer spends it.
+- **Upload** — a real file through the real form: row created, both blobs
+  written, thumbnail rendered, new photograph correctly badged *Draft*.
+- **Membership** — 20 checks against real Stripe signatures covering
+  forgery, replay, dunning, out-of-order delivery and row takeover; 7 more
+  for the billing portal.
+- **Email** — all six templates delivered through Resend to a real inbox.
+- **Legal pages, navigation, mobile layout** — every route 200, no
+  horizontal scroll at 390px, no console errors.
+
+## 7. What five test users will actually hit
+
+In the order they will hit it:
+
+1. **An invitation email** — blocked on the domain above. Nothing else in
+   the flow works until this does.
+2. **Sign in** — works, and takes one extra button press by design.
+3. **Upload and publish** — works. The dashboard now collapses each
+   photograph to a scannable row with search and status filters, so it
+   stays usable as they add more.
+4. **Their public page** — `/by/<slug>`, linked from the dashboard.
+5. **Membership** — deliberately off in production. Nothing misleads
+   anybody while it is hidden.
