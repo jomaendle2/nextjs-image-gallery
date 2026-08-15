@@ -96,6 +96,12 @@ Guards that fire on non-problems are the ones people learn to bypass.
   Stripe Connect, thresholds and tax — a separate piece of work, and one that
   only makes sense once there is a pool.
 
+- **`next-plausible` 3 → 4.** The only outdated dependency, and a major
+  version. Deliberately not taken the week before inviting testers: a
+  breaking change in analytics buys nothing now and costs a debugging
+  session if it misbehaves. `npm audit` reports zero vulnerabilities across
+  the tree, so there is no security pressure behind it.
+
 ---
 
 ## From the original brief, still unbuilt
