@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { GalleryImage } from "@/data/galleryData";
 import { photoAltText } from "@/lib/photos/alt-text";
+import { trapTab } from "./focus-trap";
 import { usePanZoom } from "./usePanZoom";
 import { ViewerCaption } from "./ViewerCaption";
 import { ViewerControls } from "./ViewerControls";
@@ -27,6 +28,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = useRef<Element | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +93,15 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         handleClose();
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog = dialogRef.current;
+      if (dialog && trapTab(dialog, event)) {
+        event.preventDefault();
       }
     };
 
@@ -148,6 +159,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
          */
         backgroundColor: `color-mix(in srgb, color-mix(in oklab, ${image.bgColor} 38%, oklch(7% 0 0)) 90%, transparent)`,
       }}
+      ref={dialogRef}
       role="dialog"
     >
       {/*
@@ -166,7 +178,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
       {/* Close button */}
       <GlassButton
-        aria-label="Close modal"
+        aria-label="Close full screen view"
         className={`absolute top-4 right-4 z-10 p-2 rounded-full ${chrome}`}
         onClick={handleClose}
         ref={closeButtonRef}
