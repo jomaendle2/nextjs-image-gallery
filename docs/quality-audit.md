@@ -343,9 +343,10 @@ cards, a sitemap, structured data. What is missing is the other half.
 site. Per-photographer is the half that matters to a contributor —
 "people can subscribe to you" is the argument for publishing here.
 
-The email half is **not** built, deliberately: it means collecting
-addresses, consent, and a sending path, which is a product decision rather
-than a cleanup.
+The email half is built in `190a6fa`: `/subscribe`, double opt-in, one-click
+unsubscribe that deletes rather than flags. What is **not** built is the
+send itself — the message that goes out when new work is published. That
+wants a trigger (on publish? weekly?) and a decision about frequency.
 
 There is currently no reason to return and no way to subscribe. Every
 visitor is a one-time arrival from a link. That is the single largest gap,
@@ -371,7 +372,53 @@ than their fourth. The constraint stands: the model proposes a description,
 never a place — it cannot know where a photograph was taken, and a
 confident wrong location on someone else's work is worse than a blank field.
 
-### 3. Membership, when there is an audience to sell to
+### 3a. What a membership should sell
+
+Exact locations are decided. The question is what sits beside them, and the
+test each candidate has to pass is: **does a photographer want it to exist?**
+This gallery's supply problem is photographers, so anything that makes
+publishing here feel worse is expensive however well it converts.
+
+**Strong — build these with locations:**
+
+- **The location itself, per photograph, opt-in.** Nothing is disclosed that
+  a photographer did not type. This is the one thing only this community can
+  supply, and it fits the privacy stance rather than contradicting it: EXIF
+  still never leaks a coordinate; the photographer *chooses* to say where
+  they stood.
+- **How the photograph was made.** The exposure line is already shown; the
+  approach is not — time of day, what they waited for, what they would do
+  differently. It costs a photographer a paragraph they usually enjoy
+  writing, and it is the thing other photographers actually pay for. It also
+  makes the member's relationship with the photographer rather than with us.
+- **The full archive.** This is the honest answer to a problem already open
+  in this document: `listPublishedPhotos` has no `LIMIT`, and the fix has
+  been deferred because a cap silently drops photographs out of a
+  photographer's gallery. If the free gallery shows recent work and members
+  see everything, the cap becomes a product boundary instead of a
+  regression — one decision solving a technical problem and a commercial one.
+
+**Worth considering, with a caveat each:**
+
+- **A share of revenue to photographers, by view.** Strategically the
+  strongest thing on this list — "your work earns here" is the best
+  recruitment sentence available, and it makes the membership something a
+  photographer wants to sell. The caveat is operational: payouts, tax,
+  thresholds, and a number that will be small at first and visible.
+- **Full-resolution viewing.** Not downloads, which invite the licensing
+  question before there is an answer to it. Simply seeing the original where
+  the gallery serves a capped copy.
+
+**Rejected, and why, so they do not come back around:**
+
+- **Early access.** Withholding new work from the audience you are trying to
+  grow, and from the feed and the email list just built to reach them.
+- **Ad-free.** There are no ads.
+- **Members-only photographs.** It splits the gallery in two and gives a
+  photographer a reason to wonder which half their best work landed in.
+- **A members' comment section.** A moderation obligation, not a feature.
+
+### 3b. Membership, when there is an audience to sell to
 
 The architecture is already waiting for it, deliberately. Sessions and
 login tokens were re-keyed onto email precisely so a paying member with no
