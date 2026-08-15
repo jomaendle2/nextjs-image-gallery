@@ -99,26 +99,62 @@ stack trace, which is exactly the day it was written for.
 
 Ordered by value, not effort.
 
-### Contributor value
-"We must provide value such that others contribute." Today the pitch is a
-form. What does a photographer *get* — an audience, a page they are proud
-to link to, stats, a print, a credit that follows the image?
+### Contributor value — partly done
+`fed93a6` says what a photographer gets, which was four true things the page
+had never said. `cc239ac` adds the one that did not exist: a URL per
+photograph they can send to anyone.
+
+Still open, and the biggest remaining one: **uploading is work.** Every
+photograph needs a title and a description typed from nothing. See the AI
+Gateway note below — this is the friction worth removing.
 
 ### Mobile polish and speed
 Real-device-shaped checks: touch targets, safe areas, scroll behaviour,
 image weight on a slow connection, interaction latency.
 
-### Vercel AI Gateway
-Speculative until there is a user-facing reason. Candidates worth judging
-rather than assuming: alt-text generation for accessibility and SEO (every
-photograph currently has `alt=""` in the dock), search by description,
-automatic titles/captions from EXIF and image content, tagging for
-discovery. Cost and honesty both matter — captions invented for someone
-else's photograph are a product decision, not a feature.
+### Vercel AI Gateway — evaluated, one candidate worth building
+
+Assessed against what the site actually needs rather than what the
+technology can do. Four candidates, in order of how well they hold up:
+
+**1. Drafting a title and description at upload — worth building.** This is
+the only one that removes friction a contributor actually feels. Uploading
+currently means writing a title and a description from scratch for every
+photograph, which is exactly where a photographer with forty good images
+stops at four. A model that proposes both from the image, with the
+photographer editing before publishing, keeps a human author on every word
+while turning a blank field into a correction. The AI Gateway fits: one
+provider-agnostic call, failure is a non-event because the fields simply
+stay empty, and the cost is bounded by uploads rather than by traffic.
+
+The honesty problem is real but avoidable — the model must not name places.
+It cannot know where a photograph was taken, and a confidently wrong
+"Amalfi Coast, Italy" on someone else's work is worse than an empty field.
+Propose the description; leave the title and the location to the person who
+was standing there.
+
+**2. Alt text — not needed, and the reason matters.** This looked like the
+obvious candidate and it was wrong. The descriptions were already written
+by the contributors and were simply not being used for alt text; `8aa97cd`
+fixed that with a pure function and no model. Worth generating only as a
+fallback for photographs whose description is empty, which is a case the
+upload assist above would mostly prevent from arising.
+
+**3. Search by description — not yet.** Sixteen photographs do not need
+embeddings. Revisit when the feed is large enough that scrolling it is the
+problem; the `LIMIT`-less `listPublishedPhotos` will need attention first
+regardless.
+
+**4. Automatic tagging for discovery — no.** It would generate a taxonomy
+nobody asked for, and the gallery's whole posture is a small curated set
+rather than a browsable index.
 
 ### Marketing surfaces
-OG images exist. Missing: a way to share a single photograph, a feed, any
-reason to return.
+Per-photograph pages and sharing landed in `cc239ac`, which was the
+foundational gap — there was no unit to share. Still missing: a feed
+(RSS/JSON) so the gallery can be followed, and any reason for a visitor to
+return. Neither should be built before deciding whether this site wants
+recurring visitors or is a place people arrive at once, by link.
 
 ---
 
@@ -135,6 +171,8 @@ GROUP BY blob_pathname HAVING count(*) > 1;
 
 ---
 
+---
+
 ## Notes and constraints
 
 - `listPublishedPhotos()` has no `LIMIT`. Everything downstream must survive
@@ -146,3 +184,9 @@ GROUP BY blob_pathname HAVING count(*) > 1;
   second copy of the bug fixed in `aa26e54`.
 - The Next.js dev-tools indicator renders in a shadow root at bottom-left.
   It shows up in screenshots and is not app UI.
+- The fourteen imported photographs have numeric ids (`"1"`–`"14"`); only
+  newer ones are nanoids. Anything that validates a photo id has to accept
+  both — this has already caused one near-miss.
+- A contributor's description contains a typo, "Aerial view of tale waves".
+  Content rather than code, so left alone, but it now appears in alt text
+  and in the `/photo/1` metadata where it is more visible than it was.
