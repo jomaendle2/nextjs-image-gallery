@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 export default function ApplyPage() {
   return (
     <ContributeShell
+      back={{ href: "/contribute", label: "Sign in" }}
       subtitle="The gallery is small and invited on purpose. If your work belongs here, show us — four fields, no account to create."
       title="Apply to contribute"
     >

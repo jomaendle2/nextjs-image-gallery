@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { confirm } from "@/app/subscribe/actions";
 import { StatusPage } from "@/components/StatusPage";
+import { TOUCH_LINK } from "@/components/ui/field";
 
 export const metadata: Metadata = {
   title: "Subscription confirmed — the beauty of earth.",
@@ -30,6 +32,19 @@ export default async function ConfirmPage({
     />
   ) : (
     <StatusPage
+      /*
+       * The sentence names the next step, so the page has to offer it.
+       * Telling somebody at a dead end where to go and then leaving them to
+       * find it is the worst of both.
+       */
+      action={
+        <Link
+          className={`${TOUCH_LINK} font-medium text-sm text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+          href="/subscribe"
+        >
+          Send a fresh link
+        </Link>
+      }
       detail="That confirmation link has expired or was already used. Asking again from the follow page will send a fresh one."
       title="That link didn't work"
     />

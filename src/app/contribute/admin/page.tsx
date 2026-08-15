@@ -45,6 +45,7 @@ export default async function AdminPage() {
 
   return (
     <ContributeShell
+      back={{ href: "/contribute/photos", label: "Your photographs" }}
       subtitle="Invite photographers, and moderate what appears in the gallery."
       title="Contributors"
     >

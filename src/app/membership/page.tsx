@@ -21,11 +21,27 @@ export const metadata: Metadata = {
  * not be on the gallery, which is why the member gate on a photograph is a
  * separate request rather than a prop threaded through a cached page.
  */
-export default async function MembershipPage() {
-  const [email, member] = await Promise.all([
+export default async function MembershipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  const [{ welcome }, email, member] = await Promise.all([
+    searchParams,
     getSessionEmail(),
     getCurrentMember(),
   ]);
+
+  /*
+   * Just back from checkout, but the webhook has not landed yet.
+   *
+   * Stripe redirects the browser the moment the payment clears and delivers
+   * the event separately, so for a second or two somebody who has genuinely
+   * paid looks exactly like somebody who has not. Without this they would
+   * come back to a "Become a member" button and reasonably conclude the
+   * payment failed — and quite possibly pay again.
+   */
+  const justPaid = welcome === "1" && member === null;
 
   if (!membershipConfigured()) {
     return (
@@ -47,9 +63,28 @@ export default async function MembershipPage() {
         {member === null ? null : (
           <p className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70">
             You are a member. The location and the notes appear under every
-            photograph.
+            photograph.{" "}
+            <Link
+              className="text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+              href="/"
+            >
+              Go and look
+            </Link>
+            .
           </p>
         )}
+
+        {justPaid ? (
+          <p
+            aria-live="polite"
+            className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70"
+          >
+            Payment received — Stripe is confirming it now, which usually takes
+            a few seconds. Reload this page and the location will be there.
+            Nothing more is needed from you, and you have not been charged
+            twice.
+          </p>
+        ) : null}
 
         <section>
           <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
@@ -79,7 +114,7 @@ export default async function MembershipPage() {
           </ul>
         </section>
 
-        {member === null ? (
+        {member === null && !justPaid ? (
           <SubscribeSection signedIn={email !== null} />
         ) : null}
 

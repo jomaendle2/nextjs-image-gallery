@@ -15,6 +15,16 @@ interface ShellProps {
   subtitle?: string;
   children: ReactNode;
   action?: ReactNode;
+  /**
+   * The page one level up, when there is one.
+   *
+   * The wordmark always goes to the gallery, which answers "how do I leave"
+   * but not "how do I go back". Those are different questions once a page
+   * is two levels deep: the admin tables are reached from your own
+   * photographs, and without this the only way out of them is to leave the
+   * whole section and walk in again.
+   */
+  back?: { href: string; label: string };
 }
 
 /**
@@ -51,6 +61,7 @@ function Frame({
   subtitle,
   children,
   action,
+  back,
   className,
 }: ShellProps & { className: string }) {
   return (
@@ -66,12 +77,36 @@ function Frame({
       <div className={className}>
         <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
           <div>
-            <Link
-              className={`${TOUCH_LINK} font-semibold text-white/50 text-sm tracking-[-0.03em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-              href="/"
+            {/*
+              A trail, not a single link. `aria-label` names it so a screen
+              reader announces the region rather than two anonymous links,
+              and the separator is decorative — it is punctuation between
+              names, and reading it aloud adds nothing.
+            */}
+            <nav
+              aria-label="Breadcrumb"
+              className="flex flex-wrap items-baseline gap-x-2 text-sm"
             >
-              the beauty of earth.
-            </Link>
+              <Link
+                className={`${TOUCH_LINK} font-semibold text-white/50 tracking-[-0.03em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+                href="/"
+              >
+                the beauty of earth.
+              </Link>
+              {back === undefined ? null : (
+                <>
+                  <span aria-hidden="true" className="text-white/25">
+                    /
+                  </span>
+                  <Link
+                    className={`${TOUCH_LINK} text-white/50 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+                    href={back.href}
+                  >
+                    {back.label}
+                  </Link>
+                </>
+              )}
+            </nav>
             <h1 className="mt-2 font-semibold text-2xl tracking-[-0.04em] sm:text-3xl">
               {title}
             </h1>
