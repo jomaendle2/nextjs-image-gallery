@@ -558,3 +558,24 @@ testers.
 
 The number is here so the decision to revisit is a measurement rather than a
 feeling: **past roughly 300 photographs, this needs windowing.**
+
+### The moderation list — measured, fine
+
+The one that grows fastest, since it holds everybody's work rather than one
+photographer's. At 116 photographs: 318 ms to DOM ready, 1,302 DOM nodes,
+695 KB, and the filter narrows the list in 121 ms.
+
+Eleven DOM nodes per row against the dashboard's sixty-four before it was
+fixed, because these rows are a thumbnail, a line of text and two buttons
+rather than a hidden form. Nothing to do. Recorded because "we checked and
+it was fine" is worth as much as a finding when the next person is deciding
+where to look.
+
+### What this exercise was actually worth
+
+Three surfaces, all of which I had previously called scalable. One was
+broken and I had already declared it fixed; one is fine on a number rather
+than an impression; one needs work at a threshold that is now written down.
+
+The habit: a claim about *many* is a claim about a number, and it is not
+verified until somebody has counted.
