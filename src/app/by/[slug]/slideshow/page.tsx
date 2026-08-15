@@ -31,7 +31,21 @@ export async function generateMetadata({
   return {
     title: `${contributor.display_name} — the beauty of earth.`,
     description: `Photographs by ${contributor.display_name}.`,
-    alternates: { canonical: `/by/${contributor.slug}/slideshow` },
+    alternates: {
+      canonical: `/by/${contributor.slug}/slideshow`,
+      /*
+       * Their own feed, so a reader pointed at a photographer's page
+       * subscribes to that photographer rather than to the whole gallery.
+       */
+      types: {
+        "application/rss+xml": [
+          {
+            url: `/by/${contributor.slug}/feed.xml`,
+            title: `${contributor.display_name} — the beauty of earth.`,
+          },
+        ],
+      },
+    },
     openGraph: {
       title: contributor.display_name,
       description: `Photographs by ${contributor.display_name}.`,

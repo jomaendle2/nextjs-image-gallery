@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Rss } from "lucide-react";
 import Link from "next/link";
 import type { GalleryAuthor } from "@/data/galleryData";
 import { ViewToggle } from "./ViewToggle";
@@ -51,7 +51,7 @@ export function ContributorHeader({
             {photoCount} {photoCount === 1 ? "photograph" : "photographs"}
             {contributor.siteUrl === null ? null : (
               <a
-                className="ml-2 inline-flex translate-y-px items-center gap-0.5 rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+                className="-my-3 ml-2 inline-flex min-h-11 translate-y-px items-center gap-0.5 rounded-full py-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
                 href={contributor.siteUrl}
                 rel="noopener noreferrer nofollow"
                 target="_blank"
@@ -60,6 +60,20 @@ export function ContributorHeader({
                 <ArrowUpRight aria-hidden="true" size={11} />
               </a>
             )}
+            {/*
+              A visible way to subscribe, next to the link out to their own
+              site — the two things a reader might want to keep. Autodiscovery
+              in the page metadata only helps somebody who already has a
+              reader open and knows to look; this is for the person who does
+              not know the feed exists.
+            */}
+            <a
+              className="-my-3 ml-2 inline-flex min-h-11 translate-y-px items-center gap-0.5 rounded-full py-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+              href={`/by/${contributor.slug}/feed.xml`}
+            >
+              follow
+              <Rss aria-hidden="true" size={10} />
+            </a>
           </p>
         </div>
 
