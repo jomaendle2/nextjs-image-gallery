@@ -2,7 +2,7 @@ import { del, put } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { deriveFromBuffer } from "@/lib/photos/derive";
-import { insertDraftPhoto } from "@/lib/photos/repository";
+import { blobIsClaimed, insertDraftPhoto } from "@/lib/photos/repository";
 
 /** Matches the token constraint in /api/uploads/token. */
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -63,6 +63,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
    * another photo's blob and have it removed on their behalf.
    */
   const pathname = parsed.pathname.replace(LEADING_SLASH, "");
+
+  /*
+   * Being on our Blob host proves where the file came from, not whose it is.
+   * Every published photograph's blob URL appears in the markup of the page
+   * that shows it, so without this a signed-in contributor could post
+   * another photographer's URL here and be handed a draft row attributed to
+   * themselves — someone else's photograph, ready to publish under their own
+   * name, from a URL they were simply shown.
+   *
+   * Deliberately not a 404-style silent refusal: the person doing this by
+   * accident (re-submitting a URL, a double-click) deserves to know why.
+   *
+   * This has to stay outside the `try` below. That block's `catch` deletes
+   * the blob on failure, which is right for an upload that has just been
+   * made and wrong in every way for one that already belongs to somebody —
+   * moving this check inside it would turn a refusal to steal a photograph
+   * into a way to delete one.
+   */
+  if (await blobIsClaimed(pathname)) {
+    return NextResponse.json(
+      { error: "That upload already belongs to a photograph." },
+      { status: 409 },
+    );
+  }
 
   try {
     const response = await fetch(parsed);

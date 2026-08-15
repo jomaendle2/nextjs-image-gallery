@@ -82,6 +82,26 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
   return rows as OwnPhotoRow[];
 }
 
+/**
+ * Whether some photo row already points at this blob.
+ *
+ * Blob URLs of published photographs are public — they are in the markup of
+ * every gallery page. Without this check a signed-in contributor could post
+ * another photographer's URL to the draft endpoint and receive a row
+ * attributed to themselves, which is to say: publish someone else's
+ * photograph under their own name, using nothing but a URL they were shown.
+ *
+ * The blob itself is already restricted to our own host and `photos/` prefix
+ * by the caller; this is the second half, and it asks about ownership rather
+ * than origin.
+ */
+export async function blobIsClaimed(pathname: string): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM photos WHERE blob_pathname = ${pathname} LIMIT 1;
+  `;
+  return rows.length > 0;
+}
+
 export async function insertDraftPhoto(
   input: DraftPhotoInput,
 ): Promise<string> {
