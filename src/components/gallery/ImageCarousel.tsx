@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { photoGround } from "@/lib/photo-ground";
+import { photoAltText } from "@/lib/photos/alt-text";
 import { ContributorHeader } from "./ContributorHeader";
 import { AmbientBackdrop } from "./carousel/AmbientBackdrop";
 import { CaptionBar } from "./carousel/CaptionBar";
@@ -209,7 +210,7 @@ export function ImageCarousel({
               >
                 {index >= start && index <= end ? (
                   <CarouselImage
-                    alt={image.title}
+                    alt={photoAltText(image)}
                     onClick={handleImageClick}
                     priority={index === currentIndex}
                     src={image.src}

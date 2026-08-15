@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { GROUND, photoGlow } from "@/lib/photo-ground";
+import { photoAltText } from "@/lib/photos/alt-text";
 import { ContributorHeader } from "./ContributorHeader";
 
 /**
@@ -68,7 +69,7 @@ export function PhotoGrid({
                 href={`/by/${contributor.slug}/slideshow#${image.id}`}
               >
                 <Image
-                  alt={image.title}
+                  alt={photoAltText(image)}
                   blurDataURL={image.src.blurDataURL}
                   className="object-cover transition-transform duration-500 ease-glass group-hover:scale-[1.04]"
                   fill={true}

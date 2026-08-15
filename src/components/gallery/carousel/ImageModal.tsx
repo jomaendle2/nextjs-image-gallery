@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { GalleryImage } from "@/data/galleryData";
+import { photoAltText } from "@/lib/photos/alt-text";
 import { usePanZoom } from "./usePanZoom";
 import { ViewerCaption } from "./ViewerCaption";
 import { ViewerControls } from "./ViewerControls";
@@ -219,7 +220,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
           }}
         >
           <Image
-            alt={image.title}
+            alt={photoAltText(image)}
             className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain select-none"
             draggable={false}
             onLoad={handleLoad}
