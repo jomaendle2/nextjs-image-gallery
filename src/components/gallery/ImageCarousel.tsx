@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { photoGlow, photoGround } from "@/lib/photo-ground";
 import { ContributorHeader } from "./ContributorHeader";
 import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
@@ -165,7 +166,7 @@ export function ImageCarousel({
       <div
         className="fixed inset-0 z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
         style={{
-          backgroundColor: `color-mix(in oklab, ${currentImage.bgColor} 76%, #0d1114)`,
+          backgroundColor: photoGround(currentImage.bgColor),
         }}
       >
         {/*
@@ -178,8 +179,7 @@ export function ImageCarousel({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-0"
           style={{
-            background:
-              "radial-gradient(120% 85% at 50% 18%, oklch(100% 0 0 / 0.12), transparent 58%), radial-gradient(100% 95% at 50% 118%, oklch(0% 0 0 / 0.38), transparent 62%)",
+            background: `radial-gradient(120% 80% at 50% 12%, ${photoGlow(currentImage.bgColor)}, transparent 62%), radial-gradient(100% 90% at 50% 118%, oklch(0% 0 0 / 0.45), transparent 62%)`,
           }}
         />
         {/* Keeps white chrome legible over pale images. */}

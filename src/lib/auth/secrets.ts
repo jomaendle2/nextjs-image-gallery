@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 /**
  * Pure crypto helpers, kept free of any database import so they can be tested
@@ -18,17 +18,4 @@ export function generateSecret(): string {
 
 export function hashSecret(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
-}
-
-/**
- * Constant-time comparison of two hex digests. Lookups are by primary key, so
- * this is only needed where a value is compared in application code.
- */
-export function secretsMatch(a: string, b: string): boolean {
-  const left = Buffer.from(a, "hex");
-  const right = Buffer.from(b, "hex");
-  if (left.length !== right.length || left.length === 0) {
-    return false;
-  }
-  return timingSafeEqual(left, right);
 }

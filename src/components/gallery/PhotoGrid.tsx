@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { GROUND, photoGlow } from "@/lib/photo-ground";
 import { ContributorHeader } from "./ContributorHeader";
 
 /**
@@ -29,12 +30,15 @@ export function PhotoGrid({
   const tint = images[0]?.bgColor ?? "#2a6b7c";
 
   return (
-    <div className="relative min-h-dvh bg-[#0d1114] text-white">
+    <div
+      className="relative min-h-dvh text-white"
+      style={{ backgroundColor: GROUND }}
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0"
         style={{
-          background: `radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, ${tint} 42%, transparent), transparent 70%)`,
+          background: `radial-gradient(120% 60% at 50% 0%, ${photoGlow(tint)}, transparent 70%)`,
         }}
       />
 
@@ -43,7 +47,12 @@ export function PhotoGrid({
           Sticky, so the view toggle and the photographer's name stay reachable
           on a phone instead of scrolling away after the first two tiles.
         */}
-        <div className="-mx-4 sm:-mx-8 sticky top-0 z-20 border-white/[0.06] border-b bg-[#0d1114]/80 px-4 py-4 backdrop-blur-xl sm:px-8 sm:py-6">
+        <div
+          className="-mx-4 sm:-mx-8 sticky top-0 z-20 border-white/[0.06] border-b px-4 py-4 backdrop-blur-xl sm:px-8 sm:py-6"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${GROUND} 82%, transparent)`,
+          }}
+        >
           <ContributorHeader
             contributor={contributor}
             photoCount={images.length}
@@ -51,7 +60,7 @@ export function PhotoGrid({
           />
         </div>
 
-        <ul className="mt-6 grid grid-cols-2 gap-2 sm:mt-8 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+        <ul className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
           {images.map((image, index) => (
             <li key={image.id}>
               <Link

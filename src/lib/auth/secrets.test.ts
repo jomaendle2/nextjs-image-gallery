@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateSecret, hashSecret, secretsMatch } from "./secrets";
+import { generateSecret, hashSecret } from "./secrets";
 
 describe("generateSecret", () => {
   it("is 256 bits of url-safe randomness", () => {
@@ -36,25 +36,5 @@ describe("hashSecret", () => {
 
   it("separates two secrets that differ by one character", () => {
     expect(hashSecret("token-a")).not.toBe(hashSecret("token-b"));
-  });
-});
-
-describe("secretsMatch", () => {
-  it("accepts identical digests", () => {
-    const digest = hashSecret("same");
-    expect(secretsMatch(digest, digest)).toBe(true);
-  });
-
-  it("rejects different digests", () => {
-    expect(secretsMatch(hashSecret("a"), hashSecret("b"))).toBe(false);
-  });
-
-  it("rejects empty input rather than treating it as a match", () => {
-    expect(secretsMatch("", "")).toBe(false);
-  });
-
-  it("rejects mismatched lengths without throwing", () => {
-    // timingSafeEqual throws on length mismatch; the guard must come first.
-    expect(secretsMatch(hashSecret("a"), "abcd")).toBe(false);
   });
 });

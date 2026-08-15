@@ -81,18 +81,6 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
   return rows as OwnPhotoRow[];
 }
 
-export async function getOwnPhoto(
-  id: string,
-  actor: Contributor,
-): Promise<OwnPhotoRow | undefined> {
-  const rows = await listOwnPhotos(actor.id);
-  const own = rows.find((row) => row.id === id);
-  if (own || !isOwner(actor)) {
-    return own;
-  }
-  return (await listAllPhotos()).find((row) => row.id === id);
-}
-
 export async function insertDraftPhoto(
   input: DraftPhotoInput,
 ): Promise<string> {
