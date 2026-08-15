@@ -36,8 +36,11 @@ function AuthorLink({ author }: { author: GalleryAuthor }) {
   return (
     <Link
       /* Vertical padding pulled back out by the negative margin: a taller
-         touch target on a phone without moving the baseline. */
-      className="-my-2 inline-block rounded-full py-2 text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+         touch target on a phone without moving the baseline. `py-2` left it
+         at 33px, which is not a touch target — `py-3` clears the 44px floor
+         the rest of the site holds to, and the negative margin means the
+         caption bar does not move a pixel for it. */
+      className="-my-3 inline-flex min-h-11 items-center rounded-full py-3 text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
       href={`/by/${author.slug}`}
     >
       {author.name}

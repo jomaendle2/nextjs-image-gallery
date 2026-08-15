@@ -94,7 +94,14 @@ export function SharePhoto({ image }: SharePhotoProps) {
   return (
     <button
       aria-label={`Copy a link to ${image.title === "" ? "this photograph" : image.title}`}
-      className="-my-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-full py-1.5 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+      /*
+       * Padded horizontally as well as vertically, and pulled back out both
+       * ways. The icon is 13px wide, so `min-h-11` alone gave a target 13px
+       * across — tall enough to measure as compliant and still a poor thing
+       * to hit with a thumb. The negative margins mean the caption bar's
+       * measured layout is unchanged.
+       */
+      className="-mx-4 -my-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
       onClick={handleShare}
       type="button"
     >

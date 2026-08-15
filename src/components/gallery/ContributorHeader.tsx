@@ -36,7 +36,7 @@ export function ContributorHeader({
             dropping its period made it read as a different logo.
           */}
           <Link
-            className="-my-1.5 inline-flex items-center gap-1.5 rounded-full py-1.5 font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className="-my-3 inline-flex min-h-11 items-center gap-1.5 rounded-full py-3 font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
             href="/"
           >
             <ArrowLeft aria-hidden="true" size={13} />

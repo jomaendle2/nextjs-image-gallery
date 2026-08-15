@@ -16,8 +16,18 @@ export function ViewToggle({
   slug: string;
   view: "grid" | "slideshow";
 }) {
+  /*
+   * 44px square, not the 36x32 this used to be.
+   *
+   * These two links are the whole navigation between a photographer's two
+   * views, they sit in a sticky header, and they were the smallest touch
+   * targets on the site — on the pages most likely to be opened on a phone.
+   * The rest of the codebase settled this question already: `min-h-11` on
+   * the fields, `TOUCH_LINK` on standalone links. A segmented control is not
+   * the place to make an exception.
+   */
   const base =
-    "inline-flex h-8 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
+    "inline-flex size-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
   const on = "bg-white/15 text-white";
   const off = "text-white/40 hover:text-white/80";
 
