@@ -31,8 +31,8 @@ const Thumbnail = memo(function ThumbnailButton({
       aria-label={`Go to image ${index + 1}: ${image.title}`}
       className={`relative flex-shrink-0 overflow-hidden transition-[width,height,box-shadow,opacity] duration-400 ease-glass ${
         isActive
-          ? "size-[58px] rounded-[15px] shadow-[0_0_0_2px_oklch(100%_0_0_/_0.9),0_6px_18px_-6px_oklch(0%_0_0_/_0.7)] opacity-100"
-          : "size-11 rounded-xl opacity-65 shadow-[0_0_0_1px_oklch(100%_0_0_/_0.22)] hover:opacity-100 hover:shadow-[0_0_0_1px_oklch(100%_0_0_/_0.5)] active:scale-95"
+          ? "size-[52px] rounded-[13px] shadow-[0_0_0_1.5px_oklch(100%_0_0_/_0.9),0_8px_22px_-8px_oklch(0%_0_0_/_0.8)] opacity-100"
+          : "size-9 rounded-[10px] opacity-45 shadow-[0_0_0_1px_oklch(100%_0_0_/_0.18)] hover:opacity-90 hover:shadow-[0_0_0_1px_oklch(100%_0_0_/_0.45)] active:scale-95"
       }`}
       onClick={handleClick}
       type="button"
@@ -101,10 +101,16 @@ export function ImageIndicators({
     });
   }, [currentIndex]);
 
+  /*
+   * No panel behind the strip. The glass slab was the single most
+   * template-looking element on the page, and it added a competing surface
+   * between the photograph and its own thumbnails. Bare tiles on the colour
+   * field read as a contact strip instead.
+   */
   return (
-    <div className="flex justify-center pb-4">
+    <div className="flex justify-center">
       <div
-        className="flex items-center gap-2.5 px-3 h-[86px] glass-regular rounded-[22px] max-w-full overflow-x-auto scrollbar-hide"
+        className="flex max-w-full items-center gap-2 overflow-x-auto px-1 py-2 scrollbar-hide"
         ref={containerRef}
       >
         {images.map((image, index) => (

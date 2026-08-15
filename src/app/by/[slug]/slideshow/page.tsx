@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
-import { PhotoGrid } from "@/components/gallery/PhotoGrid";
+import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { getGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
 
@@ -11,11 +11,6 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-/*
- * A route segment rather than a `?by=` search param: reading searchParams
- * would opt the page out of static rendering, and this page is the one a
- * photographer shares, so it needs its own title, OG image and cache entry.
- */
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -30,7 +25,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function ContributorGallery({ params }: PageProps) {
+/**
+ * The carousel view of a contributor's work — the grid's sibling rather than
+ * a query parameter, so both stay statically rendered and shareable.
+ *
+ * Arriving from a grid tile carries the photo id in the hash. A hash is never
+ * sent to the server, so this page can open on any photograph without ever
+ * becoming dynamic.
+ */
+export default async function ContributorSlideshow({ params }: PageProps) {
   const { slug } = await params;
   const contributor = await getContributorBySlug(slug);
   if (!contributor) {
@@ -43,7 +46,7 @@ export default async function ContributorGallery({ params }: PageProps) {
   }
 
   return (
-    <PhotoGrid
+    <ImageCarousel
       contributor={{
         slug: contributor.slug,
         name: contributor.display_name,

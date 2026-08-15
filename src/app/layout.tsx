@@ -65,17 +65,6 @@ export default function RootLayout({
             {children}
             <SpeedInsights />
           </QueryProvider>
-          <footer className="text-center fixed text-xs text-white/50 bottom-4 left-0 right-0 z-50 mt-8">
-            © {new Date().getFullYear()}{" "}
-            <a
-              className="text-white/70 hover:text-white transition-colors duration-200"
-              href="https://jomaendle.com"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Jo Mändle
-            </a>
-          </footer>
         </PlausibleProvider>
       </body>
     </html>

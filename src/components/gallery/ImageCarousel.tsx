@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { ContributorHeading } from "./carousel/ContributorHeading";
-import { ImageIndicators } from "./carousel/ImageIndicators";
-import { ImageInfo } from "./carousel/ImageInfo";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 import { useCarouselScroll } from "./carousel/useCarouselScroll";
@@ -104,6 +103,32 @@ export function ImageCarousel({
     }
   }, [initialIndex, scrollToIndex]);
 
+  /*
+   * Grid tiles link to `#<photoId>`. A hash never reaches the server, so this
+   * page can open on any photograph while staying statically rendered.
+   *
+   * The ref, rather than an empty dependency list, is what keeps this to the
+   * first paint: once the visitor starts navigating, the carousel owns the
+   * index and re-running this would drag them back to where they came in.
+   */
+  const hasHonouredHash = useRef(false);
+  useEffect(() => {
+    if (hasHonouredHash.current) {
+      return;
+    }
+    hasHonouredHash.current = true;
+
+    const id = globalThis.location?.hash.slice(1);
+    if (!id) {
+      return;
+    }
+    const index = images.findIndex((image) => image.id === id);
+    if (index > 0) {
+      setCurrentIndex(index);
+      scrollToIndex(index, "instant");
+    }
+  }, [images, scrollToIndex]);
+
   const handleImageClick = useCallback(() => {
     setIsModalOpen(true);
     setIsDisabled(true);
@@ -139,7 +164,9 @@ export function ImageCarousel({
       */}
       <div
         className="fixed inset-0 z-50 flex flex-col transition-colors duration-700 motion-reduce:transition-none"
-        style={{ backgroundColor: currentImage.bgColor }}
+        style={{
+          backgroundColor: `color-mix(in oklab, ${currentImage.bgColor} 76%, #0d1114)`,
+        }}
       >
         {/*
           Ambient depth. Two neutral radial washes over the flat photo
@@ -218,17 +245,13 @@ export function ImageCarousel({
           />
         </div>
 
-        <div className="relative z-10 flex-shrink-0 px-6 pb-10 space-y-4">
-          <ImageInfo
-            image={currentImage}
-            linkAuthor={contributor === undefined}
-          />
-          <ImageIndicators
-            currentIndex={currentIndex}
-            images={images}
-            onImageSelect={goToIndex}
-          />
-        </div>
+        <CaptionBar
+          currentIndex={currentIndex}
+          image={currentImage}
+          images={images}
+          linkAuthor={contributor === undefined}
+          onImageSelect={goToIndex}
+        />
       </div>
 
       {/* Full screen image modal */}

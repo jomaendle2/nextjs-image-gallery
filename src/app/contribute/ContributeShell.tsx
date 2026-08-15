@@ -60,6 +60,22 @@ export function ContributeShell({
           {action}
         </header>
         <main>{children}</main>
+
+        {/*
+          Static, not fixed. The old footer was `fixed z-50`, so it floated
+          over the viewer and over these pages as they scrolled.
+        */}
+        <footer className="mt-16 text-white/35 text-xs">
+          ©{" "}
+          <a
+            className="transition-colors hover:text-white/70"
+            href="https://jomaendle.com"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Jo Mändle
+          </a>
+        </footer>
       </div>
     </div>
   );

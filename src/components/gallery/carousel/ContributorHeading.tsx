@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { GalleryAuthor } from "@/data/galleryData";
+import { ViewToggle } from "../ViewToggle";
 
 /**
  * The heading on a contributor's page.
@@ -30,6 +31,10 @@ export function ContributorHeading({
       <h1 className="font-semibold text-2xl text-white tracking-[-0.045em] sm:text-3xl md:text-[2.125rem] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
         {contributor.name}
       </h1>
+
+      <div className="mt-1">
+        <ViewToggle slug={contributor.slug} view="slideshow" />
+      </div>
 
       <p className="text-[0.8125rem] text-white/50">
         {photoCount} {photoCount === 1 ? "photograph" : "photographs"}

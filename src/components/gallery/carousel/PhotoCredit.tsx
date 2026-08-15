@@ -1,13 +1,15 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { ViewCount } from "@/components/gallery/ViewCount";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 
 /**
- * Attribution, and the way into a photographer's own page.
+ * The right half of the wall label: who made the photograph, and how.
  *
- * Kept deliberately quiet — one line, low contrast, never competing with the
- * photograph — but always present. Photographers trade work for credit, so
- * this is a feature of the gallery rather than a footnote on it.
+ * Set as a technical plate — small, uppercase, wide-tracked — so it reads as
+ * data beside the caption rather than competing with it. Photographers trade
+ * work for credit, so the name stays legible while the exposure line sits a
+ * step quieter behind it.
  */
 
 function exifLine(image: GalleryImage): string | null {
@@ -29,7 +31,7 @@ function exifLine(image: GalleryImage): string | null {
 function AuthorLink({ author }: { author: GalleryAuthor }) {
   return (
     <Link
-      className="rounded-full text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+      className="rounded-full text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
       href={`/by/${author.slug}`}
     >
       {author.name}
@@ -49,40 +51,42 @@ export function PhotoCredit({
   const exif = exifLine(image);
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <p className="text-[0.8125rem] text-white/55">
-        <span className="text-white/40">by </span>
+    <div className="flex min-w-0 flex-col items-center gap-1 sm:items-end">
+      <p className="text-[0.6875rem] text-white/45 uppercase tracking-[0.14em]">
         {linkAuthor ? (
           <AuthorLink author={author} />
         ) : (
-          <span className="text-white/70">{author.name}</span>
+          <span className="text-white/80">{author.name}</span>
         )}
         {author.siteUrl === null ? null : (
-          <>
-            {" "}
-            <a
-              className="inline-flex items-center gap-0.5 rounded-full text-white/45 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
-              href={author.siteUrl}
-              rel="noopener noreferrer nofollow"
-              target="_blank"
-            >
-              <span className="sr-only">{`${author.name}'s own site`}</span>
-              <ArrowUpRight aria-hidden="true" size={13} />
-            </a>
-          </>
+          <a
+            className="ml-1 inline-flex translate-y-px items-center rounded-full text-white/40 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            href={author.siteUrl}
+            rel="noopener noreferrer nofollow"
+            target="_blank"
+          >
+            <span className="sr-only">{`${author.name}'s own site`}</span>
+            <ArrowUpRight aria-hidden="true" size={12} />
+          </a>
         )}
         {location === null ? null : (
-          <span className="text-white/40">{` · ${location}`}</span>
+          <span className="text-white/35">{` — ${location}`}</span>
         )}
       </p>
 
+      <ViewCount
+        className="opacity-70 transition-opacity duration-200 hover:opacity-100"
+        imageId={image.id}
+        variant="gallery"
+      />
+
       {/*
-        The exposure line is for the people who care about it and invisible
-        to everyone else. Hidden on small screens, where the caption and the
-        photograph already fill the frame.
+        The exposure line is for the people who care about it and invisible to
+        everyone else. Hidden below `sm`, where the caption and the photograph
+        already fill the frame.
       */}
       {exif === null ? null : (
-        <p className="hidden text-[0.6875rem] text-white/30 tabular-nums sm:block">
+        <p className="hidden max-w-full truncate text-[0.625rem] text-white/30 uppercase tabular-nums tracking-[0.12em] sm:block">
           {exif}
         </p>
       )}
