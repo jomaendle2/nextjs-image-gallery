@@ -73,6 +73,15 @@ export function usePanZoom(isOpen: boolean) {
   // handlers stay stable and can't act on a stale value.
   const applyScale = useCallback((next: number) => {
     transformRef.current.scale = next;
+    /*
+     * Dragging is only allowed above 1x, so an image that is panned off
+     * centre and then zoomed back out would be stranded there with no way
+     * to bring it back short of Reset. Recentre as we cross the threshold.
+     */
+    if (next <= 1) {
+      transformRef.current.x = 0;
+      transformRef.current.y = 0;
+    }
     setScale(next);
   }, []);
 

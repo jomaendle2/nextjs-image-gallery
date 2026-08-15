@@ -141,6 +141,147 @@
     -webkit-backdrop-filter: none;
     background-color: oklch(22% 0.01 250 / 0.92);
   }
+
+  /*
+   * This block sits outside any layer, so it outranks the layered
+   * `hover:bg-[…]` utilities the glass controls use and would otherwise
+   * leave them with no hover state at all. Restate it against the flat fill.
+   */
+  .glass-thin:hover,
+  .glass-regular:hover,
+  .glass-thick:hover {
+    background-color: oklch(32% 0.01 250 / 0.95);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Full-screen viewer transition
+ *
+ * Three surfaces, three timings. Animating the backdrop, the photograph
+ * and the chrome as one block on one curve is what makes an overlay read
+ * as a generic modal; a viewer should feel like the photo is being lifted
+ * out of the gallery and the room dimmed around it.
+ *
+ *   - The backdrop dims and its blur ramps from zero, so the gallery
+ *     recedes rather than being replaced.
+ *   - The photograph rises and settles on `--ease-glass`, over the
+ *     longest of the three durations. It is the subject; it arrives last
+ *     and leads the eye.
+ *   - The chrome trails the photo by 120ms, so the controls appear on a
+ *     view that already exists instead of flying in with it.
+ *
+ * Exits run roughly half as long and on an accelerating curve: dismissal
+ * should feel immediate, arrival should feel considered.
+ *
+ * Enter animations use `backwards` fill, never `forwards`. Retaining the
+ * end state would freeze `transform` and dead-hover every glass button
+ * underneath it, and would pin the photo's transform against the pan/zoom
+ * values written directly to the node.
+ * ------------------------------------------------------------------ */
+
+@keyframes viewer-backdrop-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+}
+
+@keyframes viewer-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes viewer-frame-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes viewer-frame-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes viewer-chrome-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes viewer-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes viewer-chrome-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@utility viewer-backdrop-enter {
+  animation: viewer-backdrop-in 300ms var(--ease-glass) backwards;
+}
+
+@utility viewer-backdrop-exit {
+  animation: viewer-backdrop-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@utility viewer-frame-enter {
+  animation: viewer-frame-in 440ms var(--ease-glass) backwards;
+}
+
+@utility viewer-frame-exit {
+  animation: viewer-frame-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@utility viewer-chrome-enter {
+  animation: viewer-chrome-in 280ms 120ms var(--ease-glass) backwards;
+}
+
+@utility viewer-chrome-exit {
+  animation: viewer-chrome-out 140ms linear forwards;
+}
+
+/*
+ * Reduced motion keeps the staging - things still arrive in order, and
+ * the dismissal is still quicker than the entrance - but nothing travels
+ * or scales. Only the light changes.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .viewer-backdrop-enter,
+  .viewer-frame-enter,
+  .viewer-chrome-enter {
+    animation-name: viewer-fade-in;
+    animation-duration: 200ms;
+  }
+
+  .viewer-chrome-enter {
+    animation-delay: 80ms;
+  }
 }
 
 /*

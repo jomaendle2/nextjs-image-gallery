@@ -70,7 +70,14 @@ export function ImageCarousel({
       externalCurrentIndex !== currentIndex
     ) {
       setCurrentIndex(externalCurrentIndex);
-      scrollToIndex(externalCurrentIndex);
+      /*
+       * Instant, not smooth. A smooth scroll here does not run through
+       * `goToIndex`, so the free-scroll tracker stays armed and reports every
+       * intermediate frame back through `onIndexChange`, which re-enters this
+       * effect and schedules another scroll. Placing a controlled index is
+       * setup, the same as `initialIndex`.
+       */
+      scrollToIndex(externalCurrentIndex, "instant");
     }
   }, [externalCurrentIndex, currentIndex, scrollToIndex]);
 

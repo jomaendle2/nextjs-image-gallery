@@ -8,7 +8,12 @@ import { GlassButton } from "@/components/ui/glass-button";
 import type { GalleryImage } from "@/data/galleryData";
 import { usePanZoom } from "./usePanZoom";
 
-const CLOSE_ANIMATION_MS = 300;
+/**
+ * Must stay in step with the `viewer-*-exit` animations in globals.css: the
+ * unmount happens when this elapses, so a shorter value cuts the exit off
+ * mid-frame and a longer one leaves a finished, invisible overlay on screen.
+ */
+const CLOSE_ANIMATION_MS = 220;
 
 interface ImageModalProps {
   image: GalleryImage;
@@ -22,6 +27,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedRef = useRef<Element | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     contentRef,
@@ -38,6 +44,10 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
   useEffect(() => {
     if (isOpen) {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
       setIsLoaded(false);
       setIsClosing(false);
     }
@@ -45,11 +55,23 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
-    setTimeout(() => {
+    // Held in a ref so unmounting, or reopening before the exit animation
+    // finishes, cannot land a stale `setIsClosing(false)` on the next modal.
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
       onClose();
       setIsClosing(false);
     }, CLOSE_ANIMATION_MS);
   }, [onClose]);
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
@@ -89,6 +111,9 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
   }
 
   const isZoomed = scale > 1;
+  // Toolbar, close button and caption all arrive and leave together, behind
+  // the photograph.
+  const chrome = isClosing ? "viewer-chrome-exit" : "viewer-chrome-enter";
   const dragCursor = isDragging ? "grabbing" : "grab";
   /*
    * Widen the `sizes` hint as the user zooms so the browser picks a larger
@@ -103,8 +128,8 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     <div
       aria-label={`${image.title}, full screen`}
       aria-modal="true"
-      className={`fixed inset-0 z-[100] flex items-center justify-center motion-duration-300 bg-black/75 backdrop-blur-xl transition-all duration-300 ${
-        isClosing ? "opacity-0" : "motion-preset-expand"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-xl ${
+        isClosing ? "viewer-backdrop-exit" : "viewer-backdrop-enter"
       }`}
       role="dialog"
     >
@@ -125,7 +150,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       {/* Close button */}
       <GlassButton
         aria-label="Close modal"
-        className="absolute top-4 right-4 z-10 p-2 rounded-full"
+        className={`absolute top-4 right-4 z-10 p-2 rounded-full ${chrome}`}
         onClick={handleClose}
         ref={closeButtonRef}
       >
@@ -133,7 +158,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       </GlassButton>
 
       {/* Toolbar */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
+      <div className={`absolute top-4 left-4 z-10 flex gap-2 ${chrome}`}>
         <GlassButton
           aria-label="Zoom in"
           className="p-2 rounded-full"
@@ -158,7 +183,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       </div>
 
       {/* Image Info - positioned in bottom right corner */}
-      <div className="absolute bottom-4 right-4 left-4 z-10">
+      <div className={`absolute bottom-4 right-4 left-4 z-10 ${chrome}`}>
         <div className="mx-auto max-w-md glass-thick rounded-[20px] px-4 py-3.5">
           <h2 className="font-semibold text-base mb-1 text-white tracking-[-0.02em]">
             {image.title}
@@ -185,8 +210,8 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: pan gestures, mirrored by toolbar buttons */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: pan gestures, mirrored by toolbar buttons */}
       <div
-        className={`relative w-full h-full flex items-center justify-center transition-transform duration-300 ${
-          isClosing ? "scale-95" : "scale-100"
+        className={`relative w-full h-full flex items-center justify-center ${
+          isClosing ? "viewer-frame-exit" : "viewer-frame-enter"
         }`}
         onDoubleClick={handleDoubleClick}
         onPointerCancel={handlePointerUp}

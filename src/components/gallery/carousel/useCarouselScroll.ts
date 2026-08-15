@@ -126,7 +126,23 @@ export function useCarouselScroll({
         }
         carousel.removeEventListener("scrollend", settle);
         isTransitioningRef.current = false;
-        onIndexChangeRef.current(index);
+        /*
+         * Commit where we actually ended up, not where we asked to go.
+         * `scrollend` fires for any scroll on this element, so a swipe that
+         * interrupts the animation resolves here too. Committing the
+         * requested `index` in that case would leave the caption, indicators
+         * and backdrop describing an image other than the one on screen,
+         * with no further event coming to correct it.
+         */
+        const width = carousel.clientWidth;
+        const settledIndex =
+          width === 0
+            ? index
+            : Math.min(
+                itemCount - 1,
+                Math.max(0, Math.round(carousel.scrollLeft / width)),
+              );
+        onIndexChangeRef.current(settledIndex);
       };
 
       carousel.addEventListener("scrollend", settle, { once: true });
