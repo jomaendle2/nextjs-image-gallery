@@ -42,7 +42,9 @@ Postgres. The connection string is `DATABASE_URL`.
 
 Schema lives in `src/lib/schema.ts` as a **list of additive, idempotent
 statements**, not a migration folder. Running `npm run db:migrate` applies
-them all; running it again does nothing. There is a test
+them all; running it again does nothing. **Every deployment applies them
+too** — `vercel-build` runs the migration before the build, so shipping code
+brings its schema with it rather than waiting for somebody to remember. There is a test
 (`schema.test.ts`) that fails the build if you add a statement that is not
 safely re-runnable, which is the thing standing between this project and a
 migration that half-applies in production.
@@ -74,13 +76,15 @@ in the gallery.
 
 ### Resend — email
 
-`RESEND_API_KEY` plus `EMAIL_FROM` (a verified sender on your domain).
-**Both are required** — with either missing, messages are printed to the
-server log instead of sent, silently.
+`RESEND_API_KEY` plus `EMAIL_FROM` (a verified sender on your domain —
+currently `contact@thebeautyof.earth`). **Both are required.** In development
+a missing one prints the message to the terminal, which is how you read a
+sign-in link locally. In production it *throws*: printing would put live
+tokens in the platform log while telling somebody to check an empty inbox.
 
-Six templates in `src/lib/auth/email.ts`: sign-in link, application approved,
-subscribe confirmation, subscribe welcome, new-work announcement, and the
-weekly reminder to you. Every value interpolated into one is HTML-escaped,
+Seven templates in `src/lib/auth/email.ts`: sign-in link, invitation,
+application approved, subscribe confirmation, subscribe welcome, new-work
+announcement, and the weekly reminder to you. Every value interpolated into one is HTML-escaped,
 because contributors type titles and captions.
 
 ---
@@ -97,8 +101,10 @@ because contributors type titles and captions.
 4. You land on `/contribute/photos`. `/contribute/admin` is linked from
    there, and has a breadcrumb back.
 
-The link works **once** and expires after fifteen minutes. Opening it on your
-phone to check spends it.
+The link works **once** and expires after fifteen minutes — but *opening* it
+does not spend it. The page it lands on has a Sign in button, and only
+pressing that redeems the token, so a mail scanner or a link preview cannot
+burn it before you get there.
 
 What the owner can do that a contributor cannot: see and moderate everybody's
 photographs, invite contributors, review applications, and send the
@@ -106,19 +112,30 @@ announcement.
 
 ### Make somebody a contributor
 
-`/contribute/admin` → invite by email address. They then sign in the same way
-you do. Applications from `/contribute/apply` appear on the same page.
+`/contribute/admin` → invite by email address. **They receive an invitation
+email automatically**, telling them where to sign in and that nothing happens
+until they do. If the send fails the panel says so, so you know to follow up
+by hand rather than assuming it went out.
+
+Applications from `/contribute/apply` appear on the same page, and approving
+one sends its own message.
 
 ### Publish a photograph
 
-`/contribute/photos` → upload → fill in the fields → publish. Two of those
-fields are members-only: `precise_location` and `technique`. Both are
-optional and empty by default; nothing is read from the file.
+`/contribute/photos` → upload → open a row → fill in the fields → publish.
+Two of those fields are members-only: `precise_location` and `technique`.
+Both are optional and empty by default; nothing is read from the file.
+
+Each photograph is a row that opens into its form, so the list stays
+readable as it grows. Past four photographs a search box and a status filter
+appear, and the checkboxes publish or unpublish several at once. There is no
+bulk delete, deliberately — deleting takes the stored file with it, so it
+stays one photograph at a time behind its own confirmation.
 
 ### Send the weekly announcement
 
 `/contribute/admin` shows a count of published-but-unannounced photographs
-and a Send button. It marks them announced *before* sending: if the send dies
+and a button reading "Announce N". It marks them announced *before* sending: if the send dies
 halfway, some people miss an announcement rather than some people getting two,
 and the second is the one that loses trust.
 
@@ -169,12 +186,19 @@ afterwards to unlock what you bought.
   come down empty. Keep a copy where you set them.
 - **`vercel env pull` defaults to the development environment.** A variable
   added only to Production will silently not appear.
-- **A sign-in link is single-use.** Clicking it in a link preview spends it.
+- **A sign-in link is single-use, but a preview cannot spend it.** The link
+  opens a page with a button; only pressing it redeems the token. That extra
+  press exists because mail gateways fetch every URL in an inbound message,
+  and a link that signed you in on arrival was spent before you touched it.
+  The same is true of the unsubscribe and subscribe-confirmation links.
 - **Local webhooks need `stripe listen` running.** Without it a checkout
   completes, no event arrives, and the member row is never written — which
   looks exactly like a bug in the code.
-- **`EMAIL_FROM` is as necessary as the API key.** Missing it fails silently
-  to the console.
+- **`EMAIL_FROM` is as necessary as the API key**, and in production its
+  absence now *throws* rather than printing to the log. It used to fail
+  silently, which meant live sign-in tokens written into the platform logs
+  while the person was told to check an empty inbox. The production build
+  refuses to start without it for the same reason.
 
 ---
 
