@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
+import { StructuredData } from "@/components/StructuredData";
 import { type GalleryImage, getGalleryImages } from "@/data/galleryData";
+import { siteOrigin } from "@/lib/site-url";
+import { photographSchema } from "@/lib/structured-data";
 
 export const revalidate = 3600;
 
@@ -100,5 +103,10 @@ export default async function PhotoPage({ params }: PageProps) {
    * own credit is in the caption bar, where it follows whichever image is
    * showing.
    */
-  return <ImageCarousel images={found.images} initialIndex={found.index} />;
+  return (
+    <>
+      <StructuredData data={photographSchema(found.photo, siteOrigin())} />
+      <ImageCarousel images={found.images} initialIndex={found.index} />
+    </>
+  );
 }

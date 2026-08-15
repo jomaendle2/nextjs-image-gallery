@@ -1,6 +1,9 @@
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
+import { StructuredData } from "@/components/StructuredData";
 import { getGalleryImages } from "@/data/galleryData";
+import { siteOrigin } from "@/lib/site-url";
+import { gallerySchema } from "@/lib/structured-data";
 
 /**
  * Statically rendered and refreshed hourly. Publishing calls
@@ -17,5 +20,12 @@ export default async function Home() {
     return <EmptyGallery />;
   }
 
-  return <ImageCarousel images={images} />;
+  return (
+    <>
+      <StructuredData
+        data={gallerySchema(images, siteOrigin(), "the beauty of earth.")}
+      />
+      <ImageCarousel images={images} />
+    </>
+  );
 }

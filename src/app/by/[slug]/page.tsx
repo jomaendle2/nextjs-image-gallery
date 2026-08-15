@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { PhotoGrid } from "@/components/gallery/PhotoGrid";
+import { StructuredData } from "@/components/StructuredData";
 import { getGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
+import { siteOrigin } from "@/lib/site-url";
+import { photographerSchema } from "@/lib/structured-data";
 
 export const revalidate = 3600;
 
@@ -42,14 +45,16 @@ export default async function ContributorGallery({ params }: PageProps) {
     return <EmptyGallery authorName={contributor.display_name} />;
   }
 
+  const author = {
+    slug: contributor.slug,
+    name: contributor.display_name,
+    siteUrl: contributor.site_url,
+  };
+
   return (
-    <PhotoGrid
-      contributor={{
-        slug: contributor.slug,
-        name: contributor.display_name,
-        siteUrl: contributor.site_url,
-      }}
-      images={images}
-    />
+    <>
+      <StructuredData data={photographerSchema(author, images, siteOrigin())} />
+      <PhotoGrid contributor={author} images={images} />
+    </>
   );
 }
