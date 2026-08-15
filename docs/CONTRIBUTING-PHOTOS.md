@@ -167,3 +167,30 @@ blob that already belongs to a photograph. That last one is what stops a
 contributor claiming another's work by posting its URL, which is public in
 the markup of every page the photograph appears on. It cleans up after
 itself.
+
+### Traps when checking this by hand
+
+Every one of these produced a confident, wrong "I found a bug" during the
+work on this version. They are cheap to avoid once named.
+
+- **`innerText` lies about what is on the page.** It is layout-dependent and
+  will skip an element that is present and correctly sized. Use
+  `textContent` when asking whether something rendered, and
+  `getBoundingClientRect()` when asking how big it is.
+- **Read the label before asserting on it.** A check for a button called
+  "Send" found nothing and looked like a missing panel; the button says
+  "Announce 16". Query the page for its actual text first, then assert.
+- **Reloading hides live-update failures.** Server actions revalidate and
+  the client updates on its own within about half a second. A test that
+  reloads before checking would pass even if that were broken — which is
+  the failure a person would actually hit.
+- **Grep the whole of `src`.** A list of files touching a column, built from
+  `src/lib` and `src/app`, missed `src/components` and was wrong within
+  seconds of being turned into a test.
+- **Sign-in tokens are single-use and last fifteen minutes.** A token from
+  an earlier attempt silently redirects to the sign-in form, and the next
+  assertion fails for reasons that have nothing to do with the change. Mint
+  a fresh one per run.
+- **The database is shared with production.** Anything created, published or
+  deleted while testing is real. Clean up in the same script that sets up,
+  and check the counts afterwards rather than assuming.
