@@ -99,12 +99,18 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
         The exposure line is for the people who care about it and invisible to
         everyone else. Hidden below `sm`, where the caption and the photograph
         already fill the frame.
+
+        Rendered whether or not there is anything to put in it. Only two
+        photographs in fourteen currently carry EXIF, and when this element
+        came and went with the data it took 19px of the caption bar with it
+        — which the photograph above absorbed, so choosing a photograph with
+        a lens recorded resized the image and nudged everything in the bar.
+        An empty paragraph holds the line instead. It has no text content, so
+        a screen reader passes straight over it.
       */}
-      {exif === null ? null : (
-        <p className="hidden max-w-full truncate text-[0.625rem] text-white/30 uppercase tabular-nums tracking-[0.12em] sm:block">
-          {exif}
-        </p>
-      )}
+      <p className="hidden min-h-4 max-w-full truncate text-[0.625rem] text-white/30 uppercase leading-4 tabular-nums tracking-[0.12em] sm:block">
+        {exif}
+      </p>
     </div>
   );
 }
