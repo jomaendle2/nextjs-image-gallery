@@ -3,9 +3,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sendLoginEmail } from "@/lib/auth/email";
-import { destroySession } from "@/lib/auth/session";
+import { createSession, destroySession } from "@/lib/auth/session";
 import { normaliseEmail } from "@/lib/auth/slug";
-import { mintLoginToken } from "@/lib/auth/tokens";
+import {
+  consumeLoginToken,
+  mintLoginToken,
+  pruneLoginTokens,
+} from "@/lib/auth/tokens";
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -59,4 +63,43 @@ export async function requestSignIn(
 export async function signOut(): Promise<void> {
   await destroySession();
   redirect("/contribute");
+}
+
+/**
+ * Completes a sign-in, from a POST rather than a link click.
+ *
+ * The magic link used to be a GET that consumed the token as the page
+ * loaded. Anything that follows links in the mail path — Outlook SafeLinks,
+ * Proofpoint, Barracuda, an over-eager preview pane — therefore spent the
+ * token before the recipient touched it, and the genuine click landed on
+ * "that link has expired", indistinguishable from a stale one. Nobody
+ * behind a corporate mail gateway could reliably sign in at all.
+ *
+ * Requiring a POST fixes that, because scanners do not POST. It costs one
+ * button press, which is the price of the link working. It also removes a
+ * smaller problem: a bare GET establishing a session meant a third party
+ * could force somebody's browser to sign in as them by feeding them a URL.
+ */
+export async function completeSignIn(formData: FormData): Promise<void> {
+  const token = formData.get("token");
+  const redeemed =
+    typeof token === "string" && token !== ""
+      ? await consumeLoginToken(token)
+      : null;
+
+  if (!redeemed) {
+    redirect("/contribute?error=expired");
+  }
+
+  await createSession(redeemed.email, redeemed.contributor?.id ?? null);
+
+  // Cheap housekeeping on a path that runs rarely, rather than a cron job.
+  await pruneLoginTokens();
+
+  /*
+   * Somebody with no contributors row has nothing to do on the contributor
+   * dashboard — it would refuse them the moment they arrived. A member is
+   * sent to the gallery, which is what they signed in to see.
+   */
+  redirect(redeemed.contributor === null ? "/" : "/contribute/photos");
 }
