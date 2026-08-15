@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
+import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
-import { ActionError } from "./ActionError";
+import { useServerAction } from "@/hooks/useServerAction";
 import { decideApplication } from "./actions";
-import { useServerAction } from "./useServerAction";
 
 export function ApplicationRowActions({ id }: { id: string }) {
   const { pending, error, run } = useServerAction();

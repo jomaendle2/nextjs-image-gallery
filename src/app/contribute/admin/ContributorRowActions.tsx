@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
+import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
+import { useServerAction } from "@/hooks/useServerAction";
 import type { Contributor } from "@/lib/auth/types";
-import { ActionError } from "./ActionError";
 import { setRevoked } from "./actions";
-import { useServerAction } from "./useServerAction";
 
 export type ContributorRow = Contributor & {
   revoked_at: string | null;

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useActionState, useCallback, useState, useTransition } from "react";
+import { useActionState, useCallback, useState } from "react";
+import { ActionError } from "@/components/ui/ActionError";
 import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
+import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import {
   type PhotoFormState,
@@ -25,28 +26,25 @@ const INITIAL: PhotoFormState = { message: null };
  */
 export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
   const [state, formAction, pending] = useActionState(savePhoto, INITIAL);
-  const [isMutating, startTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const router = useRouter();
-
-  const isPublished = photo.published_at !== null;
-  const savedLabel = isPublished ? "Save changes" : "Publish";
-  const submitLabel = pending ? "Saving…" : savedLabel;
 
   /*
    * Server actions called from an event handler rather than through
    * formAction, so these buttons do not submit the surrounding edit form and
    * discard the contributor's unsaved title.
+   *
+   * The shared hook, not a private copy. This file used to carry its own
+   * `run`, identical to the admin one down to the `router.refresh()` — and
+   * identical in its one defect: no catch, so a failed unpublish or delete
+   * threw into the error boundary and replaced the contributor's dashboard
+   * with "That didn't load", losing every unsaved title on the page. One
+   * implementation means fixing that once rather than finding it twice.
    */
-  const run = useCallback(
-    (work: () => Promise<void>) => {
-      startTransition(async () => {
-        await work();
-        router.refresh();
-      });
-    },
-    [router],
-  );
+  const { pending: isMutating, error: actionError, run } = useServerAction();
+
+  const isPublished = photo.published_at !== null;
+  const savedLabel = isPublished ? "Save changes" : "Publish";
+  const submitLabel = pending ? "Saving…" : savedLabel;
 
   const handleUnpublish = useCallback(() => {
     run(() => togglePublished(photo.id, false));
@@ -195,6 +193,9 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
           {state.message}
         </p>
       </div>
+
+      {/* Unpublish and delete report here; the save button reports above. */}
+      <ActionError message={actionError} />
     </form>
   );
 }

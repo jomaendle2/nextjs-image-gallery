@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
+import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
+import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
-import { ActionError } from "./ActionError";
 import { ownerSetPublished, pinOpener } from "./actions";
-import { useServerAction } from "./useServerAction";
 
 export function PhotoRowActions({ photo }: { photo: OwnPhotoRow }) {
   const { pending, error, run } = useServerAction();
