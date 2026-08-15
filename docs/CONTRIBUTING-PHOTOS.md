@@ -160,6 +160,11 @@ For the ingest path specifically, against a running dev server:
 node --env-file=.env.local scripts/smoke-upload.mts <gallery_session cookie>
 ```
 
+Take the cookie from your browser's dev tools after signing in, or mint a
+session directly. Thirteen checks, and the one worth watching is **"never
+read the GPS block"** — the synthetic photograph it uploads carries real GPS
+tags, so that assertion is the promise on the apply page, tested.
+
 It uploads a synthetic photograph carrying GPS tags, checks that the derived
 metadata is right and that the coordinates did not survive, confirms the row
 landed as a draft, and checks that the endpoint refuses three things: an

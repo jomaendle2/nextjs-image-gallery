@@ -64,30 +64,50 @@ function check(label: string, ok: boolean): void {
 
 const id = body["id"];
 check("returned a draft id", typeof id === "string");
-check("read the real dimensions", body["width"] === 1200);
-check("read the real dimensions", body["height"] === 800);
-check(
-  "derived a hex colour",
-  typeof body["bg_color"] === "string" &&
-    /^#[0-9a-f]{6}$/.test(body["bg_color"]),
-);
-check(
-  "captured the camera",
-  JSON.stringify(body["exif"]).includes("SMOKE TEST-1"),
-);
-check("captured ISO", JSON.stringify(body["exif"]).includes("800"));
-check(
-  "discarded GPS",
-  !(
-    JSON.stringify(body["exif"]).toLowerCase().includes("gps") ||
-    JSON.stringify(body["exif"]).toLowerCase().includes("latitude")
-  ),
-);
 
+/*
+ * Everything below reads the row rather than the response.
+ *
+ * These assertions used to inspect the draft route's JSON, which once echoed
+ * the whole derived object back. It now returns `{ id }` and nothing else,
+ * because the old shape included the re-encoded JPEG as a Buffer and sent
+ * megabytes of comma-separated integers on every upload. This script kept
+ * asserting on the old shape and crashed — for weeks, unnoticed, because
+ * nobody ran it.
+ *
+ * Reading the database is the better test anyway: what matters is what was
+ * persisted, not what was echoed. A route could return perfect JSON and
+ * store nothing.
+ */
 if (typeof id === "string") {
-  const rows = await sql`SELECT published_at FROM photos WHERE id = ${id};`;
+  const rows = await sql`
+    SELECT published_at, width, height, bg_color, exif, display_pathname
+    FROM photos WHERE id = ${id};`;
+  const row = rows[0];
   check("row exists", rows.length === 1);
-  check("row is a draft, not published", rows[0]?.["published_at"] === null);
+  check("row is a draft, not published", row?.["published_at"] === null);
+  check("stored the real dimensions", row?.["width"] === 1200);
+  check("stored the real dimensions", row?.["height"] === 800);
+  check(
+    "derived a hex colour",
+    typeof row?.["bg_color"] === "string" &&
+      /^#[0-9a-f]{6}$/.test(row["bg_color"] as string),
+  );
+  check(
+    "recorded the display copy's pathname",
+    typeof row?.["display_pathname"] === "string",
+  );
+
+  const exif = JSON.stringify(row?.["exif"] ?? null);
+  check("captured the camera", exif.includes("SMOKE TEST-1"));
+  check("captured ISO", exif.includes("800"));
+  check(
+    "never read the GPS block",
+    !(
+      exif.toLowerCase().includes("gps") ||
+      exif.toLowerCase().includes("latitude")
+    ),
+  );
 
   /*
    * The same blob, a second time. Being on our own Blob host proves where a
