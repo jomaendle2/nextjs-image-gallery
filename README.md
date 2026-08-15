@@ -5,7 +5,29 @@ Next.js App Router, React 19, Tailwind v4. Photographs live in Vercel Blob;
 metadata, contributors and view counts in Neon Postgres.
 
 See [docs/CONTRIBUTING-PHOTOS.md](docs/CONTRIBUTING-PHOTOS.md) for how
-contributions work and what an operator has to set up.
+contributions work and what an operator has to set up, and
+[docs/quality-audit.md](docs/quality-audit.md) for the production-readiness
+record — what was found, what was decided, and what is deliberately not done.
+
+## Routes
+
+| Route | What it is |
+| --- | --- |
+| `/` | The gallery: every published photograph, newest first behind a pinned opener |
+| `/photo/<id>` | One photograph, with its own metadata and social card |
+| `/photographers` | Everyone contributing, and the way in for anyone who wants to |
+| `/by/<slug>` | A photographer's work as a contact sheet |
+| `/by/<slug>/slideshow` | The same work in the viewer |
+| `/feed.xml` | The whole gallery, as a subscription |
+| `/by/<slug>/feed.xml` | One photographer, as a subscription |
+| `/contribute` | Sign in, for invited photographers |
+| `/contribute/photos` | A contributor's own photographs |
+| `/contribute/apply` | The public application form |
+| `/contribute/admin` | Owner only; 404 for everyone else |
+
+`sitemap.xml`, `robots.txt` and `manifest.webmanifest` are generated from the
+same data rather than written by hand, so a new photographer or photograph
+appears in them without anyone remembering to.
 
 ## Getting started
 
@@ -53,9 +75,16 @@ The migrations are additive and idempotent — re-running them is a no-op.
 
 Biome 2 replaces ESLint and Prettier and does linting, formatting and
 import sorting in one pass. The configuration is deliberately strict:
-381 rules across a11y, complexity, correctness, performance, security,
-style and suspicious, plus the `next`, `react`, `project` and `types`
-domains. `types` enables the rules that need type inference.
+395 rules across a11y, complexity, correctness, performance, security,
+style and suspicious — every rule the schema offers that is not written for
+Vue, Qwik or Solid — plus the `next`, `react`, `project` and `types`
+domains. `types` enables the rules that need type inference. Twelve are off,
+each for a reason given below.
+
+Rules absent from `biome.json` fall back to the recommended preset rather
+than to "on", which is how the six test-hygiene rules — `noFocusedTests`,
+`noSkippedTests` and friends — went missing. A stray `.only` could have kept
+CI green while running a single test.
 
 TypeScript runs with `strict` plus `noUncheckedIndexedAccess`,
 `verbatimModuleSyntax`, `noImplicitOverride` and

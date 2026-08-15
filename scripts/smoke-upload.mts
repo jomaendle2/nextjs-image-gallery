@@ -88,6 +88,28 @@ if (typeof id === "string") {
   const rows = await sql`SELECT published_at FROM photos WHERE id = ${id};`;
   check("row exists", rows.length === 1);
   check("row is a draft, not published", rows[0]?.["published_at"] === null);
+
+  /*
+   * The same blob, a second time. Being on our own Blob host proves where a
+   * file came from and not whose it is, and every published photograph's URL
+   * is in the markup of the page that shows it — so without this refusal one
+   * contributor can hand the endpoint another's URL and receive a row
+   * attributed to themselves. Checked while the row still exists, because
+   * that row is the thing doing the refusing.
+   */
+  const claimed = await fetch(`${origin}/api/photos/draft`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: `gallery_session=${cookie}`,
+    },
+    body: JSON.stringify({ blobUrl: blob.url }),
+  });
+  check(
+    "refuses a blob that already belongs to a photograph",
+    claimed.status === 409,
+  );
+
   await sql`DELETE FROM photos WHERE id = ${id};`;
 }
 

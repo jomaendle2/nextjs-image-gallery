@@ -8,15 +8,19 @@ contributor publishes directly.
 
 1. Goes to `/contribute` and enters the address the invitation was sent to.
 2. Receives a sign-in link. It works **once** and expires after 15 minutes.
-3. Lands on `/contribute/photos` and uploads a photograph — JPEG, PNG, WebP
-   or AVIF, up to 25 MB. The browser uploads straight to storage, so the file
-   is never re-encoded or shrunk on the way in.
-4. The server reads the file once and works out its dimensions, a blur
+3. Lands on `/contribute/photos` and adds photographs — several at once, by
+   picker or by dropping them on the panel. JPEG, PNG, WebP or AVIF, up to
+   25 MB each. The browser uploads straight to storage, so a file is never
+   re-encoded or shrunk on the way in. They go up one after another rather
+   than in parallel, and each reports its own progress; one failing does not
+   take the others with it.
+4. The server reads each file once and works out its dimensions, a blur
    placeholder, a backdrop colour, and the camera and exposure details. The
    contributor supplies a title and a description, adjusts the backdrop
    colour if the derived one is wrong, and publishes.
-5. The photograph appears at the top of the gallery, credited, and on the
-   contributor's own page at `/by/<their-slug>`.
+5. The photograph appears at the top of the gallery, credited, on the
+   contributor's own page at `/by/<their-slug>`, at a URL of its own at
+   `/photo/<id>`, and in both feeds.
 
 Contributors can edit, unpublish and delete their own photographs, and only
 their own. That rule is enforced in the SQL, not in the interface.
@@ -106,6 +110,10 @@ rather than a 403 — there is no reason to confirm the page exists.
 | Sessions | `src/lib/auth/session.ts` |
 | Upload token | `src/app/api/uploads/token/route.ts` |
 | Ingest | `src/app/api/photos/draft/route.ts` |
+| Alt text | `src/lib/photos/alt-text.ts` |
+| Structured data (JSON-LD) | `src/lib/structured-data.ts` |
+| Feeds | `src/lib/feed.ts`, `src/app/feed.xml/`, `src/app/by/[slug]/feed.xml/` |
+| Security headers | `next.config.ts` |
 
 Two decisions worth knowing before you change anything:
 
@@ -132,6 +140,9 @@ node --env-file=.env.local scripts/smoke-upload.mts <gallery_session cookie>
 
 It uploads a synthetic photograph carrying GPS tags, checks that the derived
 metadata is right and that the coordinates did not survive, confirms the row
-landed as a draft, and checks that the endpoint refuses both an anonymous
-caller and a URL pointing anywhere other than the blob store. It cleans up
-after itself.
+landed as a draft, and checks that the endpoint refuses three things: an
+anonymous caller, a URL pointing anywhere other than the blob store, and a
+blob that already belongs to a photograph. That last one is what stops a
+contributor claiming another's work by posting its URL, which is public in
+the markup of every page the photograph appears on. It cleans up after
+itself.
