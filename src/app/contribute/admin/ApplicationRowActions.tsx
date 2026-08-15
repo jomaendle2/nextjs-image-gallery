@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, X } from "lucide-react";
 import { useCallback } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -20,15 +21,23 @@ export function ApplicationRowActions({ id }: { id: string }) {
   return (
     <div>
       <div className="flex flex-wrap gap-2">
+        {/*
+          Two buttons a thumb-width apart deciding whether somebody joins.
+          Approving emails them and creates their account; declining closes
+          the application and cannot be undone from this page. Both deserve
+          to be told apart at a glance rather than read.
+        */}
         <GlassButton disabled={pending} onClick={approve} size="sm">
+          <Check aria-hidden="true" className="mr-1.5" size={14} />
           {pending ? "Working…" : "Approve"}
         </GlassButton>
         <GlassButton
-          className="text-white/60"
+          className="text-white/50 hover:text-red-200"
           disabled={pending}
           onClick={decline}
           size="sm"
         >
+          <X aria-hidden="true" className="mr-1.5" size={14} />
           Decline
         </GlassButton>
       </div>

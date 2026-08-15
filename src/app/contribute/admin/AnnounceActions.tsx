@@ -1,5 +1,6 @@
 "use client";
 
+import { Send } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -77,6 +78,7 @@ export function AnnounceActions({
             onClick={send}
             size="sm"
           >
+            <Send aria-hidden="true" className="mr-1.5" size={14} />
             {sending ? "Sending…" : `Announce ${pending}`}
           </GlassButton>
         )}

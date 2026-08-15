@@ -1,5 +1,6 @@
 "use client";
 
+import { UserCheck, UserX } from "lucide-react";
 import { useCallback } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -27,7 +28,30 @@ export function ContributorRowActions({ row }: { row: ContributorRow }) {
 
   return (
     <div>
-      <GlassButton disabled={pending} onClick={toggle} size="sm">
+      {/*
+        Revoking ends somebody's access, deletes their live sessions and
+        pulls their photographs out of the gallery. It sat here in the same
+        glass as every other control on the page, one of a column of
+        identical buttons beside names — which is the arrangement most
+        likely to produce a misclick and the one where a misclick costs
+        most. Restoring is ordinary, so only the destructive direction is
+        marked.
+      */}
+      <GlassButton
+        className={
+          isRevoked
+            ? ""
+            : "border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+        }
+        disabled={pending}
+        onClick={toggle}
+        size="sm"
+      >
+        {isRevoked ? (
+          <UserCheck aria-hidden="true" className="mr-1.5" size={14} />
+        ) : (
+          <UserX aria-hidden="true" className="mr-1.5" size={14} />
+        )}
         {isRevoked ? "Restore" : "Revoke"}
       </GlassButton>
       <ActionError message={error} />
