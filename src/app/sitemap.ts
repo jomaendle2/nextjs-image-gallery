@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getGalleryImages } from "@/data/galleryData";
 import { listContributors } from "@/lib/auth/contributors";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -56,5 +57,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     ]);
 
-  return [...staticRoutes, ...contributorRoutes];
+  /*
+   * One entry per photograph. These are the pages with something unique to
+   * say — a title, a description, and an image of their own — so they are
+   * the ones most worth crawling, and there are far more of them than there
+   * are of everything else here put together.
+   */
+  const photoRoutes: MetadataRoute.Sitemap = (await getGalleryImages()).map(
+    (image) => ({
+      url: `${origin}/photo/${image.id}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    }),
+  );
+
+  return [...staticRoutes, ...contributorRoutes, ...photoRoutes];
 }

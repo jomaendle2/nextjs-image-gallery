@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewCount } from "@/components/gallery/ViewCount";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { SharePhoto } from "./SharePhoto";
 
 /**
  * The right half of the wall label: who made the photograph, and how.
@@ -89,11 +90,19 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
         )}
       </p>
 
-      <ViewCount
-        className="opacity-70 transition-opacity duration-200 hover:opacity-100"
-        imageId={image.id}
-        variant="gallery"
-      />
+      {/*
+        The count and the share control sit on one line: both are facts about
+        this photograph rather than about the gallery, and pairing them keeps
+        the credit column to three rows at every width.
+      */}
+      <div className="flex items-center gap-3">
+        <ViewCount
+          className="opacity-70 transition-opacity duration-200 hover:opacity-100"
+          imageId={image.id}
+          variant="gallery"
+        />
+        <SharePhoto image={image} />
+      </div>
 
       {/*
         The exposure line is for the people who care about it and invisible to
