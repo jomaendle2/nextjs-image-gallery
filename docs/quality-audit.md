@@ -161,6 +161,32 @@ lazy loading — `aspect-square` plus blur placeholders. Grid → slideshow hash
 navigation confirmed: clicking the seventh tile opens the slideshow on the
 seventh photograph.
 
+### Structured data — `76027bf`
+
+There was none. Now `ImageGallery`, `ProfilePage` and `ImageObject`, written
+as pure functions taking an origin so they are testable and every URL is
+absolute. The photographer's own site goes out as `sameAs`. The gallery
+schema is capped at 24 so a crawler never reads a megabyte of JSON-LD before
+the first photograph paints — every photograph has its own page that
+describes itself in full.
+
+`StructuredData` writes the `</script>` escape once. There is a test that
+tries to break out through a photograph's title.
+
+### The social card — `8fc429a`
+
+The OG image was the one surface designed by somebody else — flat black,
+96pt extra-bold, drop shadow, emoji — sharing no colour, weight or spacing
+with the gallery it advertised. Rebuilt in the site's language, with the
+title bounded at 70 characters because it comes from a query parameter and
+a long one simply ran out of frame. Contributor pages now get their own card
+and a canonical URL; previously the one link a photographer shares about
+their own work previewed as the generic gallery image.
+
+### Landmarks finished — `cf6a915`, `5db6054`
+
+All five page types now have exactly one `main`.
+
 ---
 
 ## Open
@@ -220,6 +246,14 @@ regardless.
 **4. Automatic tagging for discovery — no.** It would generate a taxonomy
 nobody asked for, and the gallery's whole posture is a small curated set
 rather than a browsable index.
+
+### The unbounded feed query
+`listPublishedPhotos()` still has no `LIMIT`, and the home page mounts every
+published photograph. The dock, the grid and the JSON-LD each handle this
+now, but the query itself does not. Left alone deliberately: adding a `LIMIT`
+would silently drop photographs out of a photographer's gallery, which is a
+product decision rather than a tidy-up. It wants pagination or a "load more",
+not a cap.
 
 ### Marketing surfaces
 Per-photograph pages and sharing landed in `cc239ac`, which was the
