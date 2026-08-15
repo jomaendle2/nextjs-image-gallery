@@ -41,9 +41,23 @@ the refusal body leaks neither field. This is attack (2), and the gate is
 server-side by construction rather than by discipline: deleting the client
 component would not expose anything.
 
-**Checkout cannot be pointed at another address.** The email comes from the
-session, never the request, and is passed to Stripe as fixed. An anonymous
-POST gets 401.
+**Checkout no longer requires a session, and that is deliberate — but read
+the next paragraph with it.** This section originally said the address comes
+from the session and an anonymous POST gets 401. Both were true and the rule
+built on them was not: signing in requires an existing contributor or member
+row, so demanding a session to *become* a member made the two conditions
+circular and nobody new could buy anything.
+
+So an anonymous buyer types their own address at Stripe. What protects that
+is not the checkout route: paying grants nothing by itself, membership is
+usable only through a session, and a session only comes from a link sent to
+the address on the payment. Control of the inbox is still proved before
+anything unlocks. A signed-in buyer still has their address fixed rather
+than collected.
+
+**The write, however, had to be guarded separately** — see the takeover
+finding below. Reasoning that covers what a self-asserted address lets
+somebody *read* does not cover what it lets them *overwrite*.
 
 **The webhook is idempotent and order-independent.** `upsertMember` is an
 `ON CONFLICT ... DO UPDATE`, so redelivery — which Stripe does on every
@@ -171,11 +185,15 @@ reason of anyone to reach it.
 
 ## Open, with reasons
 
-**Rate limiting on `/api/stripe/checkout` and `/api/stripe/portal`.** Both
-require a session, and each call creates a Stripe object. A signed-in user
-could loop them and litter the account. Not exploitable for money or data,
-and `src/lib/rate-limit.ts` already exists — this is a small piece of work
-rather than a decision, and it is the first thing I would add next.
+**~~Rate limiting on `/api/stripe/checkout` and `/api/stripe/portal`.~~**
+Done — `stripeLimiter`, fifteen attempts per window, answering 429. More
+generous than the sign-in limiter because somebody genuinely may open
+checkout several times: a declined card, a wrong address, a change of mind.
+Being told to come back in fifteen minutes at the moment you are trying to
+pay is its own kind of failure.
+
+Note this became more important than written above: checkout no longer
+requires a session at all, so the route is reachable by anybody.
 
 **`members_customer_idx` is UNIQUE on `stripe_customer_id`.** If a customer id
 were ever associated with a second email — an address changed in the Stripe
@@ -184,10 +202,16 @@ Stripe would retry that event forever. Correct as a data-integrity rule, but
 it converts an unusual admin action into a stuck webhook. Worth a deliberate
 `ON CONFLICT` on that index if the membership grows.
 
-**No API version pinned on the Stripe client.** `new Stripe(key)` uses the
-account's default version. Finding (1) is exactly what that costs: a field
-moved and the code kept compiling. Pinning an explicit `apiVersion` would turn
-the next such move into a visible break instead of a silent null.
+**~~No API version pinned on the Stripe client.~~** Done — `API_VERSION` in
+`src/lib/stripe.ts`, asserted by `security.test.ts`.
+
+One thing pinning does *not* solve, recorded because it is the seam both
+silent bugs lived on: outbound calls use the pinned version, while the event
+objects Stripe delivers are serialised in whatever version the webhook
+endpoint was created with. The two can disagree, which is why
+`subscriptionPeriodEnd` and `subscriptionFromInvoice` each read the current
+shape first and fall back. Check the endpoint's version in the Dashboard
+matches the constant.
 
 **~~There is no privacy policy, terms, or Impressum.~~** Written — `/imprint`,
 `/privacy`, `/terms`, linked from the footer of every page that scrolls and
