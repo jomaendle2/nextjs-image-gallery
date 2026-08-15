@@ -60,7 +60,10 @@ The migrations are additive and idempotent — re-running them is a no-op.
 ## Scripts
 
 See **[docs/how-it-works.md](docs/how-it-works.md)** for what each service
-does, how to sign in as admin, and how to test the membership end to end.
+does, how to sign in as admin, and how to test the membership end to end;
+**[docs/launch-checklist.md](docs/launch-checklist.md)** for what must be set
+before sharing the site; and **[docs/security-architecture.md](docs/security-architecture.md)**
+for the invariants `src/lib/security.test.ts` enforces.
 
 | Script | What it does |
 | --- | --- |
