@@ -26,7 +26,7 @@ export function CarouselImage({
   }, [onLoad]);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center py-6">
+    <div className="relative w-full h-full flex items-center justify-center pt-6 pb-12">
       {/*
         A real button rather than a click handler on the <img>: it is
         keyboard reachable, exposed to assistive tech, and announces what
@@ -34,7 +34,7 @@ export function CarouselImage({
       */}
       <button
         aria-label={`View ${alt} full screen`}
-        className="group relative max-w-full h-full flex items-center justify-center max-h-full pb-6 cursor-pointer"
+        className="group relative max-w-full h-full flex items-center justify-center max-h-full cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-[6px] focus-visible:outline-white/80"
         onClick={onClick}
         type="button"
       >
@@ -47,7 +47,16 @@ export function CarouselImage({
 
         <Image
           alt={alt}
-          className={`max-w-full z-20 max-h-full w-auto object-contain rounded-2xl overflow-hidden transition-all shadow-2xl border-6 md:border-8 border-neutral-500/15 duration-500 group-hover:scale-[1.02] group-active:scale-[0.98] ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+          /*
+           * No mat around the photograph. A 6-8px translucent neutral border
+           * composites almost black over the image edge, so every picture sat
+           * inside a grey frame that read as a rendering artefact rather than
+           * a deliberate mount. Depth now comes from elevation instead: a long
+           * soft shadow to lift the photo off the colour field, a tighter one
+           * for contact, and an inset hairline so the edge stays defined where
+           * the image itself is pale.
+           */
+          className={`max-w-full z-20 max-h-full w-auto object-contain rounded-2xl overflow-hidden ring-1 ring-inset ring-white/12 shadow-[0_30px_80px_-28px_oklch(0%_0_0_/_0.7),0_4px_14px_-6px_oklch(0%_0_0_/_0.45)] transition-all duration-500 group-hover:scale-[1.02] group-active:scale-[0.98] ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           loading={priority ? "eager" : "lazy"}
           onLoad={handleLoad}
           placeholder="blur"

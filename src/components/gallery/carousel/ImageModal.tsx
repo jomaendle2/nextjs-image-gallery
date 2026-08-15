@@ -128,9 +128,24 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     <div
       aria-label={`${image.title}, full screen`}
       aria-modal="true"
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-xl ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl ${
         isClosing ? "viewer-backdrop-exit" : "viewer-backdrop-enter"
       }`}
+      style={{
+        /*
+         * The gallery's colour, dimmed almost to black.
+         *
+         * Flat black cut the viewer off from the gallery it opened out of,
+         * and turned every letterboxed edge into a hard band. Reusing the
+         * image's `bgColor` at full strength is the opposite failure: the
+         * backdrop stops reading as a separate mode and starts competing
+         * with the photograph. A little over a third of the hue over near-black keeps
+         * the room recognisably the same one, with the photo still the
+         * brightest thing in it. Held under full opacity so the blurred
+         * gallery stays faintly visible behind.
+         */
+        backgroundColor: `color-mix(in srgb, color-mix(in oklab, ${image.bgColor} 38%, oklch(7% 0 0)) 90%, transparent)`,
+      }}
       role="dialog"
     >
       {/*
