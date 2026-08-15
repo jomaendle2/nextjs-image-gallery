@@ -229,6 +229,17 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
           ref={contentRef}
           style={{
             transition: isDragging ? "none" : "transform 0.3s ease-out",
+            /*
+             * The photograph itself never hands its touches to the browser.
+             *
+             * Pinch has to start at 1×, and a two-finger gesture on an
+             * element with the default touch-action is claimed by the
+             * browser for page zoom before a single `pointermove` is
+             * delivered — so the viewer would never see the gesture it is
+             * now able to handle. Only the image is claimed this way; the
+             * backdrop around it still behaves normally.
+             */
+            touchAction: "none",
           }}
         >
           <Image

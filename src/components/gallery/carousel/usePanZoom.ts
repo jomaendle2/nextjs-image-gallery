@@ -13,6 +13,14 @@ const MIN_SCALE = 0.5;
 const SCALE_STEP = 1.5;
 const DOUBLE_CLICK_SCALE = 2;
 
+/** Separation between two pointers, in CSS pixels. */
+function distanceBetween(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 interface PanZoomTransform {
   x: number;
   y: number;
@@ -45,6 +53,17 @@ export function usePanZoom(isOpen: boolean) {
   const transformRef = useRef<PanZoomTransform>({ x: 0, y: 0, scale: 1 });
   const dragOriginRef = useRef({ x: 0, y: 0 });
   const frameRef = useRef<number | null>(null);
+
+  /*
+   * Every pointer currently down, by id.
+   *
+   * Two of them is a pinch. This is the only way to know that: a pointer
+   * event describes one finger, so the second finger's existence has to be
+   * remembered between events.
+   */
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  /** Finger separation and scale at the moment the pinch began. */
+  const pinchRef = useRef<{ distance: number; scale: number } | null>(null);
 
   const paint = useCallback(() => {
     const node = contentRef.current;
@@ -97,6 +116,8 @@ export function usePanZoom(isOpen: boolean) {
   useEffect(() => {
     if (isOpen) {
       transformRef.current = { x: 0, y: 0, scale: 1 };
+      pointersRef.current.clear();
+      pinchRef.current = null;
       setScale(1);
       setIsDragging(false);
     }
@@ -120,6 +141,28 @@ export function usePanZoom(isOpen: boolean) {
   }, [applyScale]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent) => {
+    pointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    /*
+     * The second finger starts a pinch, and ends any drag in progress —
+     * otherwise the image would slide after whichever finger happened to go
+     * down first while the other was scaling it.
+     */
+    if (pointersRef.current.size === 2) {
+      const [first, second] = [...pointersRef.current.values()];
+      if (first && second) {
+        pinchRef.current = {
+          distance: distanceBetween(first, second),
+          scale: transformRef.current.scale,
+        };
+      }
+      setIsDragging(false);
+      return;
+    }
+
     if (transformRef.current.scale <= 1) {
       return;
     }
@@ -132,8 +175,52 @@ export function usePanZoom(isOpen: boolean) {
     event.currentTarget.setPointerCapture(event.pointerId);
   }, []);
 
+  /**
+   * Scales to whatever the two fingers are now saying. Returns false when
+   * this is not a pinch, so the caller can fall through to dragging.
+   *
+   * Scale comes from the ratio of current separation to separation at the
+   * start of the gesture, against the scale the image held then — never
+   * accumulated per event. Accumulation drifts, and pinching out and back in
+   * would not return you to where you started.
+   */
+  const applyPinch = useCallback((): boolean => {
+    const pinch = pinchRef.current;
+    const pointers = pointersRef.current;
+    if (pointers.size !== 2 || pinch === null || pinch.distance <= 0) {
+      return false;
+    }
+
+    const [first, second] = [...pointers.values()];
+    if (!(first && second)) {
+      return false;
+    }
+
+    const ratio = distanceBetween(first, second) / pinch.distance;
+    const next = Math.min(Math.max(pinch.scale * ratio, MIN_SCALE), MAX_SCALE);
+    transformRef.current.scale = next;
+    if (next <= 1) {
+      transformRef.current.x = 0;
+      transformRef.current.y = 0;
+    }
+    schedulePaint();
+    return true;
+  }, [schedulePaint]);
+
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
+      const pointers = pointersRef.current;
+      if (pointers.has(event.pointerId)) {
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+
+      // Pinch takes precedence over drag whenever two fingers are down. The
+      // scale reaches state on release rather than per frame — see
+      // `handlePointerUp`, and the note about renders at the top of the file.
+      if (applyPinch()) {
+        return;
+      }
+
       if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         return;
       }
@@ -144,10 +231,24 @@ export function usePanZoom(isOpen: boolean) {
       transformRef.current.y = event.clientY - dragOriginRef.current.y;
       schedulePaint();
     },
-    [schedulePaint],
+    [applyPinch, schedulePaint],
   );
 
   const handlePointerUp = useCallback((event: React.PointerEvent) => {
+    const pointers = pointersRef.current;
+    pointers.delete(event.pointerId);
+
+    if (pointers.size < 2 && pinchRef.current !== null) {
+      pinchRef.current = null;
+      /*
+       * Commit the scale reached by the pinch. Setting state per frame would
+       * re-render the modal, the toolbar and the caption on every move — the
+       * exact cost the ref exists to avoid — and nothing on screen depends on
+       * the intermediate values.
+       */
+      setScale(transformRef.current.scale);
+    }
+
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
