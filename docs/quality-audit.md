@@ -344,9 +344,36 @@ site. Per-photographer is the half that matters to a contributor —
 "people can subscribe to you" is the argument for publishing here.
 
 The email half is built in `190a6fa`: `/subscribe`, double opt-in, one-click
-unsubscribe that deletes rather than flags. What is **not** built is the
-send itself — the message that goes out when new work is published. That
-wants a trigger (on publish? weekly?) and a decision about frequency.
+unsubscribe that deletes rather than flags, reachable from the photographers
+page since `218c5f9`.
+
+**The send itself is not built**, and it is the one thing standing between a
+subscriber list and a subscriber list worth having. Everything it needs
+exists: confirmed rows carry a usable unsubscribe token (`21ac07b`), the
+email helpers and `page`/`button` templates are in `auth/email.ts`, and the
+admin has both `requireOwner` and `useServerAction`.
+
+Four steps, in order:
+
+1. `ALTER TABLE photos ADD COLUMN IF NOT EXISTS announced_at TIMESTAMPTZ;`
+2. `listUnannouncedPhotos()` and `markAnnounced(ids)` in
+   `photos/repository.ts` — the first ordered *oldest first*, because an
+   announcement reads in the order the work appeared, which is the opposite
+   of the gallery
+3. `sendNewWorkAnnouncement(to, photos, unsubscribeUrl)` beside the existing
+   helpers
+4. An owner-gated action and a button in `/contribute/admin`
+
+**Owner-triggered rather than automatic**, deliberately. On-publish would
+mail the list once per photograph when a photographer uploads a shoot;
+weekly presumes a cadence nobody has chosen. A button cannot surprise
+anybody, and automation can be layered on it later.
+
+**Mark the photographs announced *before* sending, not after.** If the
+process dies halfway, the choice is between some subscribers getting a
+second copy and some photographs never being announced — and the duplicate
+costs more. The photographs are still on the site, in the feed and in the
+sitemap; the trust is harder to get back.
 
 There is currently no reason to return and no way to subscribe. Every
 visitor is a one-time arrival from a link. That is the single largest gap,
