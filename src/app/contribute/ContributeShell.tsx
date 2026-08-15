@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
 
 /**
@@ -120,27 +121,7 @@ function Frame({
         </header>
         <main>{children}</main>
 
-        {/*
-          Static, not fixed. The old footer was `fixed z-50`, so it floated
-          over the viewer and over these pages as they scrolled.
-        */}
-        <footer className="mt-16 text-white/35 text-xs">
-          ©{" "}
-          {/*
-            The last control on the site under the touch floor: 58x14, on
-            every contribute page, at both widths. It is the only link in
-            this footer rather than a link inside a sentence, so the
-            exemption for prose does not cover it.
-          */}
-          <a
-            className={`${TOUCH_LINK} transition-colors hover:text-white/70`}
-            href="https://jomaendle.com"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Jo Mändle
-          </a>
-        </footer>
+        <SiteFooter className="mt-16" />
       </div>
     </div>
   );

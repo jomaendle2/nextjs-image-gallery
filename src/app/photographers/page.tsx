@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { GROUND } from "@/lib/photo-ground";
@@ -147,6 +148,13 @@ export default async function PhotographersPage() {
             </Link>
           </section>
         </main>
+
+        {/*
+          This page is the viewer's one exit, which makes it the two-click
+          route to the legal notices for somebody who arrived on a
+          photograph and never leaves the gallery otherwise.
+        */}
+        <SiteFooter className="mt-16" />
       </div>
     </div>
   );

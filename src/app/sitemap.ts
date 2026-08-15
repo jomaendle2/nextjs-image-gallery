@@ -40,6 +40,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    { url: `${origin}/membership`, changeFrequency: "monthly", priority: 0.8 },
+    /*
+     * Low priority but present. Nobody searches for these, and they should
+     * not compete with a photograph — but a legal notice that crawlers
+     * cannot see is one a reader may not be able to find either, and being
+     * findable is the whole requirement.
+     */
+    ...["imprint", "privacy", "terms"].map((page) => ({
+      url: `${origin}/${page}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.2,
+    })),
   ];
 
   /*

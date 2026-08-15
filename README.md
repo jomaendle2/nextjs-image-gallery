@@ -59,6 +59,9 @@ The migrations are additive and idempotent — re-running them is a no-op.
 
 ## Scripts
 
+See **[docs/how-it-works.md](docs/how-it-works.md)** for what each service
+does, how to sign in as admin, and how to test the membership end to end.
+
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Dev server (Turbopack, the default in Next 16) |
@@ -71,6 +74,15 @@ The migrations are additive and idempotent — re-running them is a no-op.
 | `npm test` | Vitest unit tests |
 | `npm run db:migrate` | Apply the additive schema (safe to re-run) |
 | `npm run db:import-assets` | One-off import of the original photos (already run) |
+
+Operational scripts, run with `node --env-file=.env.local`:
+
+| Script | What it does |
+| --- | --- |
+| `scripts/setup-billing-portal.mts` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
+| `scripts/smoke-membership.mts` | Webhook forgery, replay, dunning, cancellation. Needs `stripe listen`. |
+| `scripts/smoke-portal.mts` | The member's side: real customer, real session, real cookie. |
+| `scripts/smoke-email.mts` | Sends one of every email template. Needs the `alias-loader` import. |
 
 ## Toolchain
 

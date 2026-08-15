@@ -149,14 +149,24 @@ account's default version. Finding (1) is exactly what that costs: a field
 moved and the code kept compiling. Pinning an explicit `apiVersion` would turn
 the next such move into a visible break instead of a silent null.
 
-**There is no privacy policy, terms, or Impressum.** Found while configuring
-the portal, which asks for the first two by URL — they were omitted rather
-than pointed at 404s. Selling a subscription from Germany requires an
-Impressum (§5 DDG), terms, and a cancellation notice, and the site already
-collects email addresses and sets a session cookie, which needs a privacy
-policy whether or not anything is sold. This is the only item here that is
-already overdue rather than merely advisable, and it is content work rather
-than code: the routes and the shell to hold them exist.
+**~~There is no privacy policy, terms, or Impressum.~~** Written — `/imprint`,
+`/privacy`, `/terms`, linked from the footer of every page that scrolls and
+so two clicks from any viewer. **Still incomplete**: the operator's postal
+address is blank in `src/lib/legal.ts`, and until it is filled in the pages
+render a visible warning and §5 DDG is not met. An invented address would be
+a false statement of identity on a legal notice, so the gap is loud rather
+than papered over.
+
+**Original uploads keep their GPS, in public blob storage.** The *displayed*
+image is a fresh sharp re-encode with no metadata, and the GPS block is never
+parsed into the database, so nothing on the site reveals a location. But the
+untouched original is stored with `access: "public"`, and it still contains
+whatever the camera wrote. Its URL carries a random suffix and is never sent
+to a client — `FEED_COLUMNS` selects `COALESCE(display_url, blob_url)`, so
+the original is only reachable by someone who already knows the URL. Low risk
+and worth closing anyway: private blob storage for originals would remove the
+question entirely, on a site whose central promise is that it does not record
+where anybody stood.
 
 **Stripe Tax is not enabled.** Selling a digital subscription from Germany
 into the EU and the US has VAT/OSS consequences that are not mine to assume.
