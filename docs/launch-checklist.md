@@ -1,7 +1,20 @@
 # Launch checklist
 
-For sending the site to friends. Ordered by what breaks if you skip it,
-checked against the live Vercel project and Stripe account on 15 August 2026.
+For sending the site to friends. Checked against the live Vercel project,
+Stripe account and Resend domain — every claim here was verified rather than
+assumed, and struck through once done.
+
+**The short version:**
+
+```bash
+vercel env add SITE_URL production      # https://www.thebeautyof.earth
+vercel env ls                           # confirm EMAIL_FROM is on the domain above
+gh pr merge 11                          # preflight checks config, build applies schema
+# then: street and city in src/lib/legal.ts, and redeploy
+```
+
+Everything below is why each of those matters and what is deliberately not
+on the list.
 
 The gallery itself works right now — anyone with the link can look at every
 photograph, on any device. Everything below is about the things that involve
@@ -9,7 +22,7 @@ a person doing something other than looking.
 
 ---
 
-## 0. Merge, before anything else
+## 0. What has to happen, in order
 
 **Production is not this product yet.** `main` has one page — the gallery
 viewer. `/contribute`, `/membership`, `/photographers`, `/subscribe` and the
@@ -21,15 +34,12 @@ So nothing below can be tested in production, and no tester can be invited,
 until PR #11 is merged and deployed. Everything verified so far was verified
 on localhost and on preview deployments, which run the branch.
 
-That is also the moment the environment variables start mattering: a preview
-build reads its own set, and production has never run this code with them.
-Merge first, then work down this list against the real site.
-
-The production build now refuses to run without `SITE_URL`, `EMAIL_FROM`
-and `RESEND_API_KEY`, naming each one and the command to set it — so if you
-merge before setting them, the deploy stops with an explanation rather than
-succeeding and emailing people links to the wrong domain. Preview and local
-builds are unaffected.
+**Set the variables in §1 before you merge, not after.** The production
+build refuses to run without `SITE_URL`, `EMAIL_FROM` and `RESEND_API_KEY`,
+naming each one and the command to set it. That is deliberate — it stops a
+deploy that would succeed and then email people links to the wrong domain —
+but it does mean merging first gives you a failed build rather than a live
+site. Preview and local builds are unaffected.
 
 The schema is applied by the build itself now (`vercel-build` runs
 `scripts/migrate.mts` before `next build`), so merging brings the database
@@ -42,25 +52,19 @@ by `schema.test.ts` — so running them on every build is safe by construction.
 
 ## 1. Blocks a soft launch
 
-### Verify a domain in Resend
+### ~~Verify a domain in Resend~~ — done
 
-**Nothing can email anyone.** The API key works, but `jomaendle.com` is not
-verified, so Resend refuses every send except to the account's own address.
-That silently breaks:
+`thebeautyof.earth` is **verified**. All seven templates were sent through
+it to a real inbox: sign-in link, invitation, application approved,
+subscribe confirmation, subscribe welcome, new-work announcement, and the
+weekly reminder.
 
-- signing in (contributors *and* members — the magic link never arrives)
-- the subscribe confirmation, so nobody can ever join the list
-- the "you're in" mail when you approve an applicant
+Re-run any time with:
 
-`thebeautyof.earth` has been added to Resend and is **pending** — the DKIM
-record is still propagating through GoDaddy. Nothing can send until it
-flips to Verified. Check at <https://resend.com/domains>; it usually takes
-minutes rather than the hours the warning suggests, but it is DNS, so it
-cannot be hurried.
-
-The other domains on the account (`links.jomaendle.com`,
-`immokaepsele.de`, `updates.mycvs.xyz`) are verified and would work today
-if you needed to test sooner.
+```bash
+node --import ./scripts/alias-loader.mjs --env-file=.env.local \
+  scripts/smoke-email.mts you@example.com
+```
 
 ### ~~Set `EMAIL_FROM` on Vercel~~ — done
 
