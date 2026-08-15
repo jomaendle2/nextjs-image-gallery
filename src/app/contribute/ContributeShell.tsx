@@ -54,7 +54,7 @@ function Frame({
   className,
 }: ShellProps & { className: string }) {
   return (
-    <div className="min-h-dvh bg-[#12161a] text-white">
+    <div className="min-h-dvh bg-surface text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0"

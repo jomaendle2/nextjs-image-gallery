@@ -7,7 +7,7 @@ import Link from "next/link";
  */
 export function EmptyGallery({ authorName }: { authorName?: string }) {
   return (
-    <main className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-[#12161a] px-6 text-center">
+    <main className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
       <h1 className="font-semibold text-2xl text-white tracking-[-0.045em] sm:text-3xl">
         the beauty of earth.
       </h1>

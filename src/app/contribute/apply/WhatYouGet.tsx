@@ -51,7 +51,7 @@ export function WhatYouGet() {
 
       <ul className="mt-4 grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] sm:grid-cols-2">
         {OFFERS.map((offer) => (
-          <li className="bg-[#12161a] p-4 sm:p-5" key={offer.title}>
+          <li className="bg-surface p-4 sm:p-5" key={offer.title}>
             <h3 className="font-semibold text-[0.9375rem] text-white tracking-[-0.02em]">
               {offer.title}
             </h3>

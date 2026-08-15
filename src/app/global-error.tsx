@@ -30,7 +30,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           display: "grid",
           placeItems: "center",
           padding: "1.5rem",
-          backgroundColor: "#0a0d0f",
+          /*
+           * The literal value of `--color-surface`, written out because this
+           * is the one component that cannot rely on the stylesheet having
+           * loaded. If that token changes, change it here too — there is no
+           * mechanism that will do it for you, which is exactly why every
+           * other copy of this colour was replaced with the token.
+           */
+          backgroundColor: "#12161a",
           color: "#ffffff",
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",

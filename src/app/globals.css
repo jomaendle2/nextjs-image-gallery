@@ -72,6 +72,19 @@
    */
   --ground: #0b0e12;
 
+  /*
+   * The ground for pages that are documents rather than viewers — the
+   * contribute flow, the apply form, the empty gallery.
+   *
+   * A step lighter than `--ground` on purpose: those pages are read rather
+   * than looked through, and the near-black that makes a photograph glow
+   * makes a form look switched off. It is a token rather than the literal it
+   * used to be, which was copied into three files and had already been typed
+   * as a fourth, slightly different near-black elsewhere. Naming it is what
+   * stops the site quietly acquiring a palette of almost-blacks.
+   */
+  --color-surface: #12161a;
+
   --glass-blur-thin: 14px;
   --glass-blur-regular: 22px;
   --glass-blur-thick: 32px;
