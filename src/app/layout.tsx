@@ -59,6 +59,16 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#2a6b7c",
   colorScheme: "dark",
+  /*
+   * Photographs to the edges of the glass on a notched phone.
+   *
+   * The default keeps the whole document inside the safe area, which on an
+   * iPhone means a full-screen photo gallery is framed by two bars of
+   * browser chrome — the one thing this design spends all its restraint
+   * avoiding. `cover` hands us the whole display and the responsibility for
+   * the insets, which the chrome below takes with `safe-*` padding.
+   */
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -416,6 +416,45 @@
     --fade-end 200ms var(--ease-glass);
 }
 
+/*
+ * Safe areas, for the chrome that has to stay clear of the hardware.
+ *
+ * `viewport-fit: cover` in the layout gives the page the whole display,
+ * including the strip behind a notch and the one under a home indicator.
+ * The photographs want that; a caption sitting under the home indicator
+ * does not.
+ *
+ * Each of these takes the larger of the design's own padding and the
+ * device's inset, so on every phone without a notch — and on every desktop,
+ * where the insets are `0px` — the spacing is exactly what it was. The
+ * padding is passed in rather than hardcoded so one utility serves the
+ * bar that wants 24px and the one that wants 16px.
+ */
+@utility safe-b-* {
+  padding-bottom: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-bottom)
+  );
+}
+
+@utility safe-t-* {
+  padding-top: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-top)
+  );
+}
+
+@utility safe-x-* {
+  padding-left: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-left)
+  );
+  padding-right: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-right)
+  );
+}
+
 /* Hide scrollbars for carousel */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */

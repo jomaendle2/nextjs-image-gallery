@@ -34,7 +34,7 @@ export function CaptionBar({
   onImageSelect,
 }: CaptionBarProps) {
   return (
-    <div className="relative z-10 mx-auto w-full max-w-[1536px] flex-shrink-0 px-4 pb-6 sm:px-8 sm:pb-7">
+    <div className="relative z-10 mx-auto w-full max-w-[1536px] flex-shrink-0 safe-x-4 safe-b-6 sm:safe-x-8 sm:safe-b-7">
       {/*
         Three columns from `lg`, and the middle one is capped at 45% of the
         bar rather than left to size itself.
