@@ -9,9 +9,10 @@ const MAX_BYTES = 25 * 1024 * 1024;
 
 const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
 
+const LEADING_SLASH = /^\//;
+
 interface DraftRequest {
   blobUrl?: unknown;
-  pathname?: unknown;
 }
 
 /**
@@ -27,8 +28,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  const { blobUrl, pathname } = (await request.json()) as DraftRequest;
-  if (typeof blobUrl !== "string" || typeof pathname !== "string") {
+  const { blobUrl } = (await request.json()) as DraftRequest;
+  if (typeof blobUrl !== "string") {
     return NextResponse.json({ error: "Missing blob url." }, { status: 400 });
   }
 
@@ -54,6 +55,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 400 },
     );
   }
+
+  /*
+   * Derived from the URL we just validated rather than taken from the request
+   * body. The stored pathname is what `del()` is given when a photo is later
+   * deleted, so accepting the client's version would let one contributor name
+   * another photo's blob and have it removed on their behalf.
+   */
+  const pathname = parsed.pathname.replace(LEADING_SLASH, "");
 
   try {
     const response = await fetch(parsed);

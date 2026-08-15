@@ -478,7 +478,8 @@
         "src/app/api/**",
         "src/lib/database.ts",
         "src/lib/auth/**",
-        "src/lib/photos/**"
+        "src/lib/photos/**",
+        "src/lib/site-url.ts"
       ],
       "linter": {
         "rules": {

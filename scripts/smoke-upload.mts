@@ -47,7 +47,7 @@ const response = await fetch(`${origin}/api/photos/draft`, {
     "Content-Type": "application/json",
     Cookie: `gallery_session=${cookie}`,
   },
-  body: JSON.stringify({ blobUrl: blob.url, pathname: blob.pathname }),
+  body: JSON.stringify({ blobUrl: blob.url }),
 });
 
 const body = (await response.json()) as Record<string, unknown>;
@@ -68,7 +68,8 @@ check("read the real dimensions", body["width"] === 1200);
 check("read the real dimensions", body["height"] === 800);
 check(
   "derived a hex colour",
-  typeof body["bg_color"] === "string" && /^#[0-9a-f]{6}$/.test(body["bg_color"]),
+  typeof body["bg_color"] === "string" &&
+    /^#[0-9a-f]{6}$/.test(body["bg_color"]),
 );
 check(
   "captured the camera",
@@ -77,8 +78,10 @@ check(
 check("captured ISO", JSON.stringify(body["exif"]).includes("800"));
 check(
   "discarded GPS",
-  !JSON.stringify(body["exif"]).toLowerCase().includes("gps") &&
-    !JSON.stringify(body["exif"]).toLowerCase().includes("latitude"),
+  !(
+    JSON.stringify(body["exif"]).toLowerCase().includes("gps") ||
+    JSON.stringify(body["exif"]).toLowerCase().includes("latitude")
+  ),
 );
 
 if (typeof id === "string") {
@@ -95,17 +98,14 @@ const ssrf = await fetch(`${origin}/api/photos/draft`, {
     "Content-Type": "application/json",
     Cookie: `gallery_session=${cookie}`,
   },
-  body: JSON.stringify({
-    blobUrl: "http://169.254.169.254/latest/meta-data/",
-    pathname: "photos/evil.jpg",
-  }),
+  body: JSON.stringify({ blobUrl: "http://169.254.169.254/latest/meta-data/" }),
 });
 check("refuses a non-blob url", ssrf.status === 400);
 
 const anon = await fetch(`${origin}/api/photos/draft`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ blobUrl: blob.url, pathname: blob.pathname }),
+  body: JSON.stringify({ blobUrl: blob.url }),
 });
 check("refuses an anonymous caller", anon.status === 401);
 

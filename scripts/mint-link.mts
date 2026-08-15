@@ -25,7 +25,7 @@ const rows = await sql`
   SELECT id, display_name FROM contributors
   WHERE email = ${email} AND revoked_at IS NULL;
 `;
-const contributor = rows[0];
+const [contributor] = rows;
 if (!contributor) {
   console.error(`No active contributor with the address ${email}.`);
   process.exit(1);

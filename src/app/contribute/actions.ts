@@ -7,6 +7,7 @@ import { destroySession } from "@/lib/auth/session";
 import { normaliseEmail } from "@/lib/auth/slug";
 import { mintLoginToken } from "@/lib/auth/tokens";
 import { signInLimiter } from "@/lib/rate-limit";
+import { siteOrigin } from "@/lib/site-url";
 
 export interface SignInState {
   message: string | null;
@@ -21,9 +22,22 @@ export interface SignInState {
  */
 const NEUTRAL = "If that address is on the list, a sign-in link is on its way.";
 
-function siteUrl(host: string): string {
-  const protocol = host.startsWith("localhost") ? "http" : "https";
-  return `${protocol}://${host}`;
+/**
+ * The client IP, as far as it can be trusted.
+ *
+ * `x-forwarded-for` is a comma-separated chain and a client can prepend
+ * entries to it, so using the raw header as the bucket key would let one
+ * caller mint a fresh bucket per request. Vercel sets `x-real-ip` to the true
+ * client address; the leftmost forwarded entry is the fallback. The per-email
+ * limit below is the sturdier of the two for this reason.
+ */
+function clientIp(headerList: Headers): string {
+  const realIp = headerList.get("x-real-ip");
+  if (realIp !== null && realIp !== "") {
+    return realIp;
+  }
+  const forwarded = headerList.get("x-forwarded-for") ?? "";
+  return forwarded.split(",")[0]?.trim() || "unknown";
 }
 
 export async function requestSignIn(
@@ -37,7 +51,7 @@ export async function requestSignIn(
 
   const email = normaliseEmail(raw);
   const headerList = await headers();
-  const ip = headerList.get("x-forwarded-for") ?? "unknown";
+  const ip = clientIp(headerList);
 
   // Limited on both axes: per address so one inbox cannot be flooded, and
   // per IP so one client cannot walk a list of addresses.
@@ -50,8 +64,7 @@ export async function requestSignIn(
   try {
     const secret = await mintLoginToken(email);
     if (secret !== null) {
-      const host = headerList.get("host") ?? "localhost:3000";
-      const url = `${siteUrl(host)}/contribute/verify?token=${secret}`;
+      const url = `${siteOrigin()}/contribute/verify?token=${secret}`;
       await sendLoginEmail(email, url);
     }
   } catch (error) {

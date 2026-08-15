@@ -51,10 +51,7 @@ export function UploadForm() {
         const response = await fetch("/api/photos/draft", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            blobUrl: blob.url,
-            pathname: blob.pathname,
-          }),
+          body: JSON.stringify({ blobUrl: blob.url }),
         });
 
         if (!response.ok) {
