@@ -8,7 +8,7 @@ import { isOwner } from "@/lib/auth/types";
 import { listOwnPhotos } from "@/lib/photos/repository";
 import { signOut } from "../actions";
 import { ContributeShell } from "../ContributeShell";
-import { PhotoCard } from "./PhotoCard";
+import { PhotoList } from "./PhotoList";
 import { UploadForm } from "./UploadForm";
 
 export const metadata: Metadata = {
@@ -58,17 +58,7 @@ export default async function PhotosPage() {
 
       <UploadForm />
 
-      {photos.length === 0 ? (
-        <p className="mt-8 text-white/55">
-          Nothing here yet. Upload your first photograph above.
-        </p>
-      ) : (
-        <ul className="mt-8 space-y-5">
-          {photos.map((photo) => (
-            <PhotoCard key={photo.id} photo={photo} />
-          ))}
-        </ul>
-      )}
+      <PhotoList photos={photos} />
     </ContributeShell>
   );
 }
