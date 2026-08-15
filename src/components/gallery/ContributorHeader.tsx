@@ -35,12 +35,18 @@ export function ContributorHeader({
     >
       <header className="mx-auto flex w-full max-w-[1536px] flex-wrap items-end justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-8 sm:py-6">
         <div className="min-w-0">
+          {/*
+            The wordmark keeps its own setting — lowercase, with the full
+            stop. Small caps are the language for metadata like the photo
+            count below; putting the mark itself in tracked capitals and
+            dropping its period made it read as a different logo.
+          */}
           <Link
-            className="inline-flex items-center gap-1 rounded-full text-[0.6875rem] text-white/45 uppercase tracking-[0.14em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className="-my-1.5 inline-flex items-center gap-1.5 rounded-full py-1.5 font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
             href="/"
           >
-            <ArrowLeft aria-hidden="true" size={12} />
-            the beauty of earth
+            <ArrowLeft aria-hidden="true" size={13} />
+            the beauty of earth.
           </Link>
 
           <h1 className="mt-1.5 font-semibold text-2xl text-white tracking-[-0.035em] sm:text-3xl">
