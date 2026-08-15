@@ -261,10 +261,13 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
         upload ten photographs, then publish ten photographs, which meant
         ten expand-click-collapse cycles down the list.
 
-        There is no bulk delete, deliberately. Deleting is irreversible and
-        takes the blobs with it, so it stays one photograph at a time behind
-        its own confirmation — no dialog makes "delete these nine, one of
-        which you misclicked" a safe offer.
+        Deleting is here too, and this comment used to say it never would
+        be — "no dialog makes 'delete these nine, one of which you
+        misclicked' a safe offer". The claim was too strong. A dialog naming
+        a *count* cannot make that safe; one naming the *titles* can, because
+        a misclicked row appears as a name the person did not expect to
+        read. That is what the confirmation below does, and it is the reason
+        the objection no longer holds.
       */}
       {selected.size === 0 ? null : (
         <div className="glass-hairline mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
