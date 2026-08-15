@@ -316,6 +316,86 @@ GROUP BY blob_pathname HAVING count(*) > 1;
 
 ---
 
+## Where to go next
+
+Written after seven passes over the code, so it is grounded in what is
+actually here rather than in what a photo gallery usually does.
+
+### The read
+
+The scarce asset is curation and trust — a small invited set, real credit,
+and a privacy stance most galleries cannot claim (GPS is never read, and
+there are tests that prove it). Those are the things worth compounding.
+
+The current bottleneck is **not** revenue. It is two photographers and
+sixteen photographs. Building a paid tier now would optimise a funnel with
+almost nothing in it. Supply and audience come first, and they feed each
+other: photographers join where work is seen and credited, audiences arrive
+where the work is good.
+
+The demand-side foundation now exists — a page per photograph, real OG
+cards, a sitemap, structured data. What is missing is the other half.
+
+### 1. A way to follow the gallery — build this first
+
+There is currently no reason to return and no way to subscribe. Every
+visitor is a one-time arrival from a link. That is the single largest gap,
+it is cheap, and it is the **precondition for everything below**: a
+membership cannot be sold to an audience you have no way to reach.
+
+Concretely: an RSS/JSON feed, and an email list that sends when new work is
+published. Nothing more.
+
+It also strengthens the contributor pitch, which is the supply side of the
+same loop — "your work goes out to N people who asked to see it" is a much
+better sentence than "your work appears in a gallery".
+
+### 2. Lower the cost of contributing — the supply side
+
+Batch upload (`8e53153`) removed most of the friction. What remains is that
+every photograph needs a title and a description typed from nothing.
+
+This reframes the AI Gateway question. Drafting a description at upload is
+not a nice-to-have feature; it is the remaining tax on the scarce resource,
+which is photographers' willingness to publish their fortieth image rather
+than their fourth. The constraint stands: the model proposes a description,
+never a place — it cannot know where a photograph was taken, and a
+confident wrong location on someone else's work is worse than a blank field.
+
+### 3. Membership, when there is an audience to sell to
+
+The architecture is already waiting for it, deliberately. Sessions and
+login tokens were re-keyed onto email precisely so a paying member with no
+`contributors` row could hold a session — see the migration note in
+`schema.ts`, the `getCurrentMember` named in `session.ts`, and the comment
+in `tokens.ts`.
+
+Exactly three things block it, and they are small:
+
+- `login_tokens.contributor_id` is `NOT NULL` (`schema.ts`)
+- `sessions.contributor_id` is `NOT NULL` (same)
+- `mintLoginToken` returns null for an address with no contributors row
+
+**What a membership should sell** matters more than the plumbing. The
+strongest candidate is the one already sketched: precise locations. It is
+genuinely valuable to the people who look at landscape photography, only
+this community can supply it, and it fits the privacy stance rather than
+contradicting it — the photographer *chooses* to disclose a spot, which is
+categorically different from EXIF leaking it. It must stay per-photograph
+and opt-in, and the money has to reach the photographer, or it converts the
+site's central promise into a thing it sells out.
+
+Weaker candidates, for the record: ad-free (there are no ads), downloads
+(commoditised), early access (annoys the audience you are trying to grow).
+
+### 4. Prints and licensing — later
+
+Money flowing to photographers is the strongest recruitment argument there
+is, and it is operationally heavy: fulfilment, tax, returns, disputes. Worth
+wanting, not worth starting before 1–3.
+
+---
+
 ## Notes and constraints
 
 - `listPublishedPhotos()` has no `LIMIT`. Everything downstream must survive
