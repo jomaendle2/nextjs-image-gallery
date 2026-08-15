@@ -66,7 +66,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
   );
 
   return (
-    <div className="flex min-w-0 flex-col items-center gap-1 sm:items-end">
+    <div className="flex min-w-0 flex-col items-center gap-1 lg:items-end">
       <p className="text-[0.6875rem] text-white/45 uppercase tracking-[0.14em]">
         {linkAuthor ? (
           <AuthorLink author={author} />

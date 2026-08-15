@@ -31,7 +31,7 @@ export default async function ContributePage({ searchParams }: PageProps) {
       title="Contribute"
     >
       {notice === undefined ? null : (
-        <p className="mb-6 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white/80">
+        <p className="glass-hairline mb-6 rounded-2xl px-4 py-3 text-sm text-white/80">
           {notice}
         </p>
       )}

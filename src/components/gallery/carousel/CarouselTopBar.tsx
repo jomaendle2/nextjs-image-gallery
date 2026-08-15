@@ -19,7 +19,7 @@ export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
       {onClose ? (
         <button
           onClick={onClose}
-          className="grid place-items-center size-11 rounded-full glass-thin transition-[transform,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95"
+          className="grid place-items-center size-11 rounded-full glass-thin transition-[scale,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95"
           aria-label="Close gallery"
           type="button"
         >

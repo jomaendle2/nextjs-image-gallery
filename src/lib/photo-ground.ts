@@ -12,8 +12,16 @@
  * thing on screen.
  */
 
-/** Near-black with a trace of blue, so the tint has something to sit in. */
-export const GROUND = "#0b0e12";
+/**
+ * Near-black with a trace of blue, so the tint has something to sit in.
+ *
+ * The literal lives in `globals.css` as `--ground`, because the CSS needs it
+ * too — `glass-bar` fills with it. Referencing the custom property rather
+ * than repeating the hex keeps the page and the stylesheet from drifting,
+ * which is the same failure this module was written to prevent. Only valid
+ * in styles that resolve against the document, which is every use here.
+ */
+export const GROUND = "var(--ground)";
 
 const TINT_STRENGTH = 26;
 

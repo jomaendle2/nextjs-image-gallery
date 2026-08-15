@@ -1,7 +1,6 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { GalleryAuthor } from "@/data/galleryData";
-import { GROUND } from "@/lib/photo-ground";
 import { ViewToggle } from "./ViewToggle";
 
 /**
@@ -27,12 +26,7 @@ export function ContributorHeader({
   view: "grid" | "slideshow";
 }) {
   return (
-    <div
-      className="w-full border-white/[0.06] border-b backdrop-blur-xl"
-      style={{
-        backgroundColor: `color-mix(in oklab, ${GROUND} 72%, transparent)`,
-      }}
-    >
+    <div className="glass-bar w-full">
       <header className="mx-auto flex w-full max-w-[1536px] flex-wrap items-end justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-8 sm:py-6">
         <div className="min-w-0">
           {/*

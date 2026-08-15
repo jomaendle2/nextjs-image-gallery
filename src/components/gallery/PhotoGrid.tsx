@@ -64,7 +64,7 @@ export function PhotoGrid({
             <li key={image.id}>
               <Link
                 aria-label={`${image.title} — open full screen`}
-                className="group relative block aspect-square overflow-hidden rounded-xl bg-white/5 ring-1 ring-white/[0.06] transition-shadow duration-300 hover:ring-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+                className="group glass-hairline relative block aspect-square overflow-hidden rounded-xl transition-[border-color] duration-300 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
                 href={`/by/${contributor.slug}/slideshow#${image.id}`}
               >
                 <Image

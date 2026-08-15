@@ -17,7 +17,7 @@ export function ApplyForm() {
 
   if (state.status === "sent") {
     return (
-      <div className="rounded-2xl border border-white/12 bg-white/5 p-6">
+      <div className="glass-thin rounded-2xl p-6">
         <h2 className="font-semibold text-lg tracking-[-0.03em]">
           Application received
         </h2>

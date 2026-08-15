@@ -108,7 +108,7 @@ export default async function PhotographersPage() {
             it still reads as the primary action.
           */}
           <Link
-            className="glass-thin mt-5 inline-flex min-h-11 items-center rounded-2xl px-5 font-medium text-sm text-white transition-[transform,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 active:scale-95"
+            className="glass-thin mt-5 inline-flex min-h-11 items-center rounded-2xl px-5 font-medium text-sm text-white transition-[scale,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 active:scale-95"
             href="/contribute/apply"
           >
             Apply to contribute

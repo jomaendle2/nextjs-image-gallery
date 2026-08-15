@@ -50,7 +50,7 @@ export default async function AdminPage() {
           <ul className="space-y-2">
             {applications.map((application) => (
               <li
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                className="glass-hairline flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
                 key={application.id}
               >
                 <div className="min-w-0">
@@ -80,7 +80,7 @@ export default async function AdminPage() {
         </section>
       )}
 
-      <section className="rounded-3xl border border-white/12 bg-white/5 p-6">
+      <section className="glass-thin rounded-3xl p-6">
         <h2 className="mb-1 font-semibold text-lg tracking-[-0.03em]">
           Invite a photographer
         </h2>
@@ -100,7 +100,7 @@ export default async function AdminPage() {
         <ul className="space-y-2">
           {contributors.map((row) => (
             <li
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+              className="glass-hairline flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
               key={row.id}
             >
               <div className="min-w-0">
@@ -134,7 +134,7 @@ export default async function AdminPage() {
         <ul className="space-y-2">
           {photos.map((photo) => (
             <li
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+              className="glass-hairline flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
               key={photo.id}
             >
               <div className="min-w-0">

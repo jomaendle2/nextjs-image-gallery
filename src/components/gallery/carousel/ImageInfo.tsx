@@ -13,7 +13,7 @@ interface ImageInfoProps {
  */
 export function ImageInfo({ image }: ImageInfoProps) {
   return (
-    <div aria-live="polite" className="min-w-0 text-center sm:text-left">
+    <div aria-live="polite" className="min-w-0 text-center lg:text-left">
       <h2 className="text-pretty font-semibold text-[1.0625rem] text-white leading-tight tracking-[-0.025em] sm:text-lg [text-shadow:0_1px_12px_oklch(0%_0_0_/_0.4)]">
         {image.title}
       </h2>

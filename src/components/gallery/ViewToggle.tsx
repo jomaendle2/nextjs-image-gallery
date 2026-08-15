@@ -22,7 +22,7 @@ export function ViewToggle({
   const off = "text-white/40 hover:text-white/80";
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-xl border border-white/10 p-1">
+    <div className="glass-hairline inline-flex items-center gap-1 rounded-xl p-1">
       <Link
         aria-current={view === "grid" ? "page" : undefined}
         className={`${base} ${view === "grid" ? on : off}`}

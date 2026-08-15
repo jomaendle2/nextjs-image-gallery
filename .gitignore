@@ -43,3 +43,9 @@ next-env.d.ts
 # Playwright MCP screenshots
 .playwright-mcp/
 .tmp-fixtures/
+
+# Review screenshots taken at the repo root during UI work
+/*.png
+
+# Ralph loop session state
+.claude/ralph-loop.local.md

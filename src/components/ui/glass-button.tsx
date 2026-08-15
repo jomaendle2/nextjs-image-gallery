@@ -21,7 +21,7 @@ export function GlassButton({
         // Base styles
         "relative inline-flex items-center justify-center",
         "glass-thin text-white font-medium",
-        "transition-[transform,background-color] duration-300 ease-glass",
+        "transition-[scale,background-color] duration-300 ease-glass",
         "hover:bg-[var(--glass-fill-hover)] active:scale-95",
         "disabled:opacity-50 disabled:pointer-events-none",
 

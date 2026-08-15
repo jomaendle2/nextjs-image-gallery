@@ -64,6 +64,14 @@
  * ------------------------------------------------------------------ */
 
 @theme {
+  /*
+   * The ground every photograph sits on. Defined here rather than in
+   * TypeScript because both need it: `src/lib/photo-ground.ts` exports it as
+   * `var(--ground)` for the inline styles that mix a photo's colour into it,
+   * and `glass-bar` below fills with it directly.
+   */
+  --ground: #0b0e12;
+
   --glass-blur-thin: 14px;
   --glass-blur-regular: 22px;
   --glass-blur-thick: 32px;
@@ -129,6 +137,56 @@
 }
 
 /*
+ * The two named exceptions to glass.
+ *
+ * Everything that is a *surface* should use one of the three weights above.
+ * These exist because two things on this site are surfaces that must not
+ * blur, and hand-rolling `border border-white/15 bg-white/5` at each of them
+ * — which is how ContributorHeader, PhotoGrid, ViewToggle, the field token,
+ * the apply confirmation and the admin rows each ended up with slightly
+ * different values — makes the exception invisible. Named, it is a decision.
+ */
+
+/*
+ * A flat surface: the glass fill and edge, no blur and no shadow.
+ *
+ * For anything that repeats. `backdrop-filter` costs a snapshot-and-blur of
+ * everything behind the element per frame, which is nearly free on one 90px
+ * strip and ruinous across twenty admin rows or every input on a form. It is
+ * also wrong there: a text field is not floating over a photograph, it is
+ * printed on the page.
+ */
+@utility glass-hairline {
+  background-color: var(--glass-fill-thin);
+  border: 1px solid var(--glass-ring);
+}
+
+/*
+ * The sticky bar behind a contributor's name.
+ *
+ * This one does blur — it is genuinely translucent chrome with photographs
+ * scrolling under it — so it carries the compositing hints the three weights
+ * above do not need. `will-change: backdrop-filter` tells the compositor the
+ * blurred region is going to change every frame, and costs nothing extra
+ * because `backdrop-filter` already forces its own layer. `contain: paint`
+ * bounds the repaint to the bar instead of letting it invalidate the page
+ * behind it, which is what makes a sticky blur affordable while scrolling.
+ *
+ * Fill and hairline are here rather than on the element so both contributor
+ * views emit the same bar; the grid adds only `sticky` positioning.
+ */
+@utility glass-bar {
+  background-color: color-mix(in oklab, var(--ground) 72%, transparent);
+  backdrop-filter: blur(var(--glass-blur-regular))
+    saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-regular))
+    saturate(var(--glass-saturate));
+  border-bottom: 1px solid oklch(100% 0 0 / 0.06);
+  will-change: backdrop-filter;
+  contain: paint;
+}
+
+/*
  * Transparency is a preference, not a given. Some people get motion sick
  * or simply cannot read text over a live blur, and the OS lets them say
  * so. Drop to a flat fill: cheaper to paint and far easier to read.
@@ -140,6 +198,19 @@
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background-color: oklch(22% 0.01 250 / 0.92);
+  }
+
+  /*
+   * The bar drops to an opaque ground rather than the flat panel fill: it
+   * sits at the top of the page, not over a photograph, and a translucent
+   * strip with no blur behind it just shows scrolling content through.
+   * `will-change` goes with the filter it was hinting at.
+   */
+  .glass-bar {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--ground);
+    will-change: auto;
   }
 
   /*
@@ -307,6 +378,44 @@
   );
 }
 
+/*
+ * The thumbnail dock's overflow hint.
+ *
+ * A scrim would not work here: the strip sits directly on the ambient colour
+ * field, which is sampled from the photograph and so changes as you move
+ * through the gallery. There is no fixed colour to fade to. A mask fades to
+ * transparent instead, whatever is behind it.
+ *
+ * Registering the two lengths as typed custom properties is the whole point
+ * of the `@property` rules — an unregistered custom property is a string to
+ * the animation system and would jump from 0px to 28px, while these
+ * interpolate, so the fade eases in as the strip leaves an edge.
+ */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@utility dock-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black var(--fade-start),
+    black calc(100% - var(--fade-end)),
+    transparent 100%
+  );
+  transition:
+    --fade-start 200ms var(--ease-glass),
+    --fade-end 200ms var(--ease-glass);
+}
+
 /* Hide scrollbars for carousel */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */
@@ -464,21 +573,21 @@ html {
     }
 }
 
-/* Touch device optimizations */
+/*
+ * Touch devices: no hover magnification.
+ *
+ * A tap on a touch screen leaves the element in :hover until you tap
+ * something else, so a hover-grow reads as a control that got stuck large.
+ *
+ * These declarations say `scale` and not `transform` deliberately. Tailwind
+ * v4 emits `scale-*` as the standalone `scale` property, so the `transform:
+ * none` this block used to carry overrode a property none of these utilities
+ * set, and cancelled nothing at all.
+ */
 @media (hover: none) and (pointer: coarse) {
-    .hover\:scale-105:hover {
-        transform: none;
-    }
-
-    .hover\:scale-\[1\.02\]:hover {
-        transform: none;
-    }
-
-    .group:hover .group-hover\:scale-105 {
-        transform: none;
-    }
-
-    .group:hover .group-hover\:scale-110 {
-        transform: none;
+    .hover\:scale-105:hover,
+    .group:hover .group-hover\:scale-\[1\.02\],
+    .group:hover .group-hover\:scale-\[1\.04\] {
+        scale: none;
     }
 }

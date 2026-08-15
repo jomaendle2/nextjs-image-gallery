@@ -1,6 +1,7 @@
 "use client";
 
 import { type RefObject, useCallback, useEffect, useRef } from "react";
+import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 
 /**
  * Longest we will wait for a smooth scroll to settle before committing the
@@ -24,10 +25,6 @@ interface UseCarouselScroll {
   goToIndex: (index: number) => void;
   scrollToIndex: (index: number, behavior?: ScrollBehavior) => void;
 }
-
-const prefersReducedMotion = () =>
-  typeof globalThis.matchMedia === "function" &&
-  globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
  * Owns every read of and write to the carousel's scroll position.
