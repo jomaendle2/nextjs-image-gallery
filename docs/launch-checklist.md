@@ -25,6 +25,13 @@ That is also the moment the environment variables start mattering: a preview
 build reads its own set, and production has never run this code with them.
 Merge first, then work down this list against the real site.
 
+The schema is applied by the build itself now (`vercel-build` runs
+`scripts/migrate.mts` before `next build`), so merging brings the database
+with it. It did not before: migrations only ever ran when somebody typed
+`npm run db:migrate` locally, which meant a deploy could ship code ahead of
+the columns it queries. Every statement is additive and idempotent — enforced
+by `schema.test.ts` — so running them on every build is safe by construction.
+
 ---
 
 ## 1. Blocks a soft launch
