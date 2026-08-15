@@ -238,6 +238,25 @@ of asking "where else?" is minutes.
 defects sat directly beneath accurate prose explaining the attack they were
 supposed to prevent. Prose is not executable and does not fail.
 
+**A rule enforced over part of its domain reads as enforced, which is worse
+than no rule — because it stops you looking.** This is the one that cost the
+most. I1 was written as a test, went green, and a third GET-mutation lived in
+`/subscribe/confirm` for the whole time it was passing: the check only read
+`route.ts` files, and a page render is a GET too. The test existed, named the
+right rule, and could not see the violation.
+
+Auditing the rest of the file for that shape found two more. I11 says
+endpoints that spend money *or send mail* are limited and only checked the
+two Stripe routes. I6 checked one query constant, so a new public query
+naming the paid columns would have passed in silence. Neither was violated
+at the time — but nothing was holding them.
+
+The check on a new invariant is therefore not "does it pass" but **"what
+does it not look at, and is that the same thing the rule claims to cover?"**
+Writing the widened I6 immediately caught a file I had missed while
+listing them by hand, which is the whole argument for enforcing a rule over
+its stated domain rather than the part you happened to think of.
+
 ---
 
 ## 5. Remaining work
