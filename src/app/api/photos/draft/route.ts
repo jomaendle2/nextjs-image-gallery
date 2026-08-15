@@ -120,6 +120,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       blob_url: blobUrl,
       blob_pathname: pathname,
       display_url: display.url,
+      display_pathname: display.pathname,
       width: derived.width,
       height: derived.height,
       blur_data_url: derived.blur_data_url,
@@ -128,7 +129,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       author_id: contributor.id,
     });
 
-    return NextResponse.json({ id, ...derived });
+    /*
+     * The id, and nothing else.
+     *
+     * This spread `derived`, which carries `display: Buffer` — the whole
+     * re-encoded JPEG. `JSON.stringify` turns a Buffer into
+     * `{"type":"Buffer","data":[…]}`, so a 2 MB image left here as roughly
+     * 8 MB of comma-separated integers, on every upload. Past Vercel's
+     * response limit that surfaces to the photographer as "that upload could
+     * not be read" *after* the row and both blobs are already committed — a
+     * failure message for something that succeeded. The client has never
+     * read anything but the error branch.
+     */
+    return NextResponse.json({ id });
   } catch (error) {
     // No row was written, so the blob would be unreachable forever.
     await del(blobUrl).catch((cleanupError: unknown) => {

@@ -53,8 +53,29 @@ export async function upsertMember(input: {
   stripeSubscriptionId: string | null;
   status: string;
   currentPeriodEnd: string | null;
-}): Promise<void> {
-  await sql`
+}): Promise<boolean> {
+  /*
+   * A row belongs to the customer already in it.
+   *
+   * `DO UPDATE` used to overwrite `stripe_customer_id` unconditionally, and
+   * once checkout accepted anonymous buyers that made the address on a
+   * membership self-asserted: anybody could pay five euros, type somebody
+   * else's address at Stripe, and have that person's row repointed at their
+   * own Stripe customer. The victim's "Manage or cancel" button would then
+   * open a portal session for the attacker's customer — their invoices,
+   * their card, their subscription — and the attacker cancelling would write
+   * `canceled` onto the victim's row and lock a paying member out.
+   *
+   * So the customer id is the thing that owns the row, and a second customer
+   * arriving for the same address is refused rather than merged. `WHERE`
+   * on a `DO UPDATE` turns the conflict into a no-op instead of an error, so
+   * a replayed event still succeeds and Stripe is not made to retry.
+   *
+   * The access half was always safe and still is — a membership is only
+   * usable through a link sent to the address — but writing was not, and
+   * "you cannot use it" is no comfort to somebody whose own row was taken.
+   */
+  const rows = await sql`
     INSERT INTO members (email, stripe_customer_id, stripe_subscription_id,
                          status, current_period_end)
     VALUES (${normaliseEmail(input.email)}, ${input.stripeCustomerId},
@@ -64,8 +85,20 @@ export async function upsertMember(input: {
       SET stripe_customer_id     = EXCLUDED.stripe_customer_id,
           stripe_subscription_id = EXCLUDED.stripe_subscription_id,
           status                 = EXCLUDED.status,
-          current_period_end     = EXCLUDED.current_period_end;
+          current_period_end     = EXCLUDED.current_period_end
+      WHERE members.stripe_customer_id = EXCLUDED.stripe_customer_id
+    RETURNING email;
   `;
+
+  const written = rows.length > 0;
+  if (!written) {
+    console.error(
+      "Refused to repoint an existing membership at a different Stripe " +
+        "customer. Someone may have checked out using an address they do " +
+        "not control, or a customer was recreated for an existing member.",
+    );
+  }
+  return written;
 }
 
 /**

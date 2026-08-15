@@ -137,6 +137,14 @@ export async function listContributorsWithPreviews(): Promise<
   return rows as ContributorPreview[];
 }
 
+/** Whether this contributor is an owner, for rules the interface must not own. */
+export async function isOwnerContributor(id: string): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM contributors WHERE id = ${id} AND role = 'owner' LIMIT 1;
+  `;
+  return rows.length > 0;
+}
+
 export async function setContributorRevoked(
   id: string,
   revoked: boolean,

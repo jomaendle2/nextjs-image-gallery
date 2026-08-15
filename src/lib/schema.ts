@@ -254,4 +254,40 @@ export const MIGRATIONS: readonly string[] = [
      views    INTEGER NOT NULL DEFAULT 0,
      PRIMARY KEY (photo_id, day)
    );`,
+
+  /*
+   * The pathname of the display copy, which is the URL the public actually
+   * sees.
+   *
+   * `blobIsClaimed` existed to stop one contributor posting another's blob
+   * URL to the draft endpoint and receiving a row attributed to themselves.
+   * It matched on `blob_pathname` — the *original* upload — while every
+   * gallery page renders `COALESCE(display_url, blob_url)`, which is the
+   * display copy. So the one URL an attacker could actually obtain was the
+   * one the guard could never match, and the check had been inert since the
+   * display copy was introduced.
+   *
+   * Storing the pathname rather than reusing `display_url` keeps the
+   * comparison in the same units as `blob_pathname`, which is what `del()`
+   * and the ownership check both speak.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS display_pathname TEXT;",
+
+  /*
+   * Backfill for every row uploaded before the column existed. Bounded by
+   * `IS NULL`, so it rewrites nothing on the second run. The URL is
+   * `https://<store>/<pathname>`, so stripping the scheme and host leaves
+   * exactly the pathname.
+   */
+  `UPDATE photos
+      SET display_pathname = regexp_replace(display_url, '^https?://[^/]+/', '')
+    WHERE display_pathname IS NULL AND display_url IS NOT NULL;`,
+
+  /*
+   * Now that both pathnames are recorded, they must be unique across both
+   * columns' worth of meaning: a blob may back at most one photograph.
+   * Partial, because rows predating the display copy have NULL here.
+   */
+  `CREATE UNIQUE INDEX IF NOT EXISTS photos_display_pathname_idx
+     ON photos (display_pathname) WHERE display_pathname IS NOT NULL;`,
 ];

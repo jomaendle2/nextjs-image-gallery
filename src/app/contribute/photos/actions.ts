@@ -112,7 +112,7 @@ export async function removePhoto(id: string): Promise<void> {
    * goes too. Failure is logged rather than surfaced — the photograph is
    * already off the site, which is what was asked for.
    */
-  const blobs = [deleted.blob_pathname, deleted.display_url].filter(
+  const blobs = [deleted.blob_pathname, deleted.display_pathname].filter(
     (target): target is string => target !== null,
   );
   await Promise.all(

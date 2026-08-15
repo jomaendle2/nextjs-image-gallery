@@ -49,6 +49,7 @@ export interface DraftPhotoInput {
   blob_url: string;
   blob_pathname: string;
   display_url: string;
+  display_pathname: string;
   width: number;
   height: number;
   blur_data_url: string;

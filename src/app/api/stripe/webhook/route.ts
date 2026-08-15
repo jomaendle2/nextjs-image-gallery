@@ -73,7 +73,7 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
       ? null
       : await stripeClient().subscriptions.retrieve(subscriptionId);
 
-  await upsertMember({
+  const written = await upsertMember({
     email,
     stripeCustomerId: customer,
     stripeSubscriptionId: subscriptionId,
@@ -81,6 +81,17 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
     currentPeriodEnd:
       subscription === null ? null : subscriptionPeriodEnd(subscription),
   });
+
+  /*
+   * Refused means the address already belongs to a different Stripe
+   * customer, so this checkout was made with somebody else's address. Do not
+   * label the subscription with it: that address is the one thing that must
+   * not become attached to this subscription, or every later event it emits
+   * would arrive claiming to be about the other person's membership.
+   */
+  if (!written) {
+    return;
+  }
 
   /*
    * Write the address onto the subscription when we did not set it at

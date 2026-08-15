@@ -5,6 +5,7 @@ import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
 import {
   inviteContributor,
+  isOwnerContributor,
   setContributorRevoked,
 } from "@/lib/auth/contributors";
 import {
@@ -116,11 +117,27 @@ export async function decideApplication(
   }
 
   if (decision === "approved") {
-    await inviteContributor({
+    const invited = await inviteContributor({
       email: application.email,
       display_name: application.display_name,
       site_url: application.site_url,
     });
+
+    /*
+     * `inviteContributor` is `ON CONFLICT (email) DO NOTHING`, so it returns
+     * null when a row already exists — most importantly a revoked one.
+     * Discarding that meant the application flipped to approved and the
+     * "you're in" email went out while nothing was created or un-revoked:
+     * the person could never sign in, and the owner had no way to notice,
+     * because the application had left the pending list. The `invite` action
+     * has always handled this null; this path did not.
+     */
+    if (invited === null) {
+      throw new Error(
+        `${application.email} already has a contributor record. It may be ` +
+          "revoked — restore it from the contributors list instead.",
+      );
+    }
 
     try {
       await sendApplicationApproved(
@@ -139,6 +156,22 @@ export async function decideApplication(
 
 export async function setRevoked(id: string, revoked: boolean): Promise<void> {
   await requireOwner();
+
+  /*
+   * An owner cannot be revoked, checked here rather than only in the button.
+   *
+   * `ContributorRowActions` hides the control for owners, and that was the
+   * whole enforcement — a client-side rule protecting the one action that
+   * cannot be undone through the interface. Revoking an owner deletes their
+   * sessions and makes `/contribute/admin` return 404 for everybody, so
+   * recovery means going to the database. A server action is a public
+   * endpoint; anything the interface merely declines to offer has to be
+   * refused here too.
+   */
+  if (revoked && (await isOwnerContributor(id))) {
+    throw new Error("An owner cannot be revoked.");
+  }
+
   await setContributorRevoked(id, revoked);
   revalidatePath("/contribute/admin");
   revalidatePath("/photographers");

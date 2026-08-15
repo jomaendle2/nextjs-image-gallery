@@ -164,8 +164,21 @@ export async function markAnnounced(ids: readonly string[]): Promise<void> {
  * than origin.
  */
 export async function blobIsClaimed(pathname: string): Promise<boolean> {
+  /*
+   * Both pathnames, and the second is the one that mattered.
+   *
+   * This matched only `blob_pathname` — the original upload, whose URL is
+   * never rendered anywhere. What every gallery page puts in its markup is
+   * `COALESCE(display_url, blob_url)`, which for every row written since the
+   * display copy was introduced is the *display* blob. So the only URL an
+   * attacker could actually copy was the only one this could not recognise,
+   * and the check had been passing everything through for as long as it has
+   * existed.
+   */
   const rows = await sql`
-    SELECT 1 FROM photos WHERE blob_pathname = ${pathname} LIMIT 1;
+    SELECT 1 FROM photos
+    WHERE blob_pathname = ${pathname} OR display_pathname = ${pathname}
+    LIMIT 1;
   `;
   return rows.length > 0;
 }
@@ -175,10 +188,11 @@ export async function insertDraftPhoto(
 ): Promise<string> {
   const id = nanoid(ID_LENGTH);
   await sql`
-    INSERT INTO photos (id, blob_url, blob_pathname, display_url, width,
+    INSERT INTO photos (id, blob_url, blob_pathname, display_url,
+                        display_pathname, width,
                         height, blur_data_url, bg_color, exif, author_id)
     VALUES (${id}, ${input.blob_url}, ${input.blob_pathname},
-            ${input.display_url}, ${input.width},
+            ${input.display_url}, ${input.display_pathname}, ${input.width},
             ${input.height}, ${input.blur_data_url}, ${input.bg_color},
             ${exifParam(input.exif)}::jsonb, ${input.author_id});
   `;
@@ -245,7 +259,7 @@ export interface DeletedPhoto {
   /** The original upload. */
   blob_pathname: string;
   /** The re-encoded copy the gallery actually served, if there was one. */
-  display_url: string | null;
+  display_pathname: string | null;
   /** Whose page needs revalidating — not necessarily the actor's. */
   author_slug: string;
 }
@@ -270,11 +284,11 @@ export async function deletePhoto(
   const rows = isOwner(actor)
     ? await sql`DELETE FROM photos p USING contributors c
                 WHERE c.id = p.author_id AND p.id = ${id}
-                RETURNING p.blob_pathname, p.display_url, c.slug;`
+                RETURNING p.blob_pathname, p.display_pathname, c.slug;`
     : await sql`DELETE FROM photos p USING contributors c
                 WHERE c.id = p.author_id AND p.id = ${id}
                   AND p.author_id = ${actor.id}
-                RETURNING p.blob_pathname, p.display_url, c.slug;`;
+                RETURNING p.blob_pathname, p.display_pathname, c.slug;`;
 
   const [row] = rows;
   if (row === undefined) {
@@ -282,7 +296,7 @@ export async function deletePhoto(
   }
   return {
     blob_pathname: row["blob_pathname"] as string,
-    display_url: (row["display_url"] as string | null) ?? null,
+    display_pathname: (row["display_pathname"] as string | null) ?? null,
     author_slug: row["slug"] as string,
   };
 }

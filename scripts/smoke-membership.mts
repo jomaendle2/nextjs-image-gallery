@@ -189,6 +189,51 @@ check(
   invoiceEvent.status === 500,
 );
 
+/*
+ * 4c. Somebody else's address must not take over an existing membership.
+ *
+ * Checkout accepts anonymous buyers, so the address on a payment is whatever
+ * was typed at Stripe. The upsert used to overwrite `stripe_customer_id`
+ * unconditionally, which meant five euros and a guessed address repointed a
+ * real member's row at the attacker's Stripe customer — and the victim's own
+ * "Manage or cancel" button would then open the attacker's invoices and card.
+ */
+await post(
+  subscriptionEvent("customer.subscription.updated", "active", inAnHour),
+  { sign: true },
+);
+const before = await sql`
+  SELECT stripe_customer_id, status FROM members WHERE email = ${address};`;
+
+const attackerEvent = {
+  id: `evt_${Math.random().toString(36).slice(2)}`,
+  type: "customer.subscription.updated",
+  data: {
+    object: {
+      id: "sub_attacker",
+      object: "subscription",
+      customer: `cus_attacker_${Date.now()}`,
+      status: "active",
+      metadata: { email: address },
+      items: { data: [{ id: "si_a", current_period_end: inAnHour }] },
+    },
+  },
+};
+const takeover = await post(attackerEvent, { sign: true });
+
+const after = await sql`
+  SELECT stripe_customer_id, status FROM members WHERE email = ${address};`;
+check(
+  "a second Stripe customer cannot seize an existing member's row",
+  after[0]?.["stripe_customer_id"] === before[0]?.["stripe_customer_id"],
+);
+/*
+ * And it must not make Stripe retry forever. The event is refused as a
+ * no-op, not as an error — a 500 here would have Stripe redelivering the
+ * attacker's event for three days.
+ */
+check("and the refusal is not retried forever", takeover.ok);
+
 // 5. Cancellation ends it.
 await post(
   subscriptionEvent("customer.subscription.deleted", "canceled", inAnHour),
