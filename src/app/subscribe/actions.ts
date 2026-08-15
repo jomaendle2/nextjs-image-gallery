@@ -10,6 +10,7 @@ import { clientIp, signInLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 import {
   confirmSubscription,
+  pruneUnconfirmed,
   requestSubscription,
   unsubscribe,
 } from "@/lib/subscribers/repository";
@@ -60,6 +61,21 @@ export async function subscribe(
   }
 
   try {
+    /*
+     * Clear out addresses that were typed and never confirmed.
+     *
+     * `pruneUnconfirmed` existed and nothing called it, so every abandoned
+     * signup stayed forever — an address somebody entered and thought better
+     * of, held indefinitely with a hashed token beside it. Double opt-in is
+     * the promise that an unconfirmed address is not kept; keeping it anyway
+     * makes the promise a formality.
+     *
+     * Here rather than on a schedule, matching how login tokens are pruned:
+     * cheap housekeeping on a path that already waits for the network, and
+     * one that only runs when somebody is subscribing anyway.
+     */
+    await pruneUnconfirmed();
+
     const pending = await requestSubscription(result.email);
     // Null means the address is already confirmed. Nothing to send, and
     // saying so would answer a question we do not answer.
@@ -85,7 +101,15 @@ export async function subscribe(
  * say so — this one is not an oracle, because holding the token is already
  * proof of holding the inbox.
  */
-export async function confirm(token: string): Promise<boolean> {
+/*
+ * Not exported. Every export from a "use server" module is a callable
+ * endpoint, so exporting a helper nothing imports publishes a second way to
+ * confirm a subscription — one that skips the redirect the page relies on
+ * and answers to anybody who can POST. It needs a valid token either way,
+ * so this is surface rather than a hole, but surface with no caller is
+ * surface with no reason.
+ */
+async function confirm(token: string): Promise<boolean> {
   const confirmed = await confirmSubscription(token);
   if (confirmed === null) {
     return false;
