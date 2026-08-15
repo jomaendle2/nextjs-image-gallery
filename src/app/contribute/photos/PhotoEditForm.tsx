@@ -1,5 +1,6 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useActionState, useCallback, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
@@ -208,25 +209,36 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
         */}
         {confirmingDelete ? (
           <>
+            {/*
+              The only irreversible control on the site, and until now it
+              looked exactly like the button next to it: same glass, same
+              weight, same size. On a phone that is two near-identical
+              targets a thumb-width apart, one of which destroys a
+              photograph and its blob. Red, an icon, and the safe option
+              listed first — so the destructive one is neither the default
+              nor the nearest thing to your thumb.
+            */}
+            <GlassButton autoFocus={true} onClick={cancelDelete} size="sm">
+              Keep
+            </GlassButton>
             <GlassButton
-              className="text-white"
+              className="border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
               disabled={isMutating}
               onClick={handleDelete}
               size="sm"
             >
-              {isMutating ? "Deleting…" : "Really delete"}
-            </GlassButton>
-            <GlassButton onClick={cancelDelete} size="sm">
-              Keep
+              <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
+              {isMutating ? "Deleting…" : "Delete for good"}
             </GlassButton>
           </>
         ) : (
           <GlassButton
-            className="text-white/60"
+            className="text-white/60 hover:text-red-200"
             disabled={isMutating}
             onClick={armDelete}
             size="sm"
           >
+            <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
             Delete
           </GlassButton>
         )}

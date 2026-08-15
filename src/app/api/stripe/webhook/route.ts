@@ -41,6 +41,41 @@ function emailFrom(subscription: Stripe.Subscription): string | null {
     : null;
 }
 
+/**
+ * Gives back money we have declined to earn.
+ *
+ * Reached when the address on a checkout already belongs to a different
+ * Stripe customer. Two ways to get here and cancelling is right for both:
+ * somebody trying to seize another person's membership, who should get a
+ * refund rather than a foothold; and a genuine subscriber who checked out
+ * twice while signed out — Checkout mints a fresh customer each time, so
+ * they would otherwise be billed monthly, twice, for a subscription with no
+ * row and no way to reach the portal and cancel it.
+ *
+ * Taking money for a membership we refuse to grant is the one outcome that
+ * is indefensible either way.
+ */
+async function cancelRefusedSubscription(
+  subscriptionId: string | null,
+): Promise<void> {
+  if (subscriptionId === null) {
+    return;
+  }
+  try {
+    await stripeClient().subscriptions.cancel(subscriptionId);
+    console.error(
+      `Cancelled subscription ${subscriptionId}: its address already ` +
+        "belongs to another Stripe customer, so it was never recorded.",
+    );
+  } catch (error) {
+    console.error(
+      `Could not cancel refused subscription ${subscriptionId}. It is ` +
+        "billing with no membership row — cancel it in the Dashboard:",
+      error,
+    );
+  }
+}
+
 async function handleCheckout(
   session: Stripe.Checkout.Session,
   eventAt: string,
@@ -102,21 +137,7 @@ async function handleCheckout(
    * outcome that is indefensible either way.
    */
   if (outcome === "wrong-customer") {
-    if (subscriptionId !== null) {
-      try {
-        await stripeClient().subscriptions.cancel(subscriptionId);
-        console.error(
-          `Cancelled subscription ${subscriptionId}: its address already ` +
-            "belongs to another Stripe customer, so it was never recorded.",
-        );
-      } catch (error) {
-        console.error(
-          `Could not cancel refused subscription ${subscriptionId}. It is ` +
-            "billing with no membership row — cancel it in the Dashboard:",
-          error,
-        );
-      }
-    }
+    await cancelRefusedSubscription(subscriptionId);
     return;
   }
 
@@ -189,6 +210,50 @@ async function handleSubscription(
   });
 }
 
+/**
+ * A chargeback ends access now, not at period end.
+ *
+ * Somebody who has told their bank the charge was not theirs should not keep
+ * receiving what it paid for while the dispute is decided. `isActive` admits
+ * only `active` and `trialing`, so writing any other status is enough to
+ * close it — and Stripe's own subscription status will follow if the dispute
+ * stands.
+ *
+ * The dispute names a charge rather than a customer, so the charge is
+ * fetched to find out whose it was.
+ */
+async function handleDispute(
+  dispute: Stripe.Dispute,
+  eventAt: string,
+): Promise<void> {
+  const chargeId =
+    typeof dispute.charge === "string"
+      ? dispute.charge
+      : (dispute.charge?.id ?? null);
+  if (chargeId === null) {
+    return;
+  }
+
+  const charge = await stripeClient().charges.retrieve(chargeId);
+  const customer =
+    typeof charge.customer === "string"
+      ? charge.customer
+      : (charge.customer?.id ?? null);
+  if (customer === null) {
+    return;
+  }
+
+  await updateMemberByCustomer({
+    stripeCustomerId: customer,
+    status: "disputed",
+    currentPeriodEnd: null,
+    eventAt,
+  });
+  console.error(
+    `Access revoked for Stripe customer ${customer}: charge ${chargeId} was disputed.`,
+  );
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const secret = process.env["STRIPE_WEBHOOK_SECRET"];
   if (secret === undefined || secret === "") {
@@ -258,47 +323,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
         break;
       }
-      case "charge.dispute.created": {
-        /*
-         * A chargeback ends access now, not at period end.
-         *
-         * Somebody who has told their bank the charge was not theirs should
-         * not keep receiving what it paid for while the dispute is decided.
-         * `isActive` admits only `active` and `trialing`, so writing any
-         * other status is enough to close it — and Stripe's own subscription
-         * status will follow if the dispute stands.
-         *
-         * The dispute names a charge rather than a customer, so the charge
-         * is fetched to find out whose it was.
-         */
-        const dispute = event.data.object;
-        const chargeId =
-          typeof dispute.charge === "string"
-            ? dispute.charge
-            : (dispute.charge?.id ?? null);
-        if (chargeId === null) {
-          break;
-        }
-
-        const charge = await stripeClient().charges.retrieve(chargeId);
-        const customer =
-          typeof charge.customer === "string"
-            ? charge.customer
-            : (charge.customer?.id ?? null);
-        if (customer !== null) {
-          await updateMemberByCustomer({
-            stripeCustomerId: customer,
-            status: "disputed",
-            currentPeriodEnd: null,
-            eventAt,
-          });
-          console.error(
-            `Access revoked for Stripe customer ${customer}: charge ` +
-              `${chargeId} was disputed.`,
-          );
-        }
+      case "charge.dispute.created":
+        await handleDispute(event.data.object, eventAt);
         break;
-      }
       default:
         // Everything else is acknowledged and ignored, so Stripe stops
         // redelivering events this integration has no opinion about.

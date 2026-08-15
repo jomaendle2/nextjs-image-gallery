@@ -627,6 +627,56 @@ html {
     body {
         @apply bg-background text-foreground;
     }
+
+    /*
+     * The four things that separate a web page from something that feels
+     * native on a phone. All are iOS/Android behaviours with no desktop
+     * equivalent, which is why none of them showed up in any amount of
+     * headless testing at 390px.
+     */
+    html,
+    body {
+        /*
+         * Pull-to-refresh and rubber-banding hijack the gallery, which is a
+         * fixed full-bleed viewer: dragging down should do nothing, not
+         * reload the page out from under a photograph.
+         */
+        overscroll-behavior: none;
+    }
+
+    /*
+     * Safari paints a grey box over anything tappable for ~150ms. On a dark
+     * photographic ground it reads as a rendering fault rather than
+     * feedback, and the glass components already have their own
+     * `active:scale-95` response.
+     */
+    a,
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea,
+    summary {
+        -webkit-tap-highlight-color: transparent;
+        /*
+         * Removes the ~300ms wait Safari keeps in case a tap becomes a
+         * double-tap-to-zoom. It is the single biggest reason a web button
+         * feels slower than a native one.
+         */
+        touch-action: manipulation;
+    }
+
+    /*
+     * A long press on a control should trigger the control, not select its
+     * label. Deliberately not applied to prose — a reader copying a caption
+     * or a photographer's name is doing something reasonable.
+     */
+    button,
+    [role="button"],
+    summary {
+        -webkit-user-select: none;
+        user-select: none;
+    }
 }
 
 /* Performance optimizations */

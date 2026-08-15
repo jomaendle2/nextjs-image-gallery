@@ -80,7 +80,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2a6b7c",
+  themeColor: "#0b0e12",
   colorScheme: "dark",
   /*
    * Photographs to the edges of the glass on a notched phone.

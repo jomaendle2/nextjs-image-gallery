@@ -13,7 +13,7 @@
  */
 
 export const FIELD =
-  "glass-hairline min-h-11 w-full rounded-xl px-3.5 py-2.5 text-sm text-white transition-colors placeholder:text-white/30 hover:border-white/25 focus-visible:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
+  "glass-hairline min-h-11 w-full rounded-xl px-3.5 py-2.5 text-base sm:text-sm text-white transition-colors placeholder:text-white/30 hover:border-white/25 focus-visible:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
 
 export const LABEL = "block font-medium text-sm text-white/70";
 
