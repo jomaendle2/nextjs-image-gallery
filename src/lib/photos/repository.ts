@@ -16,7 +16,7 @@ const ID_LENGTH = 12;
 const FEED_COLUMNS = `
   p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
-  p.title, p.description, p.location, p.exif,
+  p.title, p.description, p.location, p.exif, p.published_at,
   c.slug AS author_slug, c.display_name AS author_name,
   c.site_url AS author_site_url
 `;

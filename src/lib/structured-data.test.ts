@@ -22,6 +22,7 @@ function photo(overrides: Partial<GalleryImage> = {}): GalleryImage {
     description: "Low winter sun over the fjord.",
     bgColor: "#123456",
     location: "Reine",
+    publishedAt: "2026-04-11T08:32:10.000Z",
     exif: null,
     author: {
       slug: "mara-lindqvist",

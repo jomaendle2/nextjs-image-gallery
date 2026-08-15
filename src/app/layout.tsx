@@ -33,6 +33,16 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   alternates: {
     canonical: "/",
+    /*
+     * Feed autodiscovery. This is the mechanism every reader uses to find a
+     * feed from a page URL, so without it the feed exists and nobody can
+     * subscribe to it by pasting the site address.
+     */
+    types: {
+      "application/rss+xml": [
+        { url: "/feed.xml", title: "the beauty of earth." },
+      ],
+    },
   },
   /*
    * The icons have been sitting in `public/` unreferenced. `favicon.ico`

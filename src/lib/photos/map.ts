@@ -21,6 +21,7 @@ export function toGalleryImage(row: PhotoRow): GalleryImage {
     bgColor: row.bg_color,
     location: row.location,
     exif: row.exif,
+    publishedAt: row.published_at,
     author: {
       slug: row.author_slug,
       name: row.author_name,

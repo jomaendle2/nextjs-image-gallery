@@ -24,6 +24,8 @@ export interface GalleryImage {
   bgColor: string;
   location: string | null;
   exif: PhotoExif | null;
+  /** ISO timestamp of publication. What the feed orders and dates by. */
+  publishedAt: string;
   author: GalleryAuthor;
 }
 

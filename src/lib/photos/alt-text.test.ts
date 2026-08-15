@@ -9,6 +9,7 @@ function photo(title: string, description: string): GalleryImage {
     title,
     description,
     bgColor: "#000",
+    publishedAt: "2026-04-11T08:32:10.000Z",
     location: null,
     exif: null,
     author: { slug: "a", name: "A", siteUrl: null },

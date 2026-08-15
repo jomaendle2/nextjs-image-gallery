@@ -12,6 +12,7 @@ const row: PhotoRow = {
   title: "Bali, Indonesia",
   description: "Aerial view of tale waves",
   location: "Nusa Penida",
+  published_at: "2026-04-11T08:32:10.000Z",
   exif: { camera: "SONY ILCE-7M4", iso: 100 },
   author_slug: "anna-weber",
   author_name: "Anna Weber",

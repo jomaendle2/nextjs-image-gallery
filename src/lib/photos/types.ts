@@ -17,6 +17,8 @@ export interface PhotoRow {
   description: string;
   location: string | null;
   exif: PhotoExif | null;
+  /** ISO timestamp. Never null here — the query selects published rows only. */
+  published_at: string;
   author_slug: string;
   author_name: string;
   author_site_url: string | null;
