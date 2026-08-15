@@ -1,7 +1,7 @@
 /**
  * Sends one of every message this site can send.
  *
- * There are six templates and they are the only part of the product that
+ * There are seven templates and they are the only part of the product that
  * reaches somebody outside the browser, which makes them the part where a
  * mistake is least recoverable: a broken link in an announcement goes to the
  * whole list at once and cannot be edited afterwards. This walks all six so
@@ -25,6 +25,7 @@ import { buildAnnouncement } from "../src/lib/announcement.ts";
 import {
   sendAnnouncementReminder,
   sendApplicationApproved,
+  sendInvitation,
   sendLoginEmail,
   sendNewWorkAnnouncement,
   sendSubscribeConfirmation,
@@ -85,6 +86,8 @@ await step("sign-in link", () =>
   sendLoginEmail(to, `${origin}/contribute/verify?token=smoke-test-token`),
 );
 
+await step("invitation", () => sendInvitation(to, "Smoke Test"));
+
 await step("application approved", () =>
   sendApplicationApproved(to, "Smoke Test"),
 );
@@ -114,7 +117,7 @@ await step("weekly reminder to the owner", () =>
 
 console.log(
   failures === 0
-    ? `\nall six ${live ? "sent" : "rendered"}`
+    ? `\nall seven ${live ? "sent" : "rendered"}`
     : `\n${failures} FAILED`,
 );
 process.exit(failures === 0 ? 0 : 1);

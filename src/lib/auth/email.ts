@@ -132,6 +132,60 @@ export async function sendLoginEmail(to: string, url: string): Promise<void> {
   });
 }
 
+/**
+ * Tells somebody they have been invited.
+ *
+ * Approving an application sent mail; inviting somebody directly did not, so
+ * the owner had to message each person separately to say the thing the site
+ * could have said itself. With five photographers that is five out-of-band
+ * conversations and five chances for somebody never to arrive.
+ *
+ * Separate from `sendApplicationApproved` because the two are not the same
+ * event. "Your work is a fit" answers a submission; an invitation arrives
+ * unasked, and should say what it is rather than congratulate somebody on an
+ * application they never sent.
+ */
+export async function sendInvitation(
+  to: string,
+  displayName: string,
+): Promise<void> {
+  const url = `${siteOrigin()}/contribute`;
+  const name = escapeHtml(displayName);
+
+  await send({
+    to,
+    subject: "An invitation — the beauty of earth.",
+    text: [
+      `${displayName}, you have been invited to publish on the beauty of earth.`,
+      "",
+      `Sign in with this address — there is no password and nothing to accept: ${url}`,
+      "",
+      "Upload the full-size originals. The gallery reads the camera and",
+      "exposure from the file and never opens the GPS block, so where you",
+      "stood stays yours unless you choose to write it down.",
+      "",
+      "If you were not expecting this, ignore it — nothing happens until you",
+      "sign in.",
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
+         ${name}, you have been invited to publish on the beauty of earth.
+       </p>
+       ${button(url, "Sign in and add your work")}
+       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
+         Sign in with this address — there is no password and nothing to
+         accept. Upload the full-size originals: the gallery reads the camera
+         and exposure from the file and never opens the GPS block, so where
+         you stood stays yours unless you choose to write it down.
+       </p>
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         If you were not expecting this, ignore it — nothing happens until you
+         sign in.
+       </p>`,
+    ),
+  });
+}
+
 export async function sendApplicationApproved(
   to: string,
   displayName: string,

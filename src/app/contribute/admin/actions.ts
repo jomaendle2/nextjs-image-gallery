@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/contributors";
 import {
   sendApplicationApproved,
+  sendInvitation,
   sendNewWorkAnnouncement,
 } from "@/lib/auth/email";
 import { requireContributor } from "@/lib/auth/session";
@@ -91,9 +92,31 @@ export async function invite(
     return { message: "That address is already invited." };
   }
 
+  /*
+   * The invitation is the email, not the database row.
+   *
+   * This used to create the row and stop, leaving the owner to tell each
+   * person separately — while the application path, three functions down,
+   * has always sent mail. The same act had two behaviours depending on
+   * which door somebody came through.
+   *
+   * A failed send is reported rather than thrown: the invitation exists
+   * either way, and the owner needs to know to follow up by hand rather
+   * than believe it went out.
+   */
+  let mailed = true;
+  try {
+    await sendInvitation(created.email, created.display_name);
+  } catch (error) {
+    mailed = false;
+    console.error("Could not send the invitation:", error);
+  }
+
   revalidatePath("/contribute/admin");
   return {
-    message: `Invited ${created.display_name}. They can sign in at /contribute with ${created.email}.`,
+    message: mailed
+      ? `Invited ${created.display_name} — an invitation is on its way to ${created.email}.`
+      : `Invited ${created.display_name}, but the email could not be sent. Tell them to sign in at /contribute with ${created.email}.`,
   };
 }
 
