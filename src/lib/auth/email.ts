@@ -15,6 +15,36 @@ import { siteOrigin } from "@/lib/site-url";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
+const HTML_SPECIALS = /[&<>"']/g;
+
+const HTML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/**
+ * Escape a value before it is interpolated into an email template.
+ *
+ * `displayName` reaches `sendApplicationApproved` from the public apply form,
+ * so it is attacker-controlled: without this, `<img src=x onerror=…>` in a name
+ * is live markup by the time the applicant opens the mail. The blast radius is
+ * small — the message only ever goes to the address that submitted it — but a
+ * template that interpolates unescaped input is a habit rather than a one-off,
+ * so the escape lives at the seam and every interpolation goes through it.
+ *
+ * Both quote styles are covered because `button()` interpolates into an
+ * attribute, not only into text.
+ */
+export function escapeHtml(value: string): string {
+  return value.replace(HTML_SPECIALS, (character) => {
+    const entity = HTML_ENTITIES[character];
+    return entity === undefined ? character : entity;
+  });
+}
+
 interface Message {
   to: string;
   subject: string;
@@ -32,7 +62,7 @@ function page(body: string): string {
 
 function button(href: string, label: string): string {
   return `<p style="margin:0 0 24px">
-    <a href="${href}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#e8eaed;color:#0b0e12;text-decoration:none;font-weight:600">${label}</a>
+    <a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#e8eaed;color:#0b0e12;text-decoration:none;font-weight:600">${escapeHtml(label)}</a>
   </p>`;
 }
 
@@ -91,6 +121,7 @@ export async function sendApplicationApproved(
   displayName: string,
 ): Promise<void> {
   const url = `${siteOrigin()}/contribute`;
+  const name = escapeHtml(displayName);
 
   await send({
     to,
@@ -104,7 +135,7 @@ export async function sendApplicationApproved(
     ].join("\n"),
     html: page(
       `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${displayName}, your work is a fit. Welcome.
+         ${name}, your work is a fit. Welcome.
        </p>
        ${button(url, "Publish your first photograph")}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
