@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { galleryImages } from "@/data/galleryData";
+import type { GalleryImage } from "@/data/galleryData";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
 import { CarouselTopBar } from "./carousel/CarouselTopBar";
@@ -15,6 +15,12 @@ import { useCarouselScroll } from "./carousel/useCarouselScroll";
 const BUFFER_SIZE = 2;
 
 interface ImageCarouselProps {
+  /**
+   * Supplied by the server page. This used to be a module-level import of a
+   * hardcoded constant, which was the single thing tying the viewer to
+   * build-time assets.
+   */
+  images: readonly GalleryImage[];
   initialIndex?: number;
   currentIndex?: number;
   onIndexChange?: (index: number) => void;
@@ -22,6 +28,7 @@ interface ImageCarouselProps {
 }
 
 export function ImageCarousel({
+  images,
   initialIndex = 0,
   currentIndex: externalCurrentIndex,
   onIndexChange,
@@ -41,7 +48,7 @@ export function ImageCarousel({
   );
 
   const { carouselRef, goToIndex, scrollToIndex } = useCarouselScroll({
-    itemCount: galleryImages.length,
+    itemCount: images.length,
     currentIndex,
     onIndexChange: updateCurrentIndex,
     // Animate only as far as we actually keep images mounted. Past that the
@@ -101,9 +108,19 @@ export function ImageCarousel({
 
   // Derived during render: the background is a pure function of the index,
   // so computing it in an effect only bought an extra commit per navigation.
-  const currentImage = galleryImages[currentIndex] ?? galleryImages[0];
+  /*
+   * `images` used to be typed as a non-empty tuple, so `?? images[0]` was
+   * enough to satisfy `noUncheckedIndexedAccess`. A query result carries no
+   * such guarantee, so the empty case is handled honestly rather than cast
+   * away. The server page renders <EmptyGallery /> instead of reaching here.
+   */
+  const currentImage = images[currentIndex] ?? images[0];
+  if (!currentImage) {
+    return null;
+  }
+
   const start = Math.max(0, currentIndex - BUFFER_SIZE);
-  const end = Math.min(galleryImages.length - 1, currentIndex + BUFFER_SIZE);
+  const end = Math.min(images.length - 1, currentIndex + BUFFER_SIZE);
 
   return (
     <>
@@ -157,7 +174,7 @@ export function ImageCarousel({
               msOverflowStyle: "none",
             }}
           >
-            {galleryImages.map((image, index) => (
+            {images.map((image, index) => (
               <div
                 className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
                 key={image.id}
@@ -179,7 +196,7 @@ export function ImageCarousel({
 
           {/* Navigation arrows */}
           <CarouselNavigation
-            canGoNext={currentIndex < galleryImages.length - 1}
+            canGoNext={currentIndex < images.length - 1}
             canGoPrevious={currentIndex > 0}
             onNext={goToNext}
             onPrevious={goToPrevious}
@@ -190,7 +207,7 @@ export function ImageCarousel({
           <ImageInfo image={currentImage} />
           <ImageIndicators
             currentIndex={currentIndex}
-            images={galleryImages}
+            images={images}
             onImageSelect={goToIndex}
           />
         </div>

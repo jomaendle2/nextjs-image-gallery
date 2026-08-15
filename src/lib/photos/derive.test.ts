@@ -102,7 +102,8 @@ describe("deriveFromBuffer", () => {
     expect(EXIF_OPTIONS.gps).toBe(false);
     expect(EXIF_OPTIONS.xmp).toBe(false);
     expect(EXIF_OPTIONS.iptc).toBe(false);
-    expect(EXIF_OPTIONS.thumbnail).toBe(false);
+    expect(EXIF_OPTIONS.ifd1).toBe(false);
+    expect(EXIF_OPTIONS.makerNote).toBe(false);
   });
 
   it("drops GPS even when the original carries it", async () => {

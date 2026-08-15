@@ -49,14 +49,17 @@ const ONE_SECOND = 1;
  * silently stamp it with the importing machine's offset.
  */
 export const EXIF_OPTIONS = {
-  ifd0: true,
   exif: true,
   gps: false,
   xmp: false,
   iptc: false,
   icc: false,
   interop: false,
-  thumbnail: false,
+  // The embedded thumbnail is its own IFD with its own tags.
+  ifd1: false,
+  // Some bodies write a second copy of the coordinates in here.
+  makerNote: false,
+  userComment: false,
   reviveValues: false,
 } as const;
 

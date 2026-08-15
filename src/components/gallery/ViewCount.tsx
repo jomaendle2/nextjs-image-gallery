@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { useViewCount } from "@/hooks/useViewCount";
 
 interface ViewCountProps {
-  imageId: number;
+  imageId: string;
   variant?: "gallery" | "modal";
   className?: string;
   shouldIncrement?: boolean;
@@ -22,7 +22,7 @@ export function ViewCount({
 
   // This component is reused across images rather than remounted per image,
   // so the guard has to be per image id, not per mount.
-  const incrementedIds = useRef(new Set<number>());
+  const incrementedIds = useRef(new Set<string>());
   // Held in a ref so the effect can call the latest version without listing
   // it as a dependency and re-firing on every render.
   const incrementViewRef = useRef(incrementView);

@@ -10,7 +10,10 @@ import { useCallback } from "react";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-/** The API reports ids as strings; the gallery keys them as numbers. */
+/**
+ * Photo ids are nanoids. Rows written before contributors existed carry the
+ * old numeric ids, so both shapes have to compare equal — see `sameId`.
+ */
 interface ViewCountRow {
   image_id: string | number;
   view_count: number;
@@ -27,7 +30,7 @@ const viewCountKeys = {
   all: ["viewCount"] as const,
 };
 
-const incrementViewCount = async (imageId: number): Promise<number> => {
+const incrementViewCount = async (imageId: string): Promise<number> => {
   const response = await fetch("/api/views", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,7 +65,7 @@ export function prefetchAllViewCounts(queryClient: QueryClient) {
   });
 }
 
-export function useViewCount(imageId: number): UseViewCountReturn {
+export function useViewCount(imageId: string): UseViewCountReturn {
   const queryClient = useQueryClient();
 
   const {

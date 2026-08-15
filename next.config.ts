@@ -9,9 +9,17 @@ const nextConfig: NextConfig = {
     qualities: [75, 95],
     // AVIF first: ~20-30% smaller than WebP for these photographic sources.
     formats: ["image/avif", "image/webp"],
-    // The gallery images are content-hashed static imports, so they are
-    // immutable and can be cached by the optimizer for a year.
+    // Blob pathnames carry a random suffix and are never rewritten, so a
+    // photo URL is immutable exactly like the content-hashed static imports
+    // it replaced, and the optimizer can still cache it for a year.
     minimumCacheTTL: 31_536_000,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/photos/**",
+      },
+    ],
   },
 
   experimental: {
