@@ -252,13 +252,13 @@ Tracked against the invariants above. Status is updated as each lands.
 | 4 | Move sign-in email off the request path | I12 | **done** — `after()` |
 | 5 | Anonymous duplicate subscriptions, uncancellable | I4 | **done** — a refused payment is cancelled, not kept |
 | 6 | `paused` missing from `LIVE_STATUSES` | — | **done** |
-| 7 | Refunds and disputes unhandled | — | open |
+| 7 | Refunds and disputes unhandled | — | **done** — `charge.dispute.created` ends access now |
 | 8 | `memberExists` enrols an address permanently | I4 | open — low value to an attacker; links still go to the real inbox |
 | 9 | Swallowed query errors cache 404s for an hour | — | **done** — `listGalleryImages` throws, `getGalleryImages` forgives |
 | 10 | Member view counting is fire-and-forget | — | **done** — `after()` |
 | 11 | `/photo/[id]` serialises the whole gallery | — | open — inherent to a shared link opening a browsable viewer; fine at this size, revisit past ~200 photographs |
 | 12 | Sitemap counts drafts | — | **done** — separate `published_count` |
-| 13 | No session pruning, no sign-out-everywhere | — | open |
+| 13 | No session pruning | — | **done** — pruned alongside login tokens |
 
 ## 6. How these are enforced
 

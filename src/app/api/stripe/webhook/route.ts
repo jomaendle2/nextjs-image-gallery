@@ -26,6 +26,7 @@ import {
  *   invoice.paid                      a renewal actually cleared
  *   invoice.payment_failed            it did not — Stripe will retry, and
  *                                     the status it sets decides access
+ *   charge.dispute.created            a chargeback; access ends now
  *
  * Everything here is idempotent, because Stripe redelivers on any non-2xx
  * and events can arrive out of order: a subscription update that overtakes
@@ -253,6 +254,47 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           await handleSubscription(
             await stripeClient().subscriptions.retrieve(id),
             eventAt,
+          );
+        }
+        break;
+      }
+      case "charge.dispute.created": {
+        /*
+         * A chargeback ends access now, not at period end.
+         *
+         * Somebody who has told their bank the charge was not theirs should
+         * not keep receiving what it paid for while the dispute is decided.
+         * `isActive` admits only `active` and `trialing`, so writing any
+         * other status is enough to close it — and Stripe's own subscription
+         * status will follow if the dispute stands.
+         *
+         * The dispute names a charge rather than a customer, so the charge
+         * is fetched to find out whose it was.
+         */
+        const dispute = event.data.object;
+        const chargeId =
+          typeof dispute.charge === "string"
+            ? dispute.charge
+            : (dispute.charge?.id ?? null);
+        if (chargeId === null) {
+          break;
+        }
+
+        const charge = await stripeClient().charges.retrieve(chargeId);
+        const customer =
+          typeof charge.customer === "string"
+            ? charge.customer
+            : (charge.customer?.id ?? null);
+        if (customer !== null) {
+          await updateMemberByCustomer({
+            stripeCustomerId: customer,
+            status: "disputed",
+            currentPeriodEnd: null,
+            eventAt,
+          });
+          console.error(
+            `Access revoked for Stripe customer ${customer}: charge ` +
+              `${chargeId} was disputed.`,
           );
         }
         break;

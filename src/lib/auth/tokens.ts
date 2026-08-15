@@ -134,4 +134,16 @@ export async function pruneLoginTokens(): Promise<void> {
     DELETE FROM login_tokens
     WHERE expires_at < now() - INTERVAL '1 day' OR used_at IS NOT NULL;
   `;
+
+  /*
+   * Expired sessions go the same way, on the same rare path.
+   *
+   * There was no equivalent for `sessions`, so the table gained a row per
+   * sign-in and kept it forever — including rows long past `expires_at`,
+   * which every lookup then had to skip over. Nothing was insecure about it
+   * (`getSessionEmail` compares `expires_at > now()`), but a table that only
+   * grows is a slow leak, and this is the one place in the codebase that
+   * already runs occasional housekeeping.
+   */
+  await sql`DELETE FROM sessions WHERE expires_at < now();`;
 }
