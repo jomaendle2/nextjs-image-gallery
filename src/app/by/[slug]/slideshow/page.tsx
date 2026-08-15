@@ -19,9 +19,28 @@ export async function generateMetadata({
   if (!contributor) {
     return { title: "Not found" };
   }
+  /*
+   * Their own card, not the site's. This is the URL a photographer actually
+   * shares, and until now it previewed with the generic gallery image — so
+   * the one link they send about their own work said nothing about them.
+   */
+  const card = `/api/og?title=${encodeURIComponent(contributor.display_name)}&subtitle=${encodeURIComponent(
+    "Photographs on the beauty of earth",
+  )}`;
+
   return {
     title: `${contributor.display_name} — the beauty of earth.`,
     description: `Photographs by ${contributor.display_name}.`,
+    alternates: { canonical: `/by/${contributor.slug}/slideshow` },
+    openGraph: {
+      title: contributor.display_name,
+      description: `Photographs by ${contributor.display_name}.`,
+      images: [{ url: card, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [card],
+    },
   };
 }
 
