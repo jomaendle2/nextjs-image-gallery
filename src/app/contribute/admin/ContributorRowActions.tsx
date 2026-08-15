@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { Contributor } from "@/lib/auth/types";
+import { ActionError } from "./ActionError";
 import { setRevoked } from "./actions";
 import { useServerAction } from "./useServerAction";
 
@@ -12,7 +13,7 @@ export type ContributorRow = Contributor & {
 };
 
 export function ContributorRowActions({ row }: { row: ContributorRow }) {
-  const { pending, run } = useServerAction();
+  const { pending, error, run } = useServerAction();
   const isRevoked = row.revoked_at !== null;
 
   const toggle = useCallback(() => {
@@ -25,8 +26,11 @@ export function ContributorRowActions({ row }: { row: ContributorRow }) {
   }
 
   return (
-    <GlassButton disabled={pending} onClick={toggle} size="sm">
-      {isRevoked ? "Restore" : "Revoke"}
-    </GlassButton>
+    <div>
+      <GlassButton disabled={pending} onClick={toggle} size="sm">
+        {isRevoked ? "Restore" : "Revoke"}
+      </GlassButton>
+      <ActionError message={error} />
+    </div>
   );
 }
