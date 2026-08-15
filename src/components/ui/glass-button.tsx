@@ -30,9 +30,11 @@ export function GlassButton({
         variant === "icon" && "rounded-full",
 
         // Sizes
-        size === "default" && "px-6 py-3 text-sm",
+        // min-h-11 is the 44px touch floor; without it the small size came
+        // out at 38px and every control on the contribute pages was under it.
+        size === "default" && "min-h-12 px-6 py-3 text-sm",
         size === "icon" && "h-12 w-12",
-        size === "sm" && "px-4 py-2 text-sm",
+        size === "sm" && "min-h-11 px-4 py-2 text-sm",
 
         className,
       )}

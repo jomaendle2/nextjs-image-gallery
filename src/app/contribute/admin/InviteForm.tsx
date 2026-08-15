@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { type AdminFormState, invite } from "./actions";
 
@@ -16,14 +17,11 @@ export function InviteForm() {
     <form action={formAction} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label
-            className="block font-medium text-sm text-white/70"
-            htmlFor={nameId}
-          >
+          <label className={LABEL} htmlFor={nameId}>
             Display name
           </label>
           <input
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+            className={FIELD}
             id={nameId}
             name="display_name"
             placeholder="Anna Weber"
@@ -32,14 +30,11 @@ export function InviteForm() {
         </div>
 
         <div className="space-y-1.5">
-          <label
-            className="block font-medium text-sm text-white/70"
-            htmlFor={emailId}
-          >
+          <label className={LABEL} htmlFor={emailId}>
             Email address
           </label>
           <input
-            className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+            className={FIELD}
             id={emailId}
             name="email"
             placeholder="anna@example.com"
@@ -50,14 +45,11 @@ export function InviteForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label
-          className="block font-medium text-sm text-white/70"
-          htmlFor={siteId}
-        >
+        <label className={LABEL} htmlFor={siteId}>
           Their website <span className="text-white/35">(optional)</span>
         </label>
         <input
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          className={FIELD}
           id={siteId}
           name="site_url"
           placeholder="https://annaweber.example"

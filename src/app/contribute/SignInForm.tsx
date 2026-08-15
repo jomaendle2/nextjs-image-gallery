@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { requestSignIn, type SignInState } from "./actions";
 
@@ -14,15 +15,12 @@ export function SignInForm() {
   return (
     <form action={formAction} className="max-w-md space-y-4">
       <div className="space-y-2">
-        <label
-          className="block font-medium text-sm text-white/70"
-          htmlFor={emailId}
-        >
+        <label className={LABEL} htmlFor={emailId}>
           Email address
         </label>
         <input
           autoComplete="email"
-          className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+          className={FIELD}
           id={emailId}
           name="email"
           placeholder="you@example.com"

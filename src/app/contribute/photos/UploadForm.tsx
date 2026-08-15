@@ -105,7 +105,7 @@ export function UploadForm() {
       <input
         accept={ACCEPT}
         aria-label="Choose a photograph to upload"
-        className="block w-full text-sm text-white/70 file:mr-4 file:cursor-pointer file:rounded-full file:border-0 file:bg-white/10 file:px-4 file:py-2 file:font-medium file:text-sm file:text-white hover:file:bg-white/20"
+        className="block w-full text-sm text-white/70 file:mr-4 file:min-h-11 file:cursor-pointer file:rounded-full file:border-0 file:bg-white/10 file:px-5 file:font-medium file:text-sm file:text-white hover:file:bg-white/20"
         disabled={busy}
         onChange={handleChange}
         ref={inputRef}

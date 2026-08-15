@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useState, useTransition } from "react";
+import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { PhotoExif } from "@/lib/photos/derive";
 import type { OwnPhotoRow } from "@/lib/photos/types";
@@ -121,14 +122,11 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
           </div>
 
           <div className="space-y-1.5">
-            <label
-              className="block font-medium text-sm text-white/70"
-              htmlFor={`title-${photo.id}`}
-            >
+            <label className={LABEL} htmlFor={`title-${photo.id}`}>
               Title
             </label>
             <input
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+              className={FIELD}
               defaultValue={photo.title}
               id={`title-${photo.id}`}
               name="title"
@@ -138,14 +136,11 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
           </div>
 
           <div className="space-y-1.5">
-            <label
-              className="block font-medium text-sm text-white/70"
-              htmlFor={`description-${photo.id}`}
-            >
+            <label className={LABEL} htmlFor={`description-${photo.id}`}>
               Description
             </label>
             <textarea
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+              className={FIELD}
               defaultValue={photo.description}
               id={`description-${photo.id}`}
               name="description"
@@ -157,14 +152,11 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
 
           <div className="flex flex-wrap gap-3">
             <div className="flex-1 space-y-1.5">
-              <label
-                className="block font-medium text-sm text-white/70"
-                htmlFor={`location-${photo.id}`}
-              >
+              <label className={LABEL} htmlFor={`location-${photo.id}`}>
                 Location <span className="text-white/35">(optional)</span>
               </label>
               <input
-                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+                className={FIELD}
                 defaultValue={photo.location ?? ""}
                 id={`location-${photo.id}`}
                 name="location"
@@ -173,10 +165,7 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
             </div>
 
             <div className="space-y-1.5">
-              <label
-                className="block font-medium text-sm text-white/70"
-                htmlFor={`color-${photo.id}`}
-              >
+              <label className={LABEL} htmlFor={`color-${photo.id}`}>
                 Backdrop
               </label>
               {/*
@@ -185,7 +174,7 @@ export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
                 beats an averaged one.
               */}
               <input
-                className="h-[38px] w-16 cursor-pointer rounded-xl border border-white/15 bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+                className="h-11 w-16 cursor-pointer rounded-xl border border-white/15 bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
                 defaultValue={photo.bg_color}
                 id={`color-${photo.id}`}
                 name="bg_color"

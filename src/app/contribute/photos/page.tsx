@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TOUCH_LINK } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
@@ -39,7 +40,7 @@ export default async function PhotosPage() {
       <div className="mb-8 flex flex-wrap gap-3">
         {published.length > 0 ? (
           <Link
-            className="text-sm text-white/60 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className={`${TOUCH_LINK} text-sm text-white/60 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
             href={`/by/${contributor.slug}`}
           >
             View your public page
@@ -47,7 +48,7 @@ export default async function PhotosPage() {
         ) : null}
         {isOwner(contributor) ? (
           <Link
-            className="text-sm text-white/60 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className={`${TOUCH_LINK} text-sm text-white/60 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
             href="/contribute/admin"
           >
             Manage contributors

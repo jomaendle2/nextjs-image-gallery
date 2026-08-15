@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { TOUCH_LINK } from "@/components/ui/field";
 
 /**
  * The frame every /contribute page sits in.
@@ -43,7 +44,7 @@ export function ContributeShell({
         <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
           <div>
             <Link
-              className="font-semibold text-white/50 text-sm tracking-[-0.03em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+              className={`${TOUCH_LINK} font-semibold text-white/50 text-sm tracking-[-0.03em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
               href="/"
             >
               the beauty of earth.
