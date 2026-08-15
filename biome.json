@@ -489,7 +489,7 @@
       }
     },
     {
-      "includes": ["scripts/**", "vitest.config.ts"],
+      "includes": ["scripts/**", "vitest.config.mts"],
       "linter": {
         "rules": {
           "correctness": {
