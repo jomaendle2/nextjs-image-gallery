@@ -9,6 +9,24 @@ a person doing something other than looking.
 
 ---
 
+## 0. Merge, before anything else
+
+**Production is not this product yet.** `main` has one page — the gallery
+viewer. `/contribute`, `/membership`, `/photographers`, `/subscribe` and the
+three legal pages exist only on `worktree-going-big`, and every one of them
+404s on www.thebeautyof.earth right now. Checked against the live site, not
+inferred: 1 route on main, 17 on the branch, 190 files changed.
+
+So nothing below can be tested in production, and no tester can be invited,
+until PR #11 is merged and deployed. Everything verified so far was verified
+on localhost and on preview deployments, which run the branch.
+
+That is also the moment the environment variables start mattering: a preview
+build reads its own set, and production has never run this code with them.
+Merge first, then work down this list against the real site.
+
+---
+
 ## 1. Blocks a soft launch
 
 ### Verify a domain in Resend
