@@ -26,7 +26,7 @@ const OFFERS: readonly Offer[] = [
       "Your photographs full-screen at a URL with your name on it, listed among the photographers. Somewhere worth linking to from your own site.",
   },
   {
-    title: "Credit that travels with the work",
+    title: "Your name on every photograph",
     detail:
       "Your name sits on every photograph wherever it appears, linking out to your own site. Nothing here is published anonymously.",
   },
@@ -40,7 +40,7 @@ const OFFERS: readonly Offer[] = [
    * publishes carries no metadata at all.
    */
   {
-    title: "Where you stood stays yours",
+    title: "Your location stays private",
     detail:
       "The GPS block in your file is never read, so no coordinate ever reaches our database or the page. What the gallery publishes is a fresh copy carrying no metadata at all — downloading it tells nobody where you were. Camera and exposure are kept, because those are about the photograph rather than about you.",
   },

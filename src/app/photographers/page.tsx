@@ -102,12 +102,17 @@ export default async function PhotographersPage() {
           </ul>
 
           <section className="mt-14 max-w-prose">
+            {/*
+              Was "Shoot the earth?" — a pun, and a bad one: "shoot" is an
+              odd verb to put beside photographs of landscapes, and a
+              question mark does not make a headline friendly. Say the thing.
+            */}
             <h2 className="font-semibold text-xl tracking-[-0.03em]">
-              Shoot the earth?
+              Add your photographs
             </h2>
             <p className="mt-2 text-pretty text-sm text-white/55 leading-relaxed">
               The gallery is invited rather than open, which is why it stays
-              small. If your work belongs among these, send us a link to it.
+              small. Send us a link to your work and we will take a look.
             </p>
             {/*
               A link, not a GlassButton: this navigates, and nesting an anchor
@@ -133,11 +138,11 @@ export default async function PhotographersPage() {
           */}
           <section className="mt-10 max-w-prose">
             <h2 className="font-semibold text-xl tracking-[-0.03em]">
-              Just here to look?
+              Hear about new work
             </h2>
             <p className="mt-2 text-pretty text-sm text-white/55 leading-relaxed">
-              We will tell you when new photographs go up, and nothing else.
-              There is a feed too, if you would rather not give us an address.
+              One email when new photographs go up, and nothing else. There is a
+              feed too, if you would rather not give us an address.
             </p>
             <Link
               className={`${TOUCH_LINK} mt-3 gap-1.5 font-medium text-sm text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
