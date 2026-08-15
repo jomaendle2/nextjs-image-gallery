@@ -506,3 +506,55 @@ wanting, not worth starting before 1–3.
 - A contributor's description contains a typo, "Aerial view of tale waves".
   Content rather than code, so left alone, but it now appears in alt text
   and in the `/photo/1` metadata where it is more visible than it was.
+
+
+---
+
+## Measured scaling limits (16 August)
+
+Both the "does it scale" questions had been answered by reasoning rather
+than by counting. So I counted, by inserting rows and measuring, then
+removing them.
+
+### The contributor dashboard — fixed
+
+`<details>` hides its children; it does not stop them rendering. Collapsing
+each row fixed scanning and left every closed row still shipping a complete
+edit form. At 114 photographs:
+
+| | before | after |
+| --- | --- | --- |
+| DOM nodes | 7,432 | 1,943 |
+| form inputs | 1,374 | 120 |
+| HTML | 1.7 MB | 725 KB |
+| DOM ready | 442 ms | 232 ms |
+
+Mounting the form on first open. See the note in `PhotoCard.tsx` for the
+trade that buys.
+
+### The public gallery — measured, deferred, with a number
+
+The viewer is a client component and receives every published photograph,
+so the page carries all of them whether or not anybody scrolls that far.
+
+| photographs | HTML | DOM nodes |
+| --- | --- | --- |
+| 16 | 136 KB | 203 |
+| 116 | 676 KB | 703 |
+
+**5.4 KB and 5 DOM nodes per photograph**, linear. Which projects to roughly
+1.7 MB at 300 and 2.8 MB at 500.
+
+Not the metadata: descriptions average 47 characters and exif 176. It is the
+thumbnail markup for every photograph plus the flight data, both of which
+scale with the whole set rather than with what is on screen.
+
+Deferred deliberately. At the launch scale this is actually heading for —
+five photographers, a few dozen each — it lands near 676 KB, which is less
+than one of the photographs it is showing. Fixing it means the viewer no
+longer holds the full list, which changes how the dock and the keyboard
+navigation work, and that is not a change to make the week before inviting
+testers.
+
+The number is here so the decision to revisit is a measurement rather than a
+feeling: **past roughly 300 photographs, this needs windowing.**
