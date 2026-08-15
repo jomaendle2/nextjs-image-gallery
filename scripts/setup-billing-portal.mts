@@ -19,6 +19,7 @@
  */
 import process from "node:process";
 import Stripe from "stripe";
+import { siteOrigin } from "../src/lib/site-url.ts";
 
 const key = process.env["STRIPE_SECRET_KEY"];
 if (key === undefined || key === "") {
@@ -29,8 +30,15 @@ if (key === undefined || key === "") {
 const stripe = new Stripe(key);
 const mode = key.startsWith("sk_live_") ? "LIVE" : "test";
 
-const origin =
-  process.env["NEXT_PUBLIC_SITE_URL"] ?? "https://www.thebeautyof.earth";
+/*
+ * The same resolution the app uses, imported rather than re-implemented.
+ * These scripts each had their own idea of the origin — one reading
+ * NEXT_PUBLIC_SITE_URL, which nothing in the application sets or reads — so
+ * configuring the site correctly left the scripts pointing somewhere else.
+ * The portal's return URL is the one that matters here: get it wrong and a
+ * member who cancels is returned to a domain that is not this one.
+ */
+const origin = siteOrigin();
 
 /*
  * What a subscriber may do without asking a human.

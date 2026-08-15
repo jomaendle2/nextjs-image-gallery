@@ -33,6 +33,7 @@ import {
 } from "../src/lib/auth/email.ts";
 import { sql } from "../src/lib/database.ts";
 import { toGalleryImage } from "../src/lib/photos/map.ts";
+import { siteOrigin } from "../src/lib/site-url.ts";
 
 const [, , to] = process.argv;
 if (to === undefined) {
@@ -40,7 +41,8 @@ if (to === undefined) {
   process.exit(1);
 }
 
-const origin = process.env["NEXT_PUBLIC_SITE_URL"] ?? "http://localhost:3000";
+// The app's own resolution, so a test message links where a real one would.
+const origin = siteOrigin();
 const live =
   process.env["RESEND_API_KEY"] !== undefined &&
   process.env["EMAIL_FROM"] !== undefined;
