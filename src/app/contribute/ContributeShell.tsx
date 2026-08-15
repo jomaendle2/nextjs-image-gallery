@@ -10,20 +10,49 @@ import { TOUCH_LINK } from "@/components/ui/field";
  * but they keep the same dark ground and glass vocabulary so signing in does
  * not feel like leaving the site for an admin panel.
  */
-export function ContributeShell({
-  title,
-  subtitle,
-  children,
-  action,
-  centred = false,
-}: {
+interface ShellProps {
   title: string;
   subtitle?: string;
   children: ReactNode;
   action?: ReactNode;
-  /** For single-purpose pages, which look abandoned pinned to the top left. */
-  centred?: boolean;
-}) {
+}
+
+/**
+ * A document that scrolls: the dashboard, the admin tables, the apply form.
+ */
+export function ContributeShell(props: ShellProps) {
+  return (
+    <Frame
+      {...props}
+      className="relative mx-auto w-full max-w-3xl px-6 py-12 sm:py-16"
+    />
+  );
+}
+
+/**
+ * A single thing to do, centred in the viewport.
+ *
+ * Sign-in is one field and one button; pinned to the top left of a 1440px
+ * screen it read as an abandoned page. This was a `centred` boolean on
+ * `ContributeShell` that exactly one caller ever passed — a flag in the API
+ * of every page to serve one of them. Two names cost less than one flag.
+ */
+export function ContributeCard(props: ShellProps) {
+  return (
+    <Frame
+      {...props}
+      className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12"
+    />
+  );
+}
+
+function Frame({
+  title,
+  subtitle,
+  children,
+  action,
+  className,
+}: ShellProps & { className: string }) {
   return (
     <div className="min-h-dvh bg-[#12161a] text-white">
       <div
@@ -34,13 +63,7 @@ export function ContributeShell({
             "radial-gradient(120% 70% at 50% 0%, oklch(100% 0 0 / 0.07), transparent 60%)",
         }}
       />
-      <div
-        className={
-          centred
-            ? "relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12"
-            : "relative mx-auto w-full max-w-3xl px-6 py-12 sm:py-16"
-        }
-      >
+      <div className={className}>
         <header className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
           <div>
             <Link

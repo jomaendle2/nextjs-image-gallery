@@ -8,7 +8,6 @@ interface CaptionBarProps {
   images: readonly GalleryImage[];
   currentIndex: number;
   onImageSelect: (index: number) => void;
-  linkAuthor: boolean;
 }
 
 /**
@@ -33,7 +32,6 @@ export function CaptionBar({
   images,
   currentIndex,
   onImageSelect,
-  linkAuthor,
 }: CaptionBarProps) {
   return (
     <div className="relative z-10 mx-auto w-full max-w-[1536px] flex-shrink-0 px-4 pb-6 sm:px-8 sm:pb-7">
@@ -53,7 +51,7 @@ export function CaptionBar({
         </div>
 
         <div className="order-2 sm:order-3">
-          <PhotoCredit image={image} linkAuthor={linkAuthor} />
+          <PhotoCredit image={image} />
         </div>
       </div>
     </div>

@@ -1,12 +1,13 @@
 "use client";
 
-import { X, ZoomIn, ZoomOut } from "lucide-react";
+import { X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ViewCount } from "@/components/gallery/ViewCount";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { GalleryImage } from "@/data/galleryData";
 import { usePanZoom } from "./usePanZoom";
+import { ViewerCaption } from "./ViewerCaption";
+import { ViewerControls } from "./ViewerControls";
 
 /**
  * Must stay in step with the `viewer-*-exit` animations in globals.css: the
@@ -172,50 +173,14 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
         <X size={24} />
       </GlassButton>
 
-      {/* Toolbar */}
-      <div className={`absolute top-4 left-4 z-10 flex gap-2 ${chrome}`}>
-        <GlassButton
-          aria-label="Zoom in"
-          className="p-2 rounded-full"
-          onClick={zoomIn}
-        >
-          <ZoomIn size={20} />
-        </GlassButton>
-        <GlassButton
-          aria-label="Zoom out"
-          className="p-2 rounded-full"
-          onClick={zoomOut}
-        >
-          <ZoomOut size={20} />
-        </GlassButton>
-        <GlassButton
-          aria-label="Reset view"
-          className="px-3 py-2 rounded-full"
-          onClick={reset}
-        >
-          Reset
-        </GlassButton>
-      </div>
+      <ViewerControls
+        chrome={chrome}
+        onReset={reset}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+      />
 
-      {/* Image Info - positioned in bottom right corner */}
-      <div className={`absolute bottom-4 right-4 left-4 z-10 ${chrome}`}>
-        <div className="mx-auto max-w-md glass-thick rounded-[20px] px-4 py-3.5">
-          <h2 className="font-semibold text-base mb-1 text-white tracking-[-0.02em]">
-            {image.title}
-          </h2>
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-[0.8125rem] text-white/65 leading-relaxed">
-              {image.description}
-            </p>
-            <ViewCount
-              className="text-white/80"
-              imageId={image.id}
-              shouldIncrement={false}
-              variant="modal"
-            />
-          </div>
-        </div>
-      </div>
+      <ViewerCaption chrome={chrome} image={image} />
 
       {/*
         Pan surface: a drag region, not an activation target. Every action it

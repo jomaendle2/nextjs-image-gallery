@@ -1,5 +1,8 @@
+"use client";
+
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ViewCount } from "@/components/gallery/ViewCount";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 
@@ -41,16 +44,26 @@ function AuthorLink({ author }: { author: GalleryAuthor }) {
   );
 }
 
-export function PhotoCredit({
-  image,
-  linkAuthor = true,
-}: {
-  image: GalleryImage;
-  /** False on a contributor page, where the link would point at itself. */
-  linkAuthor?: boolean;
-}) {
+export function PhotoCredit({ image }: { image: GalleryImage }) {
   const { author, location } = image;
   const exif = exifLine(image);
+
+  /*
+   * Whether the name links is a fact about where we are, not something the
+   * gallery above needs to know. It used to be a `linkAuthor` prop threaded
+   * ImageCarousel → CaptionBar → here purely to suppress a self-link, which
+   * meant three components carried a flag only one of them read — and any
+   * new caller had to remember to pass it.
+   *
+   * Both of the photographer's own routes are covered: `/by/<slug>` and
+   * `/by/<slug>/slideshow`. The boundary check keeps `/by/anna-b` from
+   * suppressing the link on a page about `/by/anna`.
+   */
+  const pathname = usePathname();
+  const ownPage = `/by/${author.slug}`;
+  const linkAuthor = !(
+    pathname === ownPage || pathname.startsWith(`${ownPage}/`)
+  );
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 sm:items-end">

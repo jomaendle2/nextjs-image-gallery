@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentContributor } from "@/lib/auth/session";
-import { ContributeShell } from "./ContributeShell";
+import { ContributeCard } from "./ContributeShell";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = {
@@ -26,8 +26,7 @@ export default async function ContributePage({ searchParams }: PageProps) {
   const notice = error === undefined ? undefined : ERRORS[error];
 
   return (
-    <ContributeShell
-      centred={true}
+    <ContributeCard
       subtitle="This gallery is open to invited photographers. Sign in with the address your invitation was sent to."
       title="Contribute"
     >
@@ -37,6 +36,6 @@ export default async function ContributePage({ searchParams }: PageProps) {
         </p>
       )}
       <SignInForm />
-    </ContributeShell>
+    </ContributeCard>
   );
 }

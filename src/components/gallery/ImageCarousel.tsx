@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
-import { photoGlow, photoGround } from "@/lib/photo-ground";
+import { photoGround } from "@/lib/photo-ground";
 import { ContributorHeader } from "./ContributorHeader";
+import { AmbientBackdrop } from "./carousel/AmbientBackdrop";
 import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
@@ -170,28 +171,7 @@ export function ImageCarousel({
           backgroundColor: photoGround(currentImage.bgColor),
         }}
       >
-        {/*
-          Ambient depth. Two neutral radial washes over the flat photo
-          colour: a soft light from above, a heavier fall-off at the base.
-          Neutral rather than tinted, so it works for all fourteen colours
-          without a per-image gradient.
-        */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background: `radial-gradient(120% 80% at 50% 12%, ${photoGlow(currentImage.bgColor)}, transparent 62%), radial-gradient(100% 90% at 50% 118%, oklch(0% 0 0 / 0.45), transparent 62%)`,
-          }}
-        />
-        {/* Keeps white chrome legible over pale images. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-40 z-0 scrim-top"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-64 z-0 scrim-bottom"
-        />
+        <AmbientBackdrop bgColor={currentImage.bgColor} />
 
         <CarouselTopBar onClose={onClose} />
 
@@ -255,7 +235,6 @@ export function ImageCarousel({
           currentIndex={currentIndex}
           image={currentImage}
           images={images}
-          linkAuthor={contributor === undefined}
           onImageSelect={goToIndex}
         />
       </div>
