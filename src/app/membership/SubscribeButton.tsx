@@ -2,6 +2,7 @@
 
 import { GlassButton } from "@/components/ui/glass-button";
 import { useStripeRedirect } from "@/hooks/useStripeRedirect";
+import { MEMBERSHIP } from "@/lib/legal";
 
 /**
  * Sends somebody to Stripe's hosted checkout.
@@ -15,9 +16,24 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
 
   return (
     <div>
+      {/*
+        The price is on the button, not merely near it.
+
+        German law wants the cost and the recurrence unmistakable at the
+        moment of commitment (§312j BGB), and "Become a member" satisfies
+        neither — it does not even say that money is involved. This is also
+        just honest: a button that hides its price is a button people click
+        to find out, which is not consent.
+      */}
       <GlassButton disabled={busy} onClick={go}>
-        {busy ? "Opening checkout…" : "Become a member"}
+        {busy
+          ? "Opening checkout…"
+          : `Subscribe — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
       </GlassButton>
+      <p className="mt-2 text-sm text-white/45">
+        Billed by Stripe, every {MEMBERSHIP.interval}, until you cancel. Cancel
+        any time in one click — no notice period.
+      </p>
       {signedIn ? null : (
         /*
          * Said before paying, not after. A membership is tied to an address

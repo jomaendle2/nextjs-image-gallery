@@ -3,14 +3,20 @@ import Link from "next/link";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { getCurrentMember, getSessionEmail } from "@/lib/auth/session";
+import { MEMBERSHIP } from "@/lib/legal";
 import { getMemberByEmail } from "@/lib/members/repository";
 import { membershipConfigured } from "@/lib/stripe";
+import {
+  BeforeYouPay,
+  HowPaymentWorks,
+  WhatYouGet,
+} from "./membership-details";
 import { ManageButton, SubscribeButton } from "./SubscribeButton";
 
 export const metadata: Metadata = {
   title: "Membership — the beauty of earth.",
   description:
-    "See exactly where each photograph was taken, and how it was made.",
+    "See exactly where each photograph was taken, and how it was made. €5 a month, cancel any time.",
   alternates: { canonical: "/membership" },
 };
 
@@ -66,7 +72,7 @@ export default async function MembershipPage({
 
   return (
     <ContributeShell
-      subtitle="See exactly where each photograph was taken, and how it was made."
+      subtitle={`See exactly where each photograph was taken, and how it was made. ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}.`}
       title="Membership"
     >
       <div className="max-w-prose space-y-8">
@@ -120,33 +126,7 @@ export default async function MembershipPage({
           </div>
         ) : null}
 
-        <section>
-          <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
-            What you get
-          </h2>
-          <ul className="mt-4 space-y-4">
-            <li>
-              <h3 className="font-semibold text-[0.9375rem] text-white tracking-[-0.02em]">
-                Where it was taken
-              </h3>
-              <p className="mt-1.5 text-pretty text-[0.8125rem] text-white/50 leading-relaxed">
-                Not a region — the spot. Written by the photographer, for the
-                photographs they choose to share it for. Nothing is read from
-                the file: this gallery never records coordinates, and that has
-                not changed.
-              </p>
-            </li>
-            <li>
-              <h3 className="font-semibold text-[0.9375rem] text-white tracking-[-0.02em]">
-                How it was made
-              </h3>
-              <p className="mt-1.5 text-pretty text-[0.8125rem] text-white/50 leading-relaxed">
-                The exposure is on every photograph already. This is the rest —
-                the hour, the wait, what they would do differently.
-              </p>
-            </li>
-          </ul>
-        </section>
+        <WhatYouGet />
 
         {member === null && !justPaid ? (
           <SubscribeSection signedIn={email !== null} />
@@ -154,9 +134,30 @@ export default async function MembershipPage({
 
         {billing === null ? null : <ManageButton />}
 
+        {/*
+          The limits and the money come after the button, not instead of it:
+          somebody scrolling to decide reads them, and somebody who has
+          already decided is not made to wade through them first.
+        */}
+        {member === null ? <BeforeYouPay /> : null}
+        <HowPaymentWorks />
+
         <p className="text-sm text-white/45">
           The gallery, the feeds and the photographs stay free and always will.
-          A membership buys the things only the photographer can tell you.
+          A membership buys the things only the photographer can tell you.{" "}
+          {/*
+            Linked from the page that sells, not only from the footer. The
+            withdrawal right and the cancellation rule live there, and both
+            are things somebody deciding whether to pay is entitled to read
+            first rather than discover afterwards.
+          */}
+          <Link
+            className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/70"
+            href="/terms"
+          >
+            Terms
+          </Link>
+          .
         </p>
       </div>
     </ContributeShell>
