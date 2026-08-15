@@ -175,3 +175,66 @@ export async function bulkSetPublished(
   }
   return { changed };
 }
+
+/**
+ * Deletes several photographs, having been told exactly which.
+ *
+ * I refused to build this and wrote the refusal into a test, on the grounds
+ * that a checkbox is the control most likely to produce a misclick and
+ * deleting is the one action that cannot be undone. Both halves of that are
+ * true. What was wrong was concluding that the need therefore should not be
+ * met — clearing twenty test uploads through the single-photograph path is
+ * sixty clicks, and I spent the evening deleting my own test rows with SQL
+ * rather than face it, which is the clearest possible evidence that the gap
+ * was real.
+ *
+ * The objection is answered in the confirmation instead of by absence: it
+ * lists the titles rather than a count, so a misclicked selection is
+ * visible as a name you did not mean to see. A number cannot be checked
+ * against intent; a list of titles can.
+ *
+ * Authorisation is per row and unchanged, exactly as in `bulkSetPublished`:
+ * `deletePhoto` carries `AND author_id = ...` for a contributor, so a forged
+ * id in this list deletes nothing rather than somebody else's work.
+ */
+export async function bulkRemovePhotos(
+  ids: readonly string[],
+): Promise<{ deleted: number }> {
+  const actor = await requireContributor();
+
+  const slugs = new Set<string>();
+  const blobs: string[] = [];
+  let deleted = 0;
+
+  for (const id of ids) {
+    // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — a partial failure should stop rather than race the rest
+    const row = await deletePhoto(id, actor);
+    if (row !== null) {
+      slugs.add(row.author_slug);
+      blobs.push(row.blob_pathname);
+      if (row.display_pathname !== null) {
+        blobs.push(row.display_pathname);
+      }
+      deleted += 1;
+    }
+  }
+
+  /*
+   * Blobs after the rows, and failures only logged. The photographs are
+   * already gone from the site, which is what was asked for; an orphaned
+   * blob is a storage bill rather than a broken page.
+   */
+  await Promise.all(
+    blobs.map((target) =>
+      del(target).catch((error: unknown) => {
+        console.error(`Could not delete the blob ${target}:`, error);
+      }),
+    ),
+  );
+
+  for (const slug of slugs) {
+    revalidateFeeds(slug);
+  }
+  revalidatePath("/");
+  return { deleted };
+}

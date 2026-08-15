@@ -39,9 +39,10 @@ counts. Search matches titles and locations. Tick the checkboxes to publish
 or unpublish several at once, which is the thing people otherwise do ten
 times in a row after a batch upload.
 
-There is deliberately **no bulk delete**. Deleting is irreversible and takes
-the stored file with it, so it stays one photograph at a time behind its own
-confirmation — a checkbox is exactly the control that makes a misclick easy.
+Bulk delete exists too, behind a confirmation that **lists the titles**
+rather than a count — a misclicked row shows up as a name you did not expect
+to read, which a number cannot do. Deleting is irreversible and takes the
+stored file with it.
 
 Contributors can edit, unpublish and delete their own photographs, and only
 their own. That rule is enforced in the SQL, not in the interface.

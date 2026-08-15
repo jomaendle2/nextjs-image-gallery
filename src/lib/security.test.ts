@@ -331,14 +331,32 @@ describe("I2 — bulk writes carry the same authorization as single ones", () =>
   });
 
   /*
-   * Deleting is irreversible and takes the stored file with it. A checkbox
-   * is exactly the control that makes a misclick easy, so there is no bulk
-   * form of it — and that absence is load-bearing rather than an oversight.
+   * This used to assert that no bulk delete existed, which encoded a
+   * judgement call as an invariant and made it permanent. The judgement was
+   * wrong — clearing twenty uploads one at a time is sixty clicks — but the
+   * concern behind it was not, so the test now guards the concern instead
+   * of the conclusion.
+   *
+   * What must hold: per-row authorization, and a confirmation that shows
+   * what is about to go rather than only how much.
    */
-  it("offers no bulk delete", () => {
-    expect(actions).not.toMatch(
-      /export async function (bulkRemove|bulkDelete)/,
+  it("bulk delete keeps authorization per row", () => {
+    const bulk = actions.slice(
+      actions.indexOf("export async function bulkRemovePhotos"),
     );
+    expect(bulk).toContain("deletePhoto(id, actor)");
+    expect(bulk).not.toMatch(/sql`/);
+    expect(bulk).not.toMatch(/ANY\(/);
+    expect(bulk.slice(0, bulk.indexOf("for (const id"))).toContain(
+      "await requireContributor()",
+    );
+  });
+
+  it("bulk delete names what it is about to delete", () => {
+    const list = read("app", "contribute", "photos", "PhotoList.tsx");
+    // A count alone cannot be checked against intent; titles can.
+    expect(list).toContain("confirmingDelete");
+    expect(list).toMatch(/selected\.has\(photo\.id\)/);
   });
 });
 

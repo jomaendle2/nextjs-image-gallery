@@ -1,13 +1,21 @@
 "use client";
 
-import { CheckSquare, ChevronDown, Eye, EyeOff, Search, X } from "lucide-react";
+import {
+  CheckSquare,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { FIELD } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
-import { bulkSetPublished } from "./actions";
+import { bulkRemovePhotos, bulkSetPublished } from "./actions";
 import { PhotoCard } from "./PhotoCard";
 
 /**
@@ -71,6 +79,9 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const armDelete = useCallback(() => setConfirmingDelete(true), []);
+  const cancelDelete = useCallback(() => setConfirmingDelete(false), []);
   const revealAll = useCallback(() => setShowAll(true), []);
   const { pending, error, run } = useServerAction();
 
@@ -86,7 +97,10 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
     });
   }, []);
 
-  const clearSelection = useCallback(() => setSelected(new Set()), []);
+  const clearSelection = useCallback(() => {
+    setSelected(new Set());
+    setConfirmingDelete(false);
+  }, []);
 
   /*
    * Stable handlers for the bulk bar. Inline closures here would be
@@ -96,6 +110,13 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const publishSelected = useCallback(() => {
     run(async () => {
       await bulkSetPublished([...selected], true);
+      clearSelection();
+    });
+  }, [run, selected, clearSelection]);
+
+  const deleteSelected = useCallback(() => {
+    run(async () => {
+      await bulkRemovePhotos([...selected]);
       clearSelection();
     });
   }, [run, selected, clearSelection]);
@@ -256,22 +277,96 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
             {selected.size} selected
           </span>
           <div className="ml-auto flex flex-wrap gap-2">
-            <GlassButton disabled={pending} onClick={publishSelected} size="sm">
-              <Eye aria-hidden="true" className="mr-1.5" size={14} />
-              Publish
-            </GlassButton>
-            <GlassButton
-              disabled={pending}
-              onClick={unpublishSelected}
-              size="sm"
-            >
-              <EyeOff aria-hidden="true" className="mr-1.5" size={14} />
-              Unpublish
-            </GlassButton>
-            <GlassButton disabled={pending} onClick={clearSelection} size="sm">
-              Clear
-            </GlassButton>
+            {confirmingDelete ? null : (
+              <>
+                <GlassButton
+                  disabled={pending}
+                  onClick={publishSelected}
+                  size="sm"
+                >
+                  <Eye aria-hidden="true" className="mr-1.5" size={14} />
+                  Publish
+                </GlassButton>
+                <GlassButton
+                  disabled={pending}
+                  onClick={unpublishSelected}
+                  size="sm"
+                >
+                  <EyeOff aria-hidden="true" className="mr-1.5" size={14} />
+                  Unpublish
+                </GlassButton>
+                <GlassButton
+                  disabled={pending}
+                  onClick={clearSelection}
+                  size="sm"
+                >
+                  Clear
+                </GlassButton>
+                <GlassButton
+                  className="text-white/60 hover:text-red-200"
+                  disabled={pending}
+                  onClick={armDelete}
+                  size="sm"
+                >
+                  <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
+                  Delete
+                </GlassButton>
+              </>
+            )}
           </div>
+          {/*
+            The confirmation lists titles rather than a count.
+            "Delete 9 photographs?" cannot be checked against what somebody
+            meant; nine names can, and a misclicked row shows up as a title
+            they did not expect to read. Capped at eight so the bar stays a
+            bar, with the remainder counted.
+          */}
+          {confirmingDelete ? (
+            <div className="w-full space-y-3 border-white/10 border-t pt-3">
+              <p className="text-sm text-red-100/90">
+                Delete {selected.size}{" "}
+                {selected.size === 1 ? "photograph" : "photographs"} for good?
+                The stored files go too, and nothing here can bring them back.
+              </p>
+              <ul className="space-y-0.5 text-white/60 text-xs">
+                {photos
+                  .filter((photo) => selected.has(photo.id))
+                  .slice(0, 8)
+                  .map((photo) => (
+                    <li className="truncate" key={photo.id}>
+                      {(photo.title ?? "").trim() === ""
+                        ? "Untitled"
+                        : photo.title}
+                    </li>
+                  ))}
+                {selected.size > 8 ? (
+                  <li className="text-white/40">
+                    and {selected.size - 8} more
+                  </li>
+                ) : null}
+              </ul>
+              <div className="flex flex-wrap gap-2">
+                <GlassButton
+                  autoFocus={true}
+                  disabled={pending}
+                  onClick={cancelDelete}
+                  size="sm"
+                >
+                  Keep them
+                </GlassButton>
+                <GlassButton
+                  className="border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+                  disabled={pending}
+                  onClick={deleteSelected}
+                  size="sm"
+                >
+                  <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
+                  {pending ? "Deleting…" : `Delete ${selected.size} for good`}
+                </GlassButton>
+              </div>
+            </div>
+          ) : null}
+
           <div className="w-full">
             <ActionError message={error} />
           </div>

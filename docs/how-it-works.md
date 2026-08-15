@@ -128,9 +128,9 @@ Both are optional and empty by default; nothing is read from the file.
 
 Each photograph is a row that opens into its form, so the list stays
 readable as it grows. Past four photographs a search box and a status filter
-appear, and the checkboxes publish or unpublish several at once. There is no
-bulk delete, deliberately — deleting takes the stored file with it, so it
-stays one photograph at a time behind its own confirmation.
+appear, and the checkboxes publish or unpublish several at once. Bulk delete is behind a
+confirmation listing the titles rather than a count, because deleting takes
+the stored file with it and a number cannot be checked against intent.
 
 ### Send the weekly announcement
 
