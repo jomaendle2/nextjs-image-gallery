@@ -2,6 +2,7 @@
 
 import { ChevronDown, Pin } from "lucide-react";
 import Image from "next/image";
+import { type ChangeEvent, useCallback } from "react";
 import type { PhotoExif } from "@/lib/photos/derive";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoEditForm } from "./PhotoEditForm";
@@ -59,19 +60,54 @@ function Status({ photo }: { photo: OwnPhotoRow }) {
   );
 }
 
-export function PhotoCard({ photo }: { photo: OwnPhotoRow }) {
+export function PhotoCard({
+  photo,
+  selected,
+  onSelect,
+}: {
+  photo: OwnPhotoRow;
+  selected?: boolean;
+  onSelect?: (id: string, checked: boolean) => void;
+}) {
   const exif = exifSummary(photo.exif);
   const untitled = (photo.title ?? "").trim() === "";
 
+  /* Stable, so ticking one box does not re-render every other row. */
+  const handleSelect = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) =>
+      onSelect?.(photo.id, event.target.checked),
+    [onSelect, photo.id],
+  );
+
   return (
-    <li className="glass-thin overflow-hidden rounded-3xl">
-      <details className="group">
+    <li className="glass-thin flex items-stretch overflow-hidden rounded-3xl">
+      {/*
+        Beside the disclosure rather than inside it. A checkbox within
+        `<summary>` inherits its click, so selecting five photographs would
+        also expand five forms — and the usual fix, stopping propagation on
+        a wrapper, means putting a handler on an element that is not
+        interactive. Moving it out removes the conflict instead of working
+        around it.
+      */}
+      {onSelect === undefined ? null : (
+        <label className="flex shrink-0 cursor-pointer items-center pl-4 pr-1">
+          <input
+            aria-label={`Select ${untitled ? "untitled photograph" : photo.title}`}
+            checked={selected ?? false}
+            className="size-5 cursor-pointer rounded accent-white/80"
+            onChange={handleSelect}
+            type="checkbox"
+          />
+        </label>
+      )}
+
+      <details className="group min-w-0 flex-1">
         {/*
           `list-none` plus the explicit chevron: the native triangle differs
           on every platform and none of them match this. `min-h-16` keeps the
           whole row a comfortable target rather than only the words in it.
         */}
-        <summary className="flex min-h-16 cursor-pointer list-none items-center gap-4 p-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80 [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 p-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80 [&::-webkit-details-marker]:hidden">
           <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white/5">
             <Image
               alt=""

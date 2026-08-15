@@ -1,9 +1,13 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { CheckSquare, Eye, EyeOff, Search, X } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import { ActionError } from "@/components/ui/ActionError";
 import { FIELD } from "@/components/ui/field";
+import { GlassButton } from "@/components/ui/glass-button";
+import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
+import { bulkSetPublished } from "./actions";
 import { PhotoCard } from "./PhotoCard";
 
 /**
@@ -48,6 +52,41 @@ function matches(photo: OwnPhotoRow, needle: string): boolean {
 export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const { pending, error, run } = useServerAction();
+
+  const toggleOne = useCallback((id: string, checked: boolean) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelected(new Set()), []);
+
+  /*
+   * Stable handlers for the bulk bar. Inline closures here would be
+   * recreated on every keystroke in the search box, re-rendering the whole
+   * list behind it.
+   */
+  const publishSelected = useCallback(() => {
+    run(async () => {
+      await bulkSetPublished([...selected], true);
+      clearSelection();
+    });
+  }, [run, selected, clearSelection]);
+
+  const unpublishSelected = useCallback(() => {
+    run(async () => {
+      await bulkSetPublished([...selected], false);
+      clearSelection();
+    });
+  }, [run, selected, clearSelection]);
 
   /*
    * Stable references, so a keystroke re-renders the input rather than every
@@ -177,6 +216,49 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
         </div>
       ) : null}
 
+      {/*
+        The bulk bar exists for one workflow that was genuinely tedious:
+        upload ten photographs, then publish ten photographs, which meant
+        ten expand-click-collapse cycles down the list.
+
+        There is no bulk delete, deliberately. Deleting is irreversible and
+        takes the blobs with it, so it stays one photograph at a time behind
+        its own confirmation — no dialog makes "delete these nine, one of
+        which you misclicked" a safe offer.
+      */}
+      {selected.size === 0 ? null : (
+        <div className="glass-hairline mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
+          <span className="font-medium text-sm text-white/80">
+            <CheckSquare
+              aria-hidden="true"
+              className="mr-1.5 inline"
+              size={14}
+            />
+            {selected.size} selected
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <GlassButton disabled={pending} onClick={publishSelected} size="sm">
+              <Eye aria-hidden="true" className="mr-1.5" size={14} />
+              Publish
+            </GlassButton>
+            <GlassButton
+              disabled={pending}
+              onClick={unpublishSelected}
+              size="sm"
+            >
+              <EyeOff aria-hidden="true" className="mr-1.5" size={14} />
+              Unpublish
+            </GlassButton>
+            <GlassButton disabled={pending} onClick={clearSelection} size="sm">
+              Clear
+            </GlassButton>
+          </div>
+          <div className="w-full">
+            <ActionError message={error} />
+          </div>
+        </div>
+      )}
+
       {visible.length === 0 ? (
         <p className="rounded-2xl bg-white/[0.03] px-4 py-8 text-center text-sm text-white/55">
           Nothing matches{query.trim() === "" ? " that filter" : ` “${query}”`}.
@@ -184,7 +266,12 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
       ) : (
         <ul className="space-y-3">
           {visible.map((photo) => (
-            <PhotoCard key={photo.id} photo={photo} />
+            <PhotoCard
+              key={photo.id}
+              onSelect={toggleOne}
+              photo={photo}
+              selected={selected.has(photo.id)}
+            />
           ))}
         </ul>
       )}

@@ -131,3 +131,47 @@ export async function removePhoto(id: string): Promise<void> {
   revalidateFeeds(deleted.author_slug);
   revalidatePath("/");
 }
+
+/**
+ * Publishes or unpublishes several photographs at once.
+ *
+ * The workflow this exists for is real and was genuinely tedious: upload
+ * ten photographs, then publish ten photographs, which meant ten expand-
+ * click-collapse cycles down a list. Anything a person does ten times in a
+ * row is a thing the interface should let them do once.
+ *
+ * Deliberately not a bulk delete. Deleting is irreversible and takes the
+ * blobs with it, so it stays one photograph at a time behind its own
+ * confirmation — a checkbox mistake there costs somebody their work, and no
+ * amount of confirmation dialog makes "delete these nine, one of which you
+ * misclicked" a safe thing to offer.
+ *
+ * Authorisation is unchanged and per-row: `setPublished` carries
+ * `AND author_id = ...` for a contributor, so a forged id in this list
+ * updates nothing rather than somebody else's photograph. The loop is
+ * sequential because these are small writes and a partial failure should
+ * stop rather than race.
+ */
+export async function bulkSetPublished(
+  ids: readonly string[],
+  published: boolean,
+): Promise<{ changed: number }> {
+  const actor = await requireContributor();
+
+  const slugs = new Set<string>();
+  let changed = 0;
+  for (const id of ids) {
+    // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — small writes, and a partial failure should stop rather than race the rest
+    const slug = await setPublished(id, published, actor);
+    if (slug !== null) {
+      slugs.add(slug);
+      changed += 1;
+    }
+  }
+
+  // One revalidation per affected photographer, not one per photograph.
+  for (const slug of slugs) {
+    revalidateFeeds(slug);
+  }
+  return { changed };
+}
