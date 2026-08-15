@@ -25,6 +25,12 @@ That is also the moment the environment variables start mattering: a preview
 build reads its own set, and production has never run this code with them.
 Merge first, then work down this list against the real site.
 
+The production build now refuses to run without `SITE_URL`, `EMAIL_FROM`
+and `RESEND_API_KEY`, naming each one and the command to set it — so if you
+merge before setting them, the deploy stops with an explanation rather than
+succeeding and emailing people links to the wrong domain. Preview and local
+builds are unaffected.
+
 The schema is applied by the build itself now (`vercel-build` runs
 `scripts/migrate.mts` before `next build`), so merging brings the database
 with it. It did not before: migrations only ever ran when somebody typed
