@@ -238,6 +238,20 @@ of asking "where else?" is minutes.
 defects sat directly beneath accurate prose explaining the attack they were
 supposed to prevent. Prose is not executable and does not fail.
 
+**A test that has never failed is indistinguishable from one that cannot.**
+Write it, then break the thing it protects and watch it go red. This is the
+cheapest habit here and it caught the most: two checks written this evening
+were structurally incapable of failing, and both were written carefully by
+somebody paying attention. One matched `.ts`, `.tsx` and `.mjs` while every
+script it was meant to guard is `.mts`, so it covered nothing and reported
+success. Being careful does not detect this. Breaking it on purpose does, in
+about thirty seconds.
+
+The same habit is why the invariants below can be trusted: each was verified
+by reinstating the original bug — the old `blobIsClaimed`, a leaked paid
+column, a bulk write with its authorization removed — and confirming the
+suite went red before putting it back.
+
 **A rule enforced over part of its domain reads as enforced, which is worse
 than no rule — because it stops you looking.** This is the one that cost the
 most. I1 was written as a test, went green, and a third GET-mutation lived in
