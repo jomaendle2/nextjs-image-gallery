@@ -1,4 +1,5 @@
 import { sql } from "@/lib/database";
+import { memberExists } from "@/lib/members/repository";
 import { generateSecret, hashSecret } from "./secrets";
 import { normaliseEmail } from "./slug";
 import type { Contributor, ContributorRole } from "./types";
@@ -15,12 +16,24 @@ const TOKEN_TTL_MINUTES = 15;
  */
 export async function mintLoginToken(email: string): Promise<string | null> {
   const address = normaliseEmail(email);
+
+  /*
+   * A contributor, a member, or nobody.
+   *
+   * This used to require a live `contributors` row, which is what kept a
+   * paying member from ever signing in — they have an address and nothing
+   * else. Both capabilities hang off the address now, so either one earns a
+   * link and neither is told about the other. An address with neither still
+   * returns null, and the caller still answers identically, because the
+   * sign-in form must not become a way to ask who is on the list.
+   */
   const rows = await sql`
     SELECT id FROM contributors
     WHERE email = ${address} AND revoked_at IS NULL;
   `;
-  const contributorId = rows[0]?.["id"] as string | undefined;
-  if (contributorId === undefined) {
+  const contributorId = (rows[0]?.["id"] as string | undefined) ?? null;
+
+  if (contributorId === null && !(await memberExists(address))) {
     return null;
   }
 
@@ -30,10 +43,11 @@ export async function mintLoginToken(email: string): Promise<string | null> {
   ).toISOString();
 
   /*
-   * The token is issued to the *address*. `contributor_id` is still written
-   * for the cascade and as a fallback, but `email` is what redeeming it
-   * resolves through — so the same flow can one day issue a link to someone
-   * who has bought a membership and has no contributors row at all.
+   * The token is issued to the *address*. `contributor_id` is written when
+   * there is one, for the cascade and as a fallback, and left null for a
+   * member who has no contributors row — which is the case this was built
+   * for and which is now real. `email` is what redeeming it resolves
+   * through either way.
    *
    * The normalised form is stored, so redemption matches whatever casing the
    * person typed into the sign-in form.
@@ -46,21 +60,31 @@ export async function mintLoginToken(email: string): Promise<string | null> {
   return secret;
 }
 
+/** What redeeming a link established: an address, and what it can do. */
+export interface RedeemedLogin {
+  email: string;
+  /** Null for somebody whose only capability is a membership. */
+  contributor: Contributor | null;
+}
+
 /**
- * Consumes a login secret and returns the contributor it belonged to.
+ * Consumes a login secret and returns who it belonged to.
  *
  * The single-use check lives inside the UPDATE, not in a read followed by a
  * write: `WHERE used_at IS NULL` and the write happen in one statement, so
- * two simultaneous clicks on the same link cannot both succeed. A revoked
- * contributor is rejected even holding an unexpired token.
+ * two simultaneous clicks on the same link cannot both succeed.
  *
- * The token resolves to an address, and the address to a contributor. A token
- * that somehow carries no address is spent and refused — failing closed costs
- * one sign-in retry, and the alternative is a token that redeems as nobody.
+ * The token resolves to an address, and the address to whatever capabilities
+ * it holds. Returning null means "this link is worthless" and covers three
+ * cases the caller must not be able to tell apart: the token was wrong,
+ * spent or expired; or it was valid but the address has since lost every
+ * capability — a revoked contributor who never subscribed lands here, which
+ * is how revocation keeps working now that a link no longer implies a
+ * contributors row.
  */
 export async function consumeLoginToken(
   secret: string,
-): Promise<Contributor | null> {
+): Promise<RedeemedLogin | null> {
   if (secret === "") {
     return null;
   }
@@ -83,17 +107,24 @@ export async function consumeLoginToken(
     WHERE email = ${address} AND revoked_at IS NULL;
   `;
   const [row] = rows;
+
   if (!row) {
-    return null;
+    // No contributor. A member may still sign in; anybody else may not.
+    return (await memberExists(address))
+      ? { email: address, contributor: null }
+      : null;
   }
 
   return {
-    id: row["id"] as string,
-    email: row["email"] as string,
-    slug: row["slug"] as string,
-    display_name: row["display_name"] as string,
-    site_url: (row["site_url"] as string | null) ?? null,
-    role: row["role"] as ContributorRole,
+    email: address,
+    contributor: {
+      id: row["id"] as string,
+      email: row["email"] as string,
+      slug: row["slug"] as string,
+      display_name: row["display_name"] as string,
+      site_url: (row["site_url"] as string | null) ?? null,
+      role: row["role"] as ContributorRole,
+    },
   };
 }
 

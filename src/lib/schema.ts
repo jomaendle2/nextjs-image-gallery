@@ -188,4 +188,70 @@ export const MIGRATIONS: readonly string[] = [
    * work being mailed twice.
    */
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS announced_at TIMESTAMPTZ;",
+
+  /*
+   * The constraint the re-keying note above said would have to go.
+   *
+   * Tokens and sessions are keyed on email so that "contributor" is a
+   * capability attached to an address rather than the identity itself. A
+   * paying member has an address and no `contributors` row, so this is the
+   * one thing that stopped them holding a session. `contributor_id` stays
+   * for contributors, still cascading on delete — it is simply no longer
+   * required.
+   */
+  "ALTER TABLE login_tokens ALTER COLUMN contributor_id DROP NOT NULL;",
+  "ALTER TABLE sessions ALTER COLUMN contributor_id DROP NOT NULL;",
+
+  /*
+   * Members.
+   *
+   * Keyed on email like everything else in the auth layer, so the same
+   * magic link signs in a contributor, a member, or somebody who is both.
+   * Stripe's ids are stored rather than derived: `stripe_customer_id` is
+   * what a returning subscriber is matched on, and what the customer portal
+   * is opened for.
+   *
+   * `status` and `current_period_end` together are the whole access
+   * question. Both are written only by the webhook, because Stripe is the
+   * authority on whether somebody has paid — a success page can be reached
+   * by anyone who guesses the URL.
+   */
+  `CREATE TABLE IF NOT EXISTS members (
+     email                  TEXT PRIMARY KEY,
+     stripe_customer_id     TEXT NOT NULL,
+     stripe_subscription_id TEXT,
+     status                 TEXT NOT NULL DEFAULT 'incomplete',
+     current_period_end     TIMESTAMPTZ,
+     created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+   );`,
+
+  /* Returning subscribers are matched on the Stripe id from the webhook. */
+  `CREATE UNIQUE INDEX IF NOT EXISTS members_customer_idx
+     ON members (stripe_customer_id);`,
+
+  /*
+   * What a photographer chooses to tell members, and only members.
+   *
+   * Neither is derived from the file. `derive.ts` still never reads GPS —
+   * these are two text fields somebody types, which is a different act from
+   * extracting coordinates out of an image, and the difference is the whole
+   * promise this gallery makes.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_location TEXT;",
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS technique TEXT;",
+
+  /*
+   * What members looked at, aggregated per photograph per day.
+   *
+   * Enough to divide a revenue pool fairly later, and deliberately not
+   * enough to reconstruct one person's viewing history. A site whose
+   * central promise is that it does not record where you were should not
+   * quietly start recording what you looked at.
+   */
+  `CREATE TABLE IF NOT EXISTS photo_member_views (
+     photo_id TEXT NOT NULL,
+     day      DATE NOT NULL,
+     views    INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (photo_id, day)
+   );`,
 ];

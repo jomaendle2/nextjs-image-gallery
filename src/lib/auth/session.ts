@@ -1,6 +1,11 @@
 import process from "node:process";
 import { cookies } from "next/headers";
 import { sql } from "@/lib/database";
+import {
+  getMemberByEmail,
+  isActive,
+  type Member,
+} from "@/lib/members/repository";
 import { generateSecret, hashSecret } from "./secrets";
 import type { Contributor, ContributorRole } from "./types";
 
@@ -17,21 +22,23 @@ const SESSION_MAX_AGE = SESSION_DAYS * 24 * 60 * 60;
  * stays valid until it expires. The lookup only ever runs on /contribute
  * routes, so the cached public gallery pays nothing for it.
  */
-export async function createSession(contributor: Contributor): Promise<void> {
+export async function createSession(
+  email: string,
+  contributorId: string | null,
+): Promise<void> {
   const secret = generateSecret();
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000).toISOString();
 
   /*
-   * Both columns are written. `email` is what the session is keyed on and
-   * what every read resolves through; `contributor_id` is kept so the
-   * foreign key's ON DELETE CASCADE still cleans up after a deleted
-   * contributor, and so the previous keying remains available if this one
-   * turns out to be wrong.
+   * `email` is what the session is keyed on and what every read resolves
+   * through. `contributor_id` is written when there is one, so the foreign
+   * key's ON DELETE CASCADE still cleans up after a deleted contributor, and
+   * left null for a member — which is the whole reason that column stopped
+   * being NOT NULL.
    */
   await sql`
     INSERT INTO sessions (id, contributor_id, email, expires_at)
-    VALUES (${hashSecret(secret)}, ${contributor.id}, ${contributor.email},
-            ${expiresAt});
+    VALUES (${hashSecret(secret)}, ${contributorId}, ${email}, ${expiresAt});
   `;
 
   const store = await cookies();
@@ -48,9 +55,9 @@ export async function createSession(contributor: Contributor): Promise<void> {
  * The address of whoever is signed in, or null.
  *
  * This is the identity; everything else is a capability looked up from it.
- * `getCurrentContributor` is one such lookup, and a later `getCurrentMember`
- * is another — both resolve from the same cookie and the same session row,
- * which is the whole point of keying sessions on email rather than on a
+ * `getCurrentContributor` is one such lookup and `getCurrentMember` is the
+ * other — both resolve from the same cookie and the same session row, which
+ * is the whole point of keying sessions on email rather than on a
  * contributor id.
  */
 export async function getSessionEmail(): Promise<string | null> {
@@ -106,6 +113,27 @@ export async function getCurrentContributor(): Promise<Contributor | null> {
     site_url: (row["site_url"] as string | null) ?? null,
     role: row["role"] as ContributorRole,
   };
+}
+
+/**
+ * The membership capability of the signed-in address, if it has one.
+ *
+ * The second lookup the re-keying was for, and the reason `sessions` is
+ * keyed on email rather than on a contributor id: this resolves from the
+ * same cookie and the same row as `getCurrentContributor`, and somebody can
+ * be a member, a contributor, both, or neither.
+ *
+ * Returns null rather than an inactive member, so a caller cannot forget to
+ * check — an expired subscription and no subscription look the same from
+ * here, which is what a gate wants.
+ */
+export async function getCurrentMember(): Promise<Member | null> {
+  const email = await getSessionEmail();
+  if (email === null) {
+    return null;
+  }
+  const member = await getMemberByEmail(email);
+  return isActive(member) ? member : null;
 }
 
 export async function destroySession(): Promise<void> {

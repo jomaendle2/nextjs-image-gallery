@@ -29,10 +29,34 @@ describe("MIGRATIONS", () => {
   const isBackfill = (statement: string): boolean =>
     statement.trimStart().toUpperCase().startsWith("UPDATE ");
 
+  /*
+   * `DROP NOT NULL` is the third kind: idempotent by nature rather than by
+   * a guard clause, because dropping a constraint that is already absent is
+   * a no-op in Postgres. It has no `IF NOT EXISTS` form to write, so the
+   * rule recognises it rather than being relaxed — the point of this test is
+   * that every statement is safe to re-run, not that every statement carries
+   * a particular phrase.
+   */
+  const isConstraintDrop = (statement: string): boolean =>
+    /ALTER COLUMN \w+ DROP NOT NULL/i.test(statement);
+
   it("guards every schema statement so it can be re-run", () => {
-    for (const statement of MIGRATIONS.filter((s) => !isBackfill(s))) {
+    const guarded = MIGRATIONS.filter(
+      (s) => !(isBackfill(s) || isConstraintDrop(s)),
+    );
+    for (const statement of guarded) {
       expect(statement).toMatch(/IF NOT EXISTS/);
     }
+  });
+
+  it("only exempts constraint drops that really are constraint drops", () => {
+    // The exemption is narrow on purpose: it must not become a hole through
+    // which an unguarded `ALTER TABLE` of any other shape can pass.
+    expect(
+      isConstraintDrop("ALTER TABLE t ALTER COLUMN c DROP NOT NULL;"),
+    ).toBe(true);
+    expect(isConstraintDrop("ALTER TABLE t DROP COLUMN c;")).toBe(false);
+    expect(isConstraintDrop("ALTER TABLE t ADD COLUMN c TEXT;")).toBe(false);
   });
 
   it("bounds every backfill with a predicate", () => {

@@ -49,3 +49,9 @@ next-env.d.ts
 
 # Ralph loop session state
 .claude/ralph-loop.local.md
+
+# Agent skills installed by `npx skills add` — local tooling, not app code
+.agents/
+.junie/
+skills-lock.json
+.claude/skills/

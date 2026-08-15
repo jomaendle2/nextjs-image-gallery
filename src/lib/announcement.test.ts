@@ -74,6 +74,7 @@ describe("buildAnnouncement", () => {
 
   it("cannot be broken out of by a title a contributor typed", () => {
     const { html } = buildAnnouncement(
+      // biome-ignore lint/security/noSecrets: an XSS payload under test, not a key
       [photo({ title: "</a><script>alert(1)</script>" })],
       ORIGIN,
       UNSUB,
