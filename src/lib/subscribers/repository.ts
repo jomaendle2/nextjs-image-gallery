@@ -36,9 +36,9 @@ export async function requestSubscription(
    */
   const rows = await sql`
     INSERT INTO subscribers (email, confirm_token_hash, confirm_expires_at,
-                             unsubscribe_hash)
+                             unsubscribe_token)
     VALUES (${email}, ${hashSecret(confirmSecret)}, ${expiresAt},
-            ${hashSecret(generateSecret())})
+            ${generateSecret()})
     ON CONFLICT (email) DO UPDATE
       SET confirm_token_hash = EXCLUDED.confirm_token_hash,
           confirm_expires_at = EXCLUDED.confirm_expires_at
@@ -53,10 +53,9 @@ export async function requestSubscription(
  * Confirms a subscription and returns the unsubscribe secret to put in the
  * welcome email, or null if the token was wrong, spent or expired.
  *
- * The unsubscribe secret is minted here rather than at request time because
- * it only becomes useful once there is something to unsubscribe from, and
- * this is the one moment we can hand it over in a message the person is
- * expecting.
+ * The unsubscribe token is replaced here rather than kept from the request,
+ * so a confirmation link that was forwarded or logged somewhere cannot be
+ * turned into a way to unsubscribe the person who did confirm.
  */
 export async function confirmSubscription(
   secret: string,
@@ -74,7 +73,7 @@ export async function confirmSubscription(
        SET confirmed_at = now(),
            confirm_token_hash = NULL,
            confirm_expires_at = NULL,
-           unsubscribe_hash = ${hashSecret(unsubscribeSecret)}
+           unsubscribe_token = ${unsubscribeSecret}
      WHERE confirm_token_hash = ${hashSecret(secret)}
        AND confirmed_at IS NULL
        AND confirm_expires_at > now()
@@ -95,22 +94,28 @@ export async function unsubscribe(secret: string): Promise<boolean> {
     return false;
   }
   const rows = await sql`
-    DELETE FROM subscribers WHERE unsubscribe_hash = ${hashSecret(secret)}
+    DELETE FROM subscribers WHERE unsubscribe_token = ${secret}
     RETURNING email;
   `;
   return rows.length > 0;
 }
 
-/** Everyone who has confirmed, for a send. */
+/**
+ * Everyone who has confirmed, with the token their unsubscribe link needs.
+ *
+ * The token comes back in the clear because building that link is the whole
+ * reason this query exists — see the note on the table in `schema.ts` for
+ * why hashing it would be security theatre that costs the feature.
+ */
 export async function listConfirmedSubscribers(): Promise<
-  { email: string; unsubscribe_hash: string }[]
+  { email: string; unsubscribe_token: string }[]
 > {
   const rows = await sql`
-    SELECT email, unsubscribe_hash FROM subscribers
+    SELECT email, unsubscribe_token FROM subscribers
     WHERE confirmed_at IS NOT NULL
     ORDER BY confirmed_at ASC;
   `;
-  return rows as { email: string; unsubscribe_hash: string }[];
+  return rows as { email: string; unsubscribe_token: string }[];
 }
 
 /** Housekeeping for requests nobody ever confirmed. */

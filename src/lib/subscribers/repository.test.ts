@@ -37,7 +37,7 @@ describe.skipIf(!hasDatabase)("subscription lifecycle", () => {
         WHERE email = ${address};`;
       expect(rows.length).toBe(1);
       expect(rows[0]?.["confirmed_at"]).toBeNull();
-      // The secret goes in the URL; only its hash is kept.
+      // The confirm secret goes in the URL; only its hash is kept.
       expect(rows[0]?.["confirm_token_hash"]).not.toBe(pending?.confirmSecret);
 
       // An unconfirmed address is never in a send.
@@ -58,7 +58,11 @@ describe.skipIf(!hasDatabase)("subscription lifecycle", () => {
       ).toBeNull();
 
       const afterSend = await repo.listConfirmedSubscribers();
-      expect(afterSend.some((row) => row.email === address)).toBe(true);
+      const mine = afterSend.find((row) => row.email === address);
+      expect(mine).toBeDefined();
+      // The send has to be able to build an unsubscribe link from this, so
+      // the token comes back usable rather than hashed.
+      expect(mine?.unsubscribe_token).toBe(confirmed?.unsubscribeSecret);
 
       // A confirmed address cannot be re-requested, so nobody can be sent
       // "please confirm" for an address they already own.

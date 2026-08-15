@@ -141,24 +141,41 @@ export const MIGRATIONS: readonly string[] = [
    * unconfirmed row is a request rather than a subscription and is never
    * mailed anything except its own confirmation.
    *
-   * `confirm_token_hash` and `unsubscribe_token` follow the same shape as
-   * `login_tokens`: the secret goes in the URL, only its hash is stored, so
-   * a dump of this table cannot be used to confirm or cancel anybody.
+   * `confirm_token_hash` follows the same shape as `login_tokens`: the
+   * secret goes in the URL, only its hash is stored, so a dump of this table
+   * cannot be used to confirm anybody.
    *
-   * The unsubscribe token does not expire. A footer link that stopped
-   * working after fifteen minutes would be worse than useless — it is the
-   * one link in the email that has to work whenever the person finds it.
+   * `unsubscribe_token` is stored **in the clear**, and the difference is
+   * the point. A login token grants a session, so hashing it means a leaked
+   * database cannot be used to sign in as anyone. An unsubscribe token
+   * grants exactly one thing — deleting its own row — and anybody holding
+   * this table can already delete rows and already has the addresses.
+   * Hashing it buys nothing and costs the feature: every message has to
+   * carry an unsubscribe link, and a link cannot be built from a hash. The
+   * first version of this table stored the hash and made that promise
+   * unkeepable.
+   *
+   * It also does not expire. A footer link that stopped working after
+   * fifteen minutes would be worse than useless — it is the one link in the
+   * email that has to work whenever the person gets round to it.
+   *
+   * There is no `ALTER` accompanying the correction of that first version,
+   * because this table has never been deployed: it and the fix arrived on
+   * the same unreleased branch, so `CREATE TABLE IF NOT EXISTS` is the whole
+   * story. A development database that ran the earlier shape needs
+   * `DROP TABLE subscribers` once, by hand, and has nothing in it to lose.
    */
   `CREATE TABLE IF NOT EXISTS subscribers (
      email              TEXT PRIMARY KEY,
      confirm_token_hash TEXT,
      confirm_expires_at TIMESTAMPTZ,
      confirmed_at       TIMESTAMPTZ,
-     unsubscribe_hash   TEXT NOT NULL,
+     unsubscribe_token  TEXT NOT NULL,
      created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
    );`,
 
   /* The send reads only confirmed rows, so it never scans the pending ones. */
   `CREATE INDEX IF NOT EXISTS subscribers_confirmed_idx
      ON subscribers (confirmed_at) WHERE confirmed_at IS NOT NULL;`,
+
 ];
