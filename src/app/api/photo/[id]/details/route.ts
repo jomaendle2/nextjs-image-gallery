@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentMember } from "@/lib/auth/session";
 import { recordMemberView } from "@/lib/members/repository";
 import { getMemberDetails } from "@/lib/photos/repository";
@@ -44,9 +44,20 @@ export async function GET(
    * thing they pay for. Aggregate per photograph per day — see the note on
    * the table — so it can divide a revenue pool later without becoming a
    * record of what any one person looked at.
+   *
+   * `after` rather than a bare floating promise. Detached work started
+   * without it races the response: the function can be frozen or reclaimed
+   * the moment the body is sent, so the Neon round trip may simply never
+   * land. That was silently losing views, and these numbers are the input to
+   * dividing money between photographers — an undercount nobody can detect
+   * is worse than a slow response.
    */
-  recordMemberView(id).catch((error: unknown) => {
-    console.error("Could not record a member view:", error);
+  after(async () => {
+    try {
+      await recordMemberView(id);
+    } catch (error) {
+      console.error("Could not record a member view:", error);
+    }
   });
 
   /*

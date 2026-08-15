@@ -1,4 +1,4 @@
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import { buildRssFeed } from "@/lib/feed";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -6,7 +6,7 @@ import { siteOrigin } from "@/lib/site-url";
 export const revalidate = 3600;
 
 export async function GET(): Promise<Response> {
-  const images = await getGalleryImages();
+  const images = await listGalleryImages();
 
   const xml = buildRssFeed(images, {
     title: "the beauty of earth.",

@@ -14,12 +14,30 @@ import Stripe from "stripe";
  * moment a key went missing.
  */
 
+/**
+ * Pinned deliberately.
+ *
+ * Two silent failures in this integration came from Stripe moving a field
+ * between versions — `current_period_end` onto subscription items, and
+ * `invoice.subscription` under `parent` — each read through a cast that
+ * compiled fine and returned undefined for months. Pinning does not prevent
+ * a move, but it makes the next one happen when somebody changes this line,
+ * rather than on a Tuesday when Stripe rolls an account forward.
+ *
+ * Important and not covered by this: **outbound calls use this version,
+ * while the event objects Stripe delivers are serialised in the version the
+ * webhook endpoint was created with.** They can disagree, and the two
+ * helpers above read the new shape first for exactly that reason. Check the
+ * endpoint's version in the Dashboard matches this string.
+ */
+const API_VERSION = "2026-07-29.dahlia";
+
 export function stripeClient(): Stripe {
   const key = process.env["STRIPE_SECRET_KEY"];
   if (key === undefined || key === "") {
     throw new Error("STRIPE_SECRET_KEY is not set.");
   }
-  return new Stripe(key);
+  return new Stripe(key, { apiVersion: API_VERSION });
 }
 
 /**

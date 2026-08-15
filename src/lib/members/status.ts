@@ -59,7 +59,15 @@ export function isActive(member: Member | null): boolean {
  * response to a failed payment: refusing the person's second attempt to give
  * you money.
  */
-const LIVE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
+const LIVE_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  // Collection paused, subscription intact — resuming bills, so a second
+  // checkout would be a second bill.
+  "paused",
+]);
 
 /** Whether a new checkout would duplicate a subscription that already bills. */
 export function hasLiveSubscription(member: Member | null): boolean {

@@ -1,9 +1,30 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/auth/session";
 import { getMemberByEmail } from "@/lib/members/repository";
 import { hasLiveSubscription } from "@/lib/members/status";
+import { clientIp, stripeLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 import { membershipPriceId, stripeClient } from "@/lib/stripe";
+
+/**
+ * How Stripe should address the buyer, of which there are exactly three
+ * kinds: one we have billed before, one we know but have not billed, and one
+ * we have never met.
+ *
+ * Only the last is asked for an address. Fixing it where we already know it
+ * means Stripe shows it as unchangeable, so a signed-in person cannot end up
+ * with a subscription attached to an inbox their session does not open.
+ */
+function whoIsBuying(
+  customerId: string | null,
+  email: string | null,
+): { customer: string } | { customer_email: string } | Record<string, never> {
+  if (customerId !== null) {
+    return { customer: customerId };
+  }
+  return email === null ? {} : { customer_email: email };
+}
 
 /**
  * Starts a subscription checkout, for a signed-in member or a new one.
@@ -26,26 +47,19 @@ import { membershipPriceId, stripeClient } from "@/lib/stripe";
  * A signed-in buyer still gets their address fixed rather than collected —
  * there is no reason to ask again for something we already know.
  */
-/**
- * How Stripe should address the buyer, of which there are exactly three
- * kinds: one we have billed before, one we know but have not billed, and one
- * we have never met.
- *
- * Only the last is asked for an address. Fixing it where we already know it
- * means Stripe shows it as unchangeable, so a signed-in person cannot end up
- * with a subscription attached to an inbox their session does not open.
- */
-function whoIsBuying(
-  customerId: string | null,
-  email: string | null,
-): { customer: string } | { customer_email: string } | Record<string, never> {
-  if (customerId !== null) {
-    return { customer: customerId };
-  }
-  return email === null ? {} : { customer_email: email };
-}
-
 export async function POST(): Promise<NextResponse> {
+  /*
+   * A limiter on an unauthenticated route that spends money elsewhere.
+   * Every call creates a live object in a metered Stripe account.
+   */
+  const limitKey = clientIp(await headers());
+  if (!stripeLimiter.check(limitKey)) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again in a few minutes." },
+      { status: 429 },
+    );
+  }
+
   const email = await getSessionEmail();
 
   /*

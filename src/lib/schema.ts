@@ -271,6 +271,18 @@ export const MIGRATIONS: readonly string[] = [
    * comparison in the same units as `blob_pathname`, which is what `del()`
    * and the ownership check both speak.
    */
+  /*
+   * When the event that last wrote this membership was created by Stripe.
+   *
+   * Idempotency is not ordering. Stripe redelivers on any non-2xx for up to
+   * three days, so a retried `customer.subscription.updated` can land after
+   * the `deleted` that superseded it and rewrite `active` with a future
+   * period end — serving paid content to somebody who cancelled. Comparing
+   * this in the upsert's WHERE makes the write monotonic as well as
+   * repeatable.
+   */
+  "ALTER TABLE members ADD COLUMN IF NOT EXISTS last_event_at TIMESTAMPTZ;",
+
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS display_pathname TEXT;",
 
   /*

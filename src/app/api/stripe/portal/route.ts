@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/auth/session";
 import { getMemberByEmail } from "@/lib/members/repository";
+import { clientIp, stripeLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 import { stripeClient } from "@/lib/stripe";
 
@@ -18,6 +20,18 @@ import { stripeClient } from "@/lib/stripe";
  * still only ever written by a signed Stripe event.
  */
 export async function POST(): Promise<NextResponse> {
+  /*
+   * A limiter on an unauthenticated route that spends money elsewhere.
+   * Every call creates a live object in a metered Stripe account.
+   */
+  const limitKey = clientIp(await headers());
+  if (!stripeLimiter.check(limitKey)) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again in a few minutes." },
+      { status: 429 },
+    );
+  }
+
   const email = await getSessionEmail();
   if (email === null) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import { listContributors } from "@/lib/auth/contributors";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -60,7 +60,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    */
   const contributors = await listContributors();
   const contributorRoutes: MetadataRoute.Sitemap = contributors
-    .filter((person) => person.revoked_at === null && person.photo_count > 0)
+    .filter(
+      (person) => person.revoked_at === null && person.published_count > 0,
+    )
     .flatMap((person) => [
       {
         url: `${origin}/by/${person.slug}`,
@@ -80,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * the ones most worth crawling, and there are far more of them than there
    * are of everything else here put together.
    */
-  const photoRoutes: MetadataRoute.Sitemap = (await getGalleryImages()).map(
+  const photoRoutes: MetadataRoute.Sitemap = (await listGalleryImages()).map(
     (image) => ({
       url: `${origin}/photo/${image.id}`,
       changeFrequency: "monthly" as const,

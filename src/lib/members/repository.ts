@@ -39,21 +39,25 @@ export async function memberExists(rawEmail: string): Promise<boolean> {
 }
 
 /**
- * Records what Stripe just told us.
+ * Why a write did or did not happen.
  *
- * Idempotent, because webhooks arrive more than once and out of order: the
- * same event replayed writes the same row, and `ON CONFLICT` means a
- * `customer.subscription.updated` that overtakes the checkout completion
- * still lands. Keyed on email so a subscriber who checks out twice with the
- * same address updates one row rather than accumulating them.
+ * Three outcomes rather than a boolean, because two different refusals want
+ * two different responses: a stale event is routine and should be ignored
+ * quietly, while a customer mismatch means somebody checked out using an
+ * address they may not control and deserves a log line.
  */
+export type UpsertOutcome = "written" | "stale" | "wrong-customer";
+
 export async function upsertMember(input: {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string | null;
   status: string;
   currentPeriodEnd: string | null;
-}): Promise<boolean> {
+  /** When Stripe created the event, for the ordering guard. */
+  eventAt: string;
+}): Promise<UpsertOutcome> {
+  const email = normaliseEmail(input.email);
   /*
    * A row belongs to the customer already in it.
    *
@@ -74,31 +78,60 @@ export async function upsertMember(input: {
    * The access half was always safe and still is — a membership is only
    * usable through a link sent to the address — but writing was not, and
    * "you cannot use it" is no comfort to somebody whose own row was taken.
+   *
+   * Records what Stripe just told us, idempotently: the same event replayed
+   * writes the same row, and keying on email means a subscriber who checks
+   * out twice with the same address updates one row rather than
+   * accumulating them.
+   */
+
+  /*
+   * Two guards on one `DO UPDATE`, and both must be no-ops rather than
+   * errors: raising here would return 500 and have Stripe redeliver the same
+   * event for three days.
+   *
+   *   stripe_customer_id — the row belongs to the customer already in it.
+   *   last_event_at      — a later event may not be undone by an earlier one.
    */
   const rows = await sql`
     INSERT INTO members (email, stripe_customer_id, stripe_subscription_id,
-                         status, current_period_end)
-    VALUES (${normaliseEmail(input.email)}, ${input.stripeCustomerId},
+                         status, current_period_end, last_event_at)
+    VALUES (${email}, ${input.stripeCustomerId},
             ${input.stripeSubscriptionId}, ${input.status},
-            ${input.currentPeriodEnd})
+            ${input.currentPeriodEnd}, ${input.eventAt})
     ON CONFLICT (email) DO UPDATE
       SET stripe_customer_id     = EXCLUDED.stripe_customer_id,
           stripe_subscription_id = EXCLUDED.stripe_subscription_id,
           status                 = EXCLUDED.status,
-          current_period_end     = EXCLUDED.current_period_end
+          current_period_end     = EXCLUDED.current_period_end,
+          last_event_at          = EXCLUDED.last_event_at
       WHERE members.stripe_customer_id = EXCLUDED.stripe_customer_id
+        AND (members.last_event_at IS NULL
+             OR members.last_event_at <= EXCLUDED.last_event_at)
     RETURNING email;
   `;
 
-  const written = rows.length > 0;
-  if (!written) {
+  if (rows.length > 0) {
+    return "written";
+  }
+
+  /*
+   * Nothing was written, and which guard stopped it decides whether this is
+   * worth anybody's attention. One extra read, only on the refusal path.
+   */
+  const existing = await getMemberByEmail(email);
+  if (
+    existing !== null &&
+    existing.stripe_customer_id !== input.stripeCustomerId
+  ) {
     console.error(
-      "Refused to repoint an existing membership at a different Stripe " +
+      `Refused to repoint the membership for ${email} at a different Stripe ` +
         "customer. Someone may have checked out using an address they do " +
         "not control, or a customer was recreated for an existing member.",
     );
+    return "wrong-customer";
   }
-  return written;
+  return "stale";
 }
 
 /**
@@ -111,12 +144,21 @@ export async function updateMemberByCustomer(input: {
   stripeCustomerId: string;
   status: string;
   currentPeriodEnd: string | null;
+  /** When Stripe created the event, for the ordering guard. */
+  eventAt: string;
 }): Promise<void> {
+  /*
+   * Same monotonic guard as the upsert. This path handles events carrying no
+   * address, which is where cancellations arrive — precisely the write a
+   * retried older event must not be able to undo.
+   */
   await sql`
     UPDATE members
        SET status = ${input.status},
-           current_period_end = ${input.currentPeriodEnd}
-     WHERE stripe_customer_id = ${input.stripeCustomerId};
+           current_period_end = ${input.currentPeriodEnd},
+           last_event_at = ${input.eventAt}
+     WHERE stripe_customer_id = ${input.stripeCustomerId}
+       AND (last_event_at IS NULL OR last_event_at <= ${input.eventAt});
   `;
 }
 

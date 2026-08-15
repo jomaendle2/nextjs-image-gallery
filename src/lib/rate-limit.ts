@@ -73,3 +73,20 @@ export function clientIp(headerList: Headers): string {
 
 /** Shared by the sign-in and apply routes: limited per IP and per address. */
 export const signInLimiter = createLimiter();
+
+/**
+ * For the two routes that reach into Stripe.
+ *
+ * Neither is a security boundary — checkout mints a link that grants
+ * nothing, and the portal is session-gated and scoped to the caller's own
+ * customer. What this stops is cost: every call to either creates a live
+ * object in a metered third-party account, and checkout needs no session at
+ * all, so without a limit anybody with a loop can fill the Stripe dashboard
+ * with abandoned sessions.
+ *
+ * More generous than the sign-in window because a genuine person may
+ * reasonably open checkout several times — card declined, wrong address,
+ * changed their mind — and being told to come back in fifteen minutes at
+ * the moment you are trying to pay is its own kind of failure.
+ */
+export const stripeLimiter = createLimiter(15);

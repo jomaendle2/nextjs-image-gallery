@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
 import { buildRssFeed } from "@/lib/feed";
 import { siteOrigin } from "@/lib/site-url";
@@ -26,7 +26,7 @@ export async function GET(
     notFound();
   }
 
-  const images = await getGalleryImages(slug);
+  const images = await listGalleryImages(slug);
 
   const xml = buildRssFeed(images, {
     title: `${contributor.display_name} — the beauty of earth.`,

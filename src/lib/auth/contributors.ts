@@ -34,11 +34,27 @@ export async function getContributorBySlug(
 }
 
 export async function listContributors(): Promise<
-  (Contributor & { revoked_at: string | null; photo_count: number })[]
+  (Contributor & {
+    revoked_at: string | null;
+    photo_count: number;
+    published_count: number;
+  })[]
 > {
+  /*
+   * Two counts, because two callers want different questions answered.
+   *
+   * The admin table wants everything, drafts included — that is the point of
+   * a moderation view. The sitemap wants only what a visitor would find, and
+   * using the total there emitted `/by/<slug>` for contributors who had
+   * uploaded but published nothing: a 200 rendering `EmptyGallery`, which is
+   * exactly the thin page the sitemap's own comment says it excludes.
+   */
   const rows = await sql`
     SELECT c.id, c.email, c.slug, c.display_name, c.site_url, c.role,
-           c.revoked_at, COUNT(p.id)::int AS photo_count
+           c.revoked_at,
+           COUNT(p.id)::int AS photo_count,
+           COUNT(p.id) FILTER (WHERE p.published_at IS NOT NULL)::int
+             AS published_count
     FROM contributors c
     LEFT JOIN photos p ON p.author_id = c.id
     GROUP BY c.id
@@ -47,6 +63,7 @@ export async function listContributors(): Promise<
   return rows as (Contributor & {
     revoked_at: string | null;
     photo_count: number;
+    published_count: number;
   })[];
 }
 

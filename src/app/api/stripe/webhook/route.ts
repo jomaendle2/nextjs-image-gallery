@@ -40,7 +40,10 @@ function emailFrom(subscription: Stripe.Subscription): string | null {
     : null;
 }
 
-async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
+async function handleCheckout(
+  session: Stripe.Checkout.Session,
+  eventAt: string,
+): Promise<void> {
   const { customer } = session;
   /*
    * In preference order: the address we fixed at checkout for a signed-in
@@ -73,23 +76,55 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
       ? null
       : await stripeClient().subscriptions.retrieve(subscriptionId);
 
-  const written = await upsertMember({
+  const outcome = await upsertMember({
     email,
     stripeCustomerId: customer,
     stripeSubscriptionId: subscriptionId,
     status: subscription?.status ?? "active",
     currentPeriodEnd:
       subscription === null ? null : subscriptionPeriodEnd(subscription),
+    eventAt,
   });
 
   /*
-   * Refused means the address already belongs to a different Stripe
-   * customer, so this checkout was made with somebody else's address. Do not
-   * label the subscription with it: that address is the one thing that must
-   * not become attached to this subscription, or every later event it emits
-   * would arrive claiming to be about the other person's membership.
+   * We refused to record this payment, so we must not keep it.
+   *
+   * `wrong-customer` means the address already belongs to a different Stripe
+   * customer. There are two ways to arrive here and cancelling is right for
+   * both: somebody trying to seize another person's membership, who should
+   * get their money back rather than a foothold; and a genuine subscriber
+   * who checked out twice while signed out — Checkout mints a fresh customer
+   * each time, so they would otherwise be billed monthly, twice, for a
+   * subscription with no row and no way to reach the portal and cancel it.
+   *
+   * Taking money for a membership we have declined to grant is the one
+   * outcome that is indefensible either way.
    */
-  if (!written) {
+  if (outcome === "wrong-customer") {
+    if (subscriptionId !== null) {
+      try {
+        await stripeClient().subscriptions.cancel(subscriptionId);
+        console.error(
+          `Cancelled subscription ${subscriptionId}: its address already ` +
+            "belongs to another Stripe customer, so it was never recorded.",
+        );
+      } catch (error) {
+        console.error(
+          `Could not cancel refused subscription ${subscriptionId}. It is ` +
+            "billing with no membership row — cancel it in the Dashboard:",
+          error,
+        );
+      }
+    }
+    return;
+  }
+
+  /*
+   * A stale event, superseded by one that already landed. Nothing to do, and
+   * nothing to label — writing the address onto the subscription now would
+   * be acting on an out-of-date view of who owns it.
+   */
+  if (outcome !== "written") {
     return;
   }
 
@@ -118,6 +153,7 @@ async function handleCheckout(session: Stripe.Checkout.Session): Promise<void> {
 
 async function handleSubscription(
   subscription: Stripe.Subscription,
+  eventAt: string,
 ): Promise<void> {
   const customer =
     typeof subscription.customer === "string"
@@ -137,6 +173,7 @@ async function handleSubscription(
       stripeCustomerId: customer,
       status: subscription.status,
       currentPeriodEnd: periodEnd,
+      eventAt,
     });
     return;
   }
@@ -147,6 +184,7 @@ async function handleSubscription(
     stripeSubscriptionId: subscription.id,
     status: subscription.status,
     currentPeriodEnd: periodEnd,
+    eventAt,
   });
 }
 
@@ -178,14 +216,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Bad signature." }, { status: 400 });
   }
 
+  /*
+   * Stripe stamps every event with its creation time, which is the only
+   * ordering this integration can rely on — delivery order is not it.
+   *
+   * Falling back to now, rather than letting a missing or malformed
+   * `created` throw. An event that has passed the signature check is
+   * genuinely from Stripe and must be processed; treating it as current is
+   * the same behaviour this had before ordering existed, and is strictly
+   * better than a 500 that makes Stripe redeliver it for three days.
+   */
+  const created = event.created * 1000;
+  const eventAt = new Date(
+    Number.isFinite(created) ? created : Date.now(),
+  ).toISOString();
+
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckout(event.data.object);
+        await handleCheckout(event.data.object, eventAt);
         break;
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        await handleSubscription(event.data.object);
+        await handleSubscription(event.data.object, eventAt);
         break;
       case "invoice.paid":
       case "invoice.payment_failed": {
@@ -199,6 +252,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (id !== null) {
           await handleSubscription(
             await stripeClient().subscriptions.retrieve(id),
+            eventAt,
           );
         }
         break;

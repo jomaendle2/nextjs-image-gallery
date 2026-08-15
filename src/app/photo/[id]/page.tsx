@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { StructuredData } from "@/components/StructuredData";
-import { type GalleryImage, getGalleryImages } from "@/data/galleryData";
+import { type GalleryImage, listGalleryImages } from "@/data/galleryData";
 import { siteOrigin } from "@/lib/site-url";
 import { photographSchema } from "@/lib/structured-data";
 
@@ -28,7 +28,7 @@ interface FoundPhoto {
 }
 
 async function findPhoto(id: string): Promise<FoundPhoto | null> {
-  const images = await getGalleryImages();
+  const images = await listGalleryImages();
   const index = images.findIndex((image) => image.id === id);
   const photo = images[index];
   return photo === undefined ? null : { images, index, photo };

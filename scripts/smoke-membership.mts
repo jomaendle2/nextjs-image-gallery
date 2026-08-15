@@ -73,6 +73,8 @@ function subscriptionEvent(type: string, status: string, periodEnd: number) {
   return {
     id: `evt_${Math.random().toString(36).slice(2)}`,
     type,
+    // Stripe stamps every event with this; the ordering guard reads it.
+    created: Math.floor(Date.now() / 1000),
     data: {
       object: {
         id: "sub_smoke",
@@ -156,6 +158,7 @@ const invoiceEvent = await post(
   {
     id: `evt_${Math.random().toString(36).slice(2)}`,
     type: "invoice.payment_failed",
+    created: Math.floor(Date.now() / 1000),
     data: {
       object: {
         id: "in_smoke",
@@ -208,6 +211,7 @@ const before = await sql`
 const attackerEvent = {
   id: `evt_${Math.random().toString(36).slice(2)}`,
   type: "customer.subscription.updated",
+  created: Math.floor(Date.now() / 1000),
   data: {
     object: {
       id: "sub_attacker",
@@ -233,6 +237,35 @@ check(
  * attacker's event for three days.
  */
 check("and the refusal is not retried forever", takeover.ok);
+
+/*
+ * 4d. A retried older event must not undo a newer one.
+ *
+ * Stripe redelivers on any non-2xx for up to three days, so an `updated`
+ * that 500s on a database blip can land *after* the `deleted` that
+ * superseded it — rewriting `active` with a future period end and serving
+ * paid content to somebody who cancelled. Idempotent is not monotonic.
+ */
+const older = subscriptionEvent(
+  "customer.subscription.updated",
+  "active",
+  inAnHour,
+);
+const newer = subscriptionEvent(
+  "customer.subscription.updated",
+  "canceled",
+  inAnHour,
+);
+// Stripe stamps `created`; the guard compares it, not arrival order.
+const now = Math.floor(Date.now() / 1000);
+await post({ ...newer, created: now }, { sign: true });
+await post({ ...older, created: now - 600 }, { sign: true });
+
+const ordered = await sql`SELECT status FROM members WHERE email = ${address};`;
+check(
+  "a late-arriving older event cannot resurrect access",
+  ordered[0]?.["status"] === "canceled",
+);
 
 // 5. Cancellation ends it.
 await post(
