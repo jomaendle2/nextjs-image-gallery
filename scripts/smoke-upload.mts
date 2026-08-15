@@ -4,19 +4,39 @@
  * assert the row landed as a draft, then clean both up.
  *
  * Usage:
- *   node --env-file=.env.local scripts/smoke-upload.mts <session-cookie> [origin]
+ *   npm run smoke:upload
+ *
+ * It mints its own owner session and deletes it afterwards. It used to
+ * require a cookie pasted in from dev tools, which is why nobody ran it —
+ * and why it sat broken for a long stretch of commits, asserting on a
+ * response shape that had changed underneath it. A check with a setup step
+ * is a check that gets skipped, and a skipped check rots silently.
  */
 import process from "node:process";
 import { del, put } from "@vercel/blob";
 import sharp from "sharp";
+import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
 
-const [, , cookie, originArg] = process.argv;
-if (!cookie) {
-  console.error("Usage: smoke-upload.mts <gallery_session value> [origin]");
+const [, , originArg] = process.argv;
+const origin = originArg ?? "http://localhost:3000";
+
+/*
+ * A real session row for the owner, exactly as signing in would create —
+ * same table, same hashed secret, same expiry rules — so the route under
+ * test cannot tell this apart from a person. Removed at the end.
+ */
+const cookie = generateSecret();
+const owners = await sql`
+  INSERT INTO sessions (id, contributor_id, email, expires_at)
+  SELECT ${hashSecret(cookie)}, id, email, now() + interval '10 minutes'
+  FROM contributors WHERE role = 'owner' AND revoked_at IS NULL
+  RETURNING email;
+`;
+if (owners.length === 0) {
+  console.error("No active owner to run as. Is the database seeded?");
   process.exit(1);
 }
-const origin = originArg ?? "http://localhost:3000";
 
 const image = await sharp({
   create: {
@@ -152,5 +172,14 @@ const anon = await fetch(`${origin}/api/photos/draft`, {
 check("refuses an anonymous caller", anon.status === 401);
 
 await del(blob.url).catch(() => undefined);
+
+/*
+ * The session goes whether or not the checks passed. An earlier run of this
+ * script died partway and left a draft row and two blobs in the production
+ * database — the same database local development uses — so cleanup that only
+ * happens on the happy path is not cleanup.
+ */
+await sql`DELETE FROM sessions WHERE id = ${hashSecret(cookie)};`;
+
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

@@ -165,6 +165,18 @@ Members can cancel themselves from `/membership`.
 
 ## Testing it end to end
 
+With the dev server running:
+
+```bash
+npm run smoke
+```
+
+Forty checks across the three paths that matter — ingest, the attacker's
+side of the membership, the member's side — with no setup and nothing left
+behind. Individually: `smoke:upload`, `smoke:membership`, `smoke:portal`.
+
+The membership half needs a webhook tunnel; the rest do not:
+
 ```bash
 # 1. Webhooks need a tunnel in development.
 stripe listen --forward-to localhost:3000/api/stripe/webhook
