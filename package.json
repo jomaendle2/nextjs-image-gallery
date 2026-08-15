@@ -1,7 +1,7 @@
 {
   "name": "beauty-of-earth-gallery",
   "version": "1.0.0",
-  "author": "Jo Mändle",
+  "author": "Jo M\u00e4ndle",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,8 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mts",
-    "db:import-assets": "node --env-file=.env.local scripts/import-assets.mts"
+    "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/migrate.mts",
+    "db:import-assets": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
+    "auth:link": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

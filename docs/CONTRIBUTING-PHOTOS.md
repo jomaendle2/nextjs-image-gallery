@@ -73,7 +73,7 @@ There is no pending state. The row is the invitation.
 If no email provider is configured yet, mint your own link:
 
 ```bash
-node --env-file=.env.local scripts/mint-link.mts you@example.com
+npm run auth:link -- you@example.com
 ```
 
 ## Owner tools
