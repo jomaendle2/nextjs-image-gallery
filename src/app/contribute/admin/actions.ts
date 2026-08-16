@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { FormState } from "@/app/form-state";
+import { type FormState, failed, succeeded } from "@/app/form-state";
 import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
 import {
@@ -15,8 +15,8 @@ import {
   sendInvitation,
   sendNewWorkAnnouncement,
 } from "@/lib/auth/email";
+import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
-import { looksLikeEmail, normaliseSiteUrl } from "@/lib/auth/slug";
 import { isOwner } from "@/lib/auth/types";
 import { toGalleryImage } from "@/lib/photos/map";
 import {
@@ -25,6 +25,7 @@ import {
   setOpener,
   setPublished,
 } from "@/lib/photos/repository";
+import { revalidateFeeds } from "@/lib/photos/revalidate";
 import { siteOrigin } from "@/lib/site-url";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 
@@ -43,7 +44,7 @@ export interface AnnounceResult {
  */
 export type AdminFormState = FormState;
 
-const MAX_NAME = 80;
+const _MAX_NAME = 80;
 
 /**
  * Every action here re-checks the role on the server.
@@ -64,43 +65,22 @@ export async function invite(
   _previous: AdminFormState,
   formData: FormData,
 ): Promise<AdminFormState> {
-  await requireOwner();
+  const actor = await requireOwner();
 
-  const email = String(formData.get("email") ?? "").trim();
-  const displayName = String(formData.get("display_name") ?? "")
-    .trim()
-    .slice(0, MAX_NAME);
-  const siteUrlRaw = String(formData.get("site_url") ?? "").trim();
-
-  if (!looksLikeEmail(email) || displayName === "") {
-    return {
-      message: "An email address and a display name are required.",
-      tone: "error" as const,
-    };
-  }
-
-  let siteUrl: string | null = null;
-  if (siteUrlRaw !== "") {
-    siteUrl = normaliseSiteUrl(siteUrlRaw);
-    if (siteUrl === null) {
-      return {
-        message: "That website address does not look like a URL.",
-        tone: "error" as const,
-      };
-    }
+  // The same reader the contributor's invite uses; both post the same form.
+  const form = readInviteForm(formData, actor.email);
+  if ("error" in form) {
+    return failed(form.error);
   }
 
   const created = await inviteContributor({
-    email,
-    display_name: displayName,
-    site_url: siteUrl,
+    email: form.email,
+    display_name: form.displayName,
+    site_url: form.siteUrl,
   });
 
   if (created === null) {
-    return {
-      message: "That address is already invited.",
-      tone: "error" as const,
-    };
+    return failed("That address is already invited.");
   }
 
   /*
@@ -124,12 +104,13 @@ export async function invite(
   }
 
   revalidatePath("/contribute/admin");
-  return {
-    message: mailed
-      ? `Invited ${created.display_name} — an invitation is on its way to ${created.email}.`
-      : `Invited ${created.display_name}, but the email could not be sent. Tell them to sign in at /contribute with ${created.email}.`,
-    tone: mailed ? ("success" as const) : ("error" as const),
-  };
+  return mailed
+    ? succeeded(
+        `Invited ${created.display_name} — an invitation is on its way to ${created.email}.`,
+      )
+    : failed(
+        `Invited ${created.display_name}, but the email could not be sent. Tell them to sign in at ${siteOrigin()}/contribute with ${created.email}.`,
+      );
 }
 
 /**
@@ -224,19 +205,27 @@ export async function setRevoked(id: string, revoked: boolean): Promise<void> {
     throw new Error("An owner cannot be revoked.");
   }
 
-  await setContributorRevoked(id, revoked);
+  /*
+   * A revoked contributor's photographs drop out of every query that joins
+   * on `revoked_at IS NULL`, so every cached surface has to be rebuilt — the
+   * gallery, their own page, and each `/photo/[id]`. Hand-listing the paths
+   * here missed the last two, so a revoked photographer's work went on being
+   * served for up to an hour after the owner removed them.
+   */
+  const slug = await setContributorRevoked(id, revoked);
   revalidatePath("/contribute/admin");
-  revalidatePath("/photographers");
-  // A revoked contributor's photos drop out of the feed, which joins on
-  // `revoked_at IS NULL`, so the public pages have to be rebuilt too.
-  revalidatePath("/");
+  if (slug !== null) {
+    revalidateFeeds(slug);
+  }
 }
 
 export async function pinOpener(id: string): Promise<void> {
-  await requireOwner();
+  const actor = await requireOwner();
   await setOpener(id);
   revalidatePath("/contribute/admin");
-  revalidatePath("/");
+  // The opener leads the gallery and the contributor's own page, and changes
+  // the previews on /photographers.
+  revalidateFeeds(actor.slug);
 }
 
 export async function ownerSetPublished(
@@ -246,9 +235,8 @@ export async function ownerSetPublished(
   const actor = await requireOwner();
   const slug = await setPublished(id, published, actor);
   revalidatePath("/contribute/admin");
-  revalidatePath("/");
   if (slug !== null) {
-    revalidatePath(`/by/${slug}`);
+    revalidateFeeds(slug);
   }
 }
 
@@ -283,7 +271,7 @@ export async function announceNewWork(): Promise<AnnounceResult> {
   await markAnnounced(rows.map((row) => row.id));
 
   let sent = 0;
-  let failed = 0;
+  let notSent = 0;
 
   for (const subscriber of subscribers) {
     const message = buildAnnouncement(
@@ -296,11 +284,11 @@ export async function announceNewWork(): Promise<AnnounceResult> {
       await sendNewWorkAnnouncement(subscriber.email, message);
       sent += 1;
     } catch (error) {
-      failed += 1;
+      notSent += 1;
       console.error(`Announcement to ${subscriber.email} failed:`, error);
     }
   }
 
   revalidatePath("/contribute/admin");
-  return { sent, failed, photographs: images.length };
+  return { sent, failed: notSent, photographs: images.length };
 }

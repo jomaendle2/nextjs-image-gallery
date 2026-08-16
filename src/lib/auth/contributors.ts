@@ -324,9 +324,11 @@ export async function isOwnerContributor(id: string): Promise<boolean> {
 export async function setContributorRevoked(
   id: string,
   revoked: boolean,
-): Promise<void> {
+): Promise<string | null> {
   const revokedAt = revoked ? new Date().toISOString() : null;
-  await sql`UPDATE contributors SET revoked_at = ${revokedAt} WHERE id = ${id};`;
+  const rows = await sql`
+    UPDATE contributors SET revoked_at = ${revokedAt}
+    WHERE id = ${id} RETURNING slug;`;
   if (revoked) {
     /*
      * Revocation has to be immediate, so live sessions go with it. Deleted
@@ -339,4 +341,5 @@ export async function setContributorRevoked(
       WHERE email = (SELECT email FROM contributors WHERE id = ${id});
     `;
   }
+  return (rows[0]?.["slug"] as string | undefined) ?? null;
 }

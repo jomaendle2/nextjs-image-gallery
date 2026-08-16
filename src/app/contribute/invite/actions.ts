@@ -2,66 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import type { FormState } from "@/app/form-state";
+import { type FormState, failed, succeeded } from "@/app/form-state";
 import { claimInvite } from "@/lib/auth/contributors";
 import { sendInvitation } from "@/lib/auth/email";
+import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
-import {
-  looksLikeEmail,
-  normaliseEmail,
-  normaliseSiteUrl,
-} from "@/lib/auth/slug";
 import { clientIp, inviteLimiter } from "@/lib/rate-limit";
-
-/** Matches the owner's invite form, which slices names to the same length. */
-const MAX_NAME = 80;
-
-function refuse(message: string): FormState {
-  return { message, tone: "error" };
-}
-
-type ReadInvite =
-  | { email: string; displayName: string; siteUrl: string | null }
-  | { error: string };
-
-/**
- * The form, checked. Separate from the action so the action reads as the
- * sequence it is — who, how often, then what — rather than as validation
- * with a claim buried in the middle.
- */
-function readInvite(formData: FormData, actorEmail: string): ReadInvite {
-  const email = normaliseEmail(String(formData.get("email") ?? ""));
-  const displayName = String(formData.get("display_name") ?? "")
-    .trim()
-    .slice(0, MAX_NAME);
-  const siteUrlRaw = String(formData.get("site_url") ?? "").trim();
-
-  if (!looksLikeEmail(email) || displayName === "") {
-    return { error: "An email address and a name are required." };
-  }
-
-  /*
-   * Said plainly rather than left to the generic answer.
-   *
-   * The claim would refuse this anyway — the inviter is a contributor, so
-   * their own address fails its "already a contributor" guard and costs no
-   * quota. But "that address is already a photographer here" is a confusing
-   * thing to be told about yourself, and this check is race-free by
-   * construction: the address comes from the session, not a database read.
-   */
-  if (email === normaliseEmail(actorEmail)) {
-    return { error: "That is your own address." };
-  }
-
-  if (siteUrlRaw === "") {
-    return { email, displayName, siteUrl: null };
-  }
-  const siteUrl = normaliseSiteUrl(siteUrlRaw);
-  if (siteUrl === null) {
-    return { error: "That website address does not look like a URL." };
-  }
-  return { email, displayName, siteUrl };
-}
+import { siteOrigin } from "@/lib/site-url";
 
 /**
  * A contributor spending one of their three invites.
@@ -97,12 +44,12 @@ export async function inviteAsContributor(
       inviteLimiter.check(`actor:${actor.id}`)
     )
   ) {
-    return refuse("Too many invitations just now. Try again in a few minutes.");
+    return failed("Too many invitations just now. Try again in a few minutes.");
   }
 
-  const form = readInvite(formData, actor.email);
+  const form = readInviteForm(formData, actor.email);
   if ("error" in form) {
-    return refuse(form.error);
+    return failed(form.error);
   }
 
   const { email, displayName, siteUrl } = form;
@@ -114,13 +61,13 @@ export async function inviteAsContributor(
   });
 
   if (outcome.status === "no-invites-left") {
-    return refuse("You have used all three of your invitations.");
+    return failed("You have used all three of your invitations.");
   }
   if (outcome.status === "already-a-contributor") {
-    return refuse(`${email} is already a photographer here.`);
+    return failed(`${email} is already a photographer here.`);
   }
   if (outcome.status === "inviter-not-eligible") {
-    return refuse("Your account cannot send invitations.");
+    return failed("Your account cannot send invitations.");
   }
 
   revalidatePath("/contribute/invite");
@@ -136,18 +83,14 @@ export async function inviteAsContributor(
     await sendInvitation(email, displayName, actor.display_name);
   } catch (error) {
     console.error("Invitation email failed:", error);
-    return {
-      message: `${displayName} can sign in at /contribute, but the email did not go out. Send them the link yourself.`,
-      tone: "error",
-    };
+    return failed(
+      `${displayName} can sign in at ${siteOrigin()}/contribute, but the email did not go out. Send them the link yourself.`,
+    );
   }
 
   const left =
     outcome.remaining === 0
       ? "That was your last one."
       : `${outcome.remaining} left.`;
-  return {
-    message: `Invited ${email}. ${left}`,
-    tone: "success",
-  };
+  return succeeded(`Invited ${email}. ${left}`);
 }

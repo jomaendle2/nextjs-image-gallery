@@ -1,7 +1,6 @@
 "use server";
 
 import { del } from "@vercel/blob";
-import { revalidatePath } from "next/cache";
 import { type FormState, failed, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
 import {
@@ -9,6 +8,7 @@ import {
   publishPhoto,
   setPublished,
 } from "@/lib/photos/repository";
+import { revalidateFeeds } from "@/lib/photos/revalidate";
 
 /** One shape for every form on the site. See `@/app/form-state`. */
 export type PhotoFormState = FormState;
@@ -18,26 +18,6 @@ const MAX_DESCRIPTION = 300;
 /* Room for a paragraph about how a photograph was made, not an essay. */
 const MAX_TECHNIQUE = 600;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
-
-/**
- * Every cached surface a photograph appears on.
- *
- * `/photo/[id]` is its own ISR entry with `revalidate = 3600`, so leaving it
- * out means unpublishing removes a photograph everywhere except the URL
- * somebody actually shared — which goes on serving it, with a 200, for up to
- * an hour. After a delete that page renders a broken image.
- *
- * A dynamic route needs its pattern and a type; passing one concrete URL
- * only clears that URL. `/photographers` is here for the same reason:
- * publishing changes the counts and thumbnails on it, and only the admin
- * actions were revalidating it.
- */
-function revalidateFeeds(slug: string): void {
-  revalidatePath("/");
-  revalidatePath(`/by/${slug}`);
-  revalidatePath("/photo/[id]", "page");
-  revalidatePath("/photographers");
-}
 
 function text(formData: FormData, key: string, max: number): string {
   const value = formData.get(key);
