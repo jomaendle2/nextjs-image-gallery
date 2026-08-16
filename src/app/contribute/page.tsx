@@ -35,8 +35,15 @@ export default async function ContributePage({ searchParams }: PageProps) {
 
   return (
     <ContributeCard
-      subtitle="This gallery is open to invited photographers. Sign in with the address your invitation was sent to."
-      title="Contribute"
+      /*
+       * Two audiences, one door. This used to read "open to invited
+       * photographers… the address your invitation was sent to", which is
+       * the page every member is sent to after paying — so somebody who had
+       * bought a membership and never been invited to anything read it and
+       * reasonably concluded they were in the wrong place.
+       */
+      subtitle="For photographers and for members. Sign in with your email address — no password, no account to create."
+      title="Sign in"
     >
       {notice === undefined ? null : (
         <Notice className="mb-6" tone="warning">

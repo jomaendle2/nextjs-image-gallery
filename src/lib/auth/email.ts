@@ -238,6 +238,67 @@ export async function sendApplicationApproved(
 }
 
 /**
+ * What somebody gets for their five euros, in writing.
+ *
+ * There was no membership email at all. The only instruction lived on the
+ * page Stripe redirects to, so anybody who closed the tab — or paid on a
+ * phone and opened the site on a laptop — had paid and had nothing, anywhere,
+ * telling them what they had bought or how to reach it. Checkout would then
+ * refuse them a second time with "that address already has a membership",
+ * which is true and useless.
+ *
+ * It carries a working sign-in link rather than instructions to request one,
+ * because the moment after paying is exactly when a person should not be
+ * asked to do more admin. The link is single-use and expires like any other;
+ * the text says so, and says what to do when it has.
+ */
+export async function sendMembershipWelcome(
+  to: string,
+  signInUrl: string,
+): Promise<void> {
+  const origin = siteOrigin();
+
+  await send({
+    to,
+    subject: "Your membership — the beauty of earth.",
+    text: [
+      "Thank you — your membership is active.",
+      "",
+      `Open this to sign in: ${signInUrl}`,
+      "",
+      "The link works once and lasts fifteen minutes. If it expires, ask for",
+      `a fresh one at ${origin}/contribute using this same address.`,
+      "",
+      "Signed in, every photograph shows where it was taken and how, wherever",
+      "the photographer has written it down.",
+      "",
+      `Cancel any time from ${origin}/membership. No notice period.`,
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
+         Thank you — your membership is active.
+       </p>
+       ${button(signInUrl, "Sign in")}
+       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
+         The link works once and lasts fifteen minutes. If it expires, ask for
+         a fresh one at
+         <a href="${escapeHtml(`${origin}/contribute`)}" style="color:#a8adb4">${escapeHtml(`${origin}/contribute`)}</a>
+         using this same address.
+       </p>
+       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
+         Signed in, every photograph shows where it was taken and how,
+         wherever the photographer has written it down.
+       </p>
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         Cancel any time from
+         <a href="${escapeHtml(`${origin}/membership`)}" style="color:#6b7178">${escapeHtml(`${origin}/membership`)}</a>.
+         No notice period.
+       </p>`,
+    ),
+  });
+}
+
+/**
  * The answer nobody was getting.
  *
  * `/contribute/apply` says a reply "takes a few days rather than a few

@@ -77,7 +77,15 @@ export async function POST(): Promise<NextResponse> {
   const existing = email === null ? null : await getMemberByEmail(email);
   if (hasLiveSubscription(existing)) {
     return NextResponse.json(
-      { error: "That address already has a membership." },
+      {
+        /*
+         * The next step, not just the refusal. A buyer who reaches this has
+         * usually forgotten they already subscribed, and "you already have
+         * one" without a way to use it is where they get stuck.
+         */
+        error:
+          "That address already has a membership — sign in with it to use it.",
+      },
       { status: 409 },
     );
   }

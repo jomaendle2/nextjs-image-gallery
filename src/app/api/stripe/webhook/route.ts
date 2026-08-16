@@ -2,7 +2,10 @@ import process from "node:process";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { sendMembershipWelcome } from "@/lib/auth/email";
+import { mintLoginToken } from "@/lib/auth/tokens";
 import { updateMemberByCustomer, upsertMember } from "@/lib/members/repository";
+import { siteOrigin } from "@/lib/site-url";
 import {
   stripeClient,
   subscriptionFromInvoice,
@@ -170,6 +173,40 @@ async function handleCheckout(
     } catch (error) {
       console.error("Could not label the subscription with its email:", error);
     }
+  }
+
+  await welcomeNewMember(email);
+}
+
+/**
+ * The only durable record a member gets of what they bought.
+ *
+ * Everything else lived on the page Stripe redirects to, so closing the tab
+ * — or paying on a phone and opening the site on a laptop — left somebody
+ * who had paid with nothing at all. It carries a working link rather than
+ * instructions for requesting one, because the minute after paying is not
+ * the minute to ask a person for more admin.
+ *
+ * Never allowed to fail the webhook. The membership is already recorded and
+ * correct; returning non-2xx here would make Stripe redeliver an event we
+ * have fully handled, and the redelivery would send the mail again. A
+ * missing welcome is recoverable by asking for a link; a loop is not.
+ */
+async function welcomeNewMember(email: string): Promise<void> {
+  try {
+    const secret = await mintLoginToken(email);
+    if (secret === null) {
+      // The row was written moments ago, so this should not happen — but a
+      // token we cannot mint is not a reason to fail a paid subscription.
+      console.error("No sign-in token for a member we just recorded.");
+      return;
+    }
+    await sendMembershipWelcome(
+      email,
+      `${siteOrigin()}/contribute/verify?token=${secret}`,
+    );
+  } catch (error) {
+    console.error("Could not send the membership welcome:", error);
   }
 }
 

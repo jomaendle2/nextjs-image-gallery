@@ -113,6 +113,49 @@ check("a forged signature is rejected", unsigned.status === 400);
 const noRow = await sql`SELECT 1 FROM members WHERE email = ${address};`;
 check("the forged event wrote nothing", noRow.length === 0);
 
+/*
+ * 1b. A completed checkout welcomes the buyer.
+ *
+ * There was no membership email at all, and no test that noticed — this
+ * suite drove subscription events and never a checkout, which is the one
+ * event a real purchase always produces. The welcome carries a sign-in
+ * link, so the observable side effect is a freshly minted login token for
+ * the buyer's address; without it, somebody who closed the tab after paying
+ * had nothing anywhere telling them what they had bought.
+ */
+const buyer = `checkout-smoke-${Date.now()}@example.test`;
+const buyerCustomer = `cus_checkout_${Date.now()}`;
+
+const checkout = await post(
+  {
+    id: `evt_checkout_${Date.now()}`,
+    type: "checkout.session.completed",
+    created: Math.floor(Date.now() / 1000),
+    data: {
+      object: {
+        id: `cs_${Date.now()}`,
+        customer: buyerCustomer,
+        customer_details: { email: buyer },
+        customer_email: null,
+        subscription: null,
+        metadata: {},
+      },
+    },
+  },
+  { sign: true },
+);
+check("a completed checkout is accepted", checkout.ok);
+
+const bought = await sql`SELECT status FROM members WHERE email = ${buyer};`;
+check("the buyer has a membership", bought.length === 1);
+
+const welcomed = await sql`
+  SELECT 1 FROM login_tokens WHERE email = ${buyer} AND used_at IS NULL;`;
+check("and was sent a way in", welcomed.length === 1);
+
+await sql`DELETE FROM login_tokens WHERE email = ${buyer};`;
+await sql`DELETE FROM members WHERE email = ${buyer};`;
+
 // 2. A properly signed event grants membership.
 const granted = await post(
   subscriptionEvent("customer.subscription.updated", "active", inAnHour),
