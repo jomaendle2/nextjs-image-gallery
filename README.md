@@ -90,6 +90,7 @@ is nothing to remember at the command line:
 | `npm run smoke:membership` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
 | `npm run smoke:portal` | The member's side: real customer, real session, real cookie. |
 | `npm run smoke:email -- you@example.com` | Sends one of every email template. The address is required, because this one really sends. |
+| `npm run probe:scale` | Measures the authoring page at 50–600 photographs. Inserts drafts, reads the page, deletes them. |
 | `npm run stripe:portal-setup` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
 | `npm run mint-link -- you@example.com` | Break-glass sign-in link when mail is down. |
 

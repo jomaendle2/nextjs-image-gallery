@@ -25,8 +25,13 @@ import { SelectAll } from "./SelectAll";
  * contributor's rows, so filtering here costs nothing and works instantly
  * with no round trip. It stops being right somewhere north of a few hundred
  * photographs, at which point the query — and `listOwnPhotos`, which has no
- * LIMIT — is what needs to change, not this component. Written down so the
- * next person meets the ceiling on purpose rather than by surprise.
+ * LIMIT — is what needs to change, not this component.
+ *
+ * That sentence used to guess "a few hundred". It has since been measured
+ * with `npm run probe:scale`: 0.67 KB of HTML per row, so 300 rows is a
+ * 384 KB page rendering in 99 ms and 600 rows is 585 KB in 117 ms. The real
+ * ceiling is past a thousand. Re-run the probe rather than re-reasoning if
+ * this changes; the numbers are in `docs/next-version.md`.
  *
  * This component owns the state and nothing else: the two bars it composes
  * are in their own files, and the filtering itself is in `filter.ts`, where

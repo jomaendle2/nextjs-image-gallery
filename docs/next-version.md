@@ -28,9 +28,29 @@ branch per preview is a dashboard setting, not code.
 
 ### 2. Windowing the *public* gallery — past roughly 300 photographs
 
-(The contributor dashboard is handled: rows are capped at 30 with a reveal
-control, and filtering searches the whole set rather than the visible
-window.)
+The contributor dashboard is handled, and now measured rather than
+asserted — `npm run probe:scale` inserts synthetic drafts, reads the real
+page through a real session, and deletes them:
+
+| rows | HTML | render |
+| ---: | ---: | ---: |
+| 50 | 216 KB | 84 ms |
+| 150 | 283 KB | 87 ms |
+| 300 | 384 KB | 99 ms |
+| 600 | 585 KB | 117 ms |
+
+**0.67 KB per row, linear** — eight times cheaper than a gallery
+photograph, because the 30-row cap means only thirty thumbnails are ever
+built and the rest is serialised props. At 600 rows the page is 585 KB and
+renders in 117 ms, so the dashboard's own ceiling is somewhere past a
+thousand, not the "few hundred" its source comment guesses. That comment
+now points here.
+
+Worth knowing *why* the props still cost something: `PhotoList` receives
+every row so it can filter across the whole set rather than the visible
+window. That is the right trade — a search that only finds what is already
+on screen is the way paginated search usually goes wrong — but it is why
+the cost is per row rather than per rendered row.
 
 Measured, not guessed: 136 KB of HTML at 16 photographs, 676 KB at 116.
 **5.4 KB and 5 DOM nodes per photograph, linear.** That projects to about
