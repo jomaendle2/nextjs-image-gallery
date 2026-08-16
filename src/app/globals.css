@@ -18,8 +18,6 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -84,6 +82,40 @@
    * stops the site quietly acquiring a palette of almost-blacks.
    */
   --color-surface: #12161a;
+
+  /* ------------------------------------------------------------------
+   * The accent.
+   *
+   * One colour, and it is not invented: it is the mean of what the
+   * photographs already are. The published set measures out at a sea-teal
+   * band — #2a6b7c, #2184ab, #136aa0, #4c89a1, #87abab — because this is a
+   * gallery of coastlines and sky. `PhotoGrid` had already picked #2a6b7c
+   * by hand as its fallback tint, which is the same conclusion reached
+   * without a token.
+   *
+   * Restrained, in the sense that it earns its place rather than fills the
+   * page: primary actions, links, focus, and the selected state. Everything
+   * else stays glass on ground. The reading pages were monochrome and read
+   * as switched off; a form with nothing coloured on it gives the eye
+   * nowhere to go and no sense of which control is the one you came for.
+   *
+   * OKLCH so the steps are perceptually even — the same hue and chroma at
+   * three lightnesses, rather than three colours that happen to look
+   * related. Chroma stays modest: a saturated teal beside a photograph
+   * competes with it, and the photograph must win.
+   * ------------------------------------------------------------------ */
+
+  /* Text, icons and hairlines on the dark ground. */
+  --color-accent: oklch(0.82 0.093 210);
+  --color-accent-bright: oklch(0.90 0.075 210);
+
+  /* Fills. Low alpha: these sit behind text that must stay readable. */
+  --color-accent-fill: oklch(0.82 0.093 210 / 0.14);
+  --color-accent-fill-hover: oklch(0.82 0.093 210 / 0.22);
+  --color-accent-edge: oklch(0.82 0.093 210 / 0.38);
+
+  /* For the rare element that fills solid and needs dark text on top. */
+  --color-accent-ink: oklch(0.24 0.035 210);
 
   --glass-blur-thin: 14px;
   --glass-blur-regular: 22px;

@@ -29,7 +29,7 @@ export function SignInForm() {
         />
       </div>
 
-      <GlassButton disabled={pending} type="submit">
+      <GlassButton disabled={pending} type="submit" variant="primary">
         {pending ? "Sending…" : "Email me a link"}
       </GlassButton>
 

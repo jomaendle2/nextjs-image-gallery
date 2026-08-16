@@ -108,7 +108,7 @@ export function ApplyForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <GlassButton disabled={pending} type="submit">
+        <GlassButton disabled={pending} type="submit" variant="primary">
           {pending ? "Sending…" : "Apply to contribute"}
         </GlassButton>
         <p aria-live="polite" className="text-sm text-white/60">

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
-import { TOUCH_LINK } from "@/components/ui/field";
+import { TextLink } from "@/components/ui/TextLink";
 import { SubscribeForm } from "./SubscribeForm";
 
 export const metadata: Metadata = {
@@ -34,12 +33,9 @@ export default function SubscribePage() {
 
         <p className="mt-4 text-sm text-white/45">
           Prefer a reader?{" "}
-          <Link
-            className={`${TOUCH_LINK} text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-            href="/feed.xml"
-          >
+          <TextLink href="/feed.xml" standalone={true}>
             The feed is here
-          </Link>
+          </TextLink>
           , and each photographer has one of their own.
         </p>
       </div>

@@ -1,7 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { TextLink } from "@/components/ui/TextLink";
 import { listPendingApplications } from "@/lib/applications/repository";
 import { listContributors } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
@@ -128,12 +128,7 @@ export default async function AdminPage() {
                 </p>
                 <p className="truncate text-white/45 text-xs">
                   {row.email} · {count(row.photo_count, "photograph")} ·{" "}
-                  <Link
-                    className="underline underline-offset-2 hover:text-white"
-                    href={`/by/${row.slug}`}
-                  >
-                    /by/{row.slug}
-                  </Link>
+                  <TextLink href={`/by/${row.slug}`}>/by/{row.slug}</TextLink>
                 </p>
               </div>
               <ContributorRowActions row={row} />

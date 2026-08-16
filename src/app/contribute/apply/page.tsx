@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { TOUCH_LINK } from "@/components/ui/field";
+import { TextLink } from "@/components/ui/TextLink";
 import { ContributeShell } from "../ContributeShell";
 import { ApplyForm } from "./ApplyForm";
 import { WhatYouGet } from "./WhatYouGet";
@@ -24,12 +23,9 @@ export default function ApplyPage() {
 
       <p className="mt-8 text-sm text-white/45">
         Already invited?{" "}
-        <Link
-          className={`${TOUCH_LINK} text-white/70 underline underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-          href="/contribute"
-        >
+        <TextLink href="/contribute" standalone={true}>
           Sign in
-        </Link>
+        </TextLink>
       </p>
     </ContributeShell>
   );

@@ -57,7 +57,7 @@ export function SubscribeForm() {
         />
       </div>
 
-      <GlassButton disabled={pending} size="sm" type="submit">
+      <GlassButton disabled={pending} size="sm" type="submit" variant="primary">
         {pending ? "Sending…" : "Email me new work"}
       </GlassButton>
 

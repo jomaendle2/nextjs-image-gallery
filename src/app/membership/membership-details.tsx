@@ -28,20 +28,34 @@ import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
  * `aria-hidden` because a reader who cannot see them loses nothing.
  */
 
+/**
+ * One point, with its icon.
+ *
+ * `tone` is not decoration. The accent means "this is what you are buying";
+ * plain glass means "this is a limit on it". Colouring both alike — which is
+ * what the first version of this did — turns the accent into a bullet point
+ * and quietly tells the reader that a caveat is a feature.
+ */
 function Row({
   icon,
   heading,
+  tone = "neutral",
   children,
 }: {
   icon: ReactNode;
   heading: string;
+  tone?: "accent" | "neutral";
   children: ReactNode;
 }) {
   return (
     <li className="flex gap-3.5">
       <span
         aria-hidden="true"
-        className="mt-0.5 flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/70"
+        className={`mt-0.5 flex size-8 flex-shrink-0 items-center justify-center rounded-full ${
+          tone === "accent"
+            ? "bg-accent-fill text-accent"
+            : "bg-white/[0.06] text-white/60"
+        }`}
       >
         {icon}
       </span>
@@ -65,12 +79,20 @@ export function WhatYouGet() {
         What you get
       </h2>
       <ul className="mt-5 space-y-5">
-        <Row heading="Where it was taken" icon={<MapPin size={15} />}>
+        <Row
+          heading="Where it was taken"
+          icon={<MapPin size={15} />}
+          tone="accent"
+        >
           Not a region — the spot, written by the photographer. Nothing is read
           from the image file: this gallery never records coordinates, and a
           membership does not change that.
         </Row>
-        <Row heading="How it was made" icon={<NotebookPen size={15} />}>
+        <Row
+          heading="How it was made"
+          icon={<NotebookPen size={15} />}
+          tone="accent"
+        >
           The exposure is already on every photograph. This is the rest — the
           hour, the wait, what they would do differently.
         </Row>

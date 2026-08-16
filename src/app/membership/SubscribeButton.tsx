@@ -25,7 +25,7 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
         just honest: a button that hides its price is a button people click
         to find out, which is not consent.
       */}
-      <GlassButton disabled={busy} onClick={go}>
+      <GlassButton disabled={busy} onClick={go} variant="primary">
         {busy
           ? "Opening checkout…"
           : `Subscribe — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}

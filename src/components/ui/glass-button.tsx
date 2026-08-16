@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "icon";
+  variant?: "default" | "primary" | "icon";
   size?: "default" | "icon" | "sm";
   ref?: Ref<HTMLButtonElement>;
 }
@@ -27,6 +27,16 @@ export function GlassButton({
 
         // Variants
         variant === "default" && "rounded-2xl",
+        /*
+         * The one action a page was opened to take.
+         *
+         * A page of identical glass buttons makes the reader find the
+         * primary one by reading all of them. This is the only place the
+         * accent is allowed to fill a surface, and there is at most one per
+         * view — the moment there are two, neither is primary.
+         */
+        variant === "primary" &&
+          "rounded-2xl border-accent-edge bg-accent-fill text-accent-bright hover:bg-accent-fill-hover",
         variant === "icon" && "rounded-full",
 
         // Sizes
