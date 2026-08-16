@@ -100,7 +100,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    /*
+     * suppressHydrationWarning covers exactly one element — the tag it is
+     * on — and exists because browser extensions (LanguageTool, Grammarly,
+     * dark-mode switchers) stamp attributes like `data-lt-installed` onto
+     * <html> before React hydrates. Without it, every visitor running one
+     * sees a hydration error for markup we never wrote. Children are still
+     * validated; this does not hide real mismatches anywhere else.
+     */
+    <html lang="en" suppressHydrationWarning={true}>
       <head>
         {/*
           Analytics is third-party and on the critical path for nothing, but

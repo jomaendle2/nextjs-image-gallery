@@ -10,6 +10,25 @@ interface Details {
   technique?: string | null;
 }
 
+/*
+ * The one fact that outlives any single photograph.
+ *
+ * `member` is a property of the session, but it arrives bundled into a
+ * per-photograph response — so the component kept re-learning it from
+ * scratch on every swipe to a photograph it had not fetched yet, and the
+ * invitation blinked out for the length of a round trip each time.
+ * `keepPreviousData` did not cover that case: it bridges consecutive
+ * fetches of one query observer, not first visits to new photographs.
+ *
+ * So the flag is kept here, at module scope, written by every successful
+ * fetch. While a photograph's own answer is in flight, a known non-member
+ * still gets the invitation instantly; a known member gets the held blank
+ * line, because their content belongs to one photograph and must not be
+ * guessed. Module scope is deliberate — the value should live exactly as
+ * long as the tab, same as the query cache beside it.
+ */
+let sessionIsMember: boolean | null = null;
+
 /**
  * Where a photograph was taken and how, for members.
  *
@@ -29,16 +48,30 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
       if (response.status === 403) {
+        sessionIsMember = false;
         return { member: false };
       }
       if (!response.ok) {
         throw new Error("Could not load the details.");
       }
-      return (await response.json()) as Details;
+      const details = (await response.json()) as Details;
+      sessionIsMember = details.member;
+      return details;
     },
     staleTime: 5 * 60 * 1000,
     // A failed lookup should not retry three times behind a photograph.
     retry: false,
+    /*
+     * Once the session is known to be a non-member, stop asking. The route
+     * answers 403 for every photograph alike, so each further swipe was one
+     * more request whose answer was already known — and one more red
+     * "403 (Forbidden)" in the console, which reads as breakage when it is
+     * the gate doing its job. One refusal per session is the gate working;
+     * sixteen is noise. Becoming a member goes through Stripe's redirect,
+     * which reloads the page and resets this module, so the flag cannot go
+     * stale within a session.
+     */
+    enabled: sessionIsMember !== false,
     /*
      * Carry the previous photograph's answer across the switch, so the
      * query key changing does not unmount everything for the length of a
@@ -89,14 +122,21 @@ function whatToShow(
   data: Details | undefined,
   isStale: boolean,
 ): Details | undefined {
-  if (data === undefined) {
-    return undefined;
-  }
-  if (!isStale) {
+  if (data !== undefined && !isStale) {
     return data;
   }
   // Stale: safe for a non-member's invitation, never for a member's location.
-  return data.member ? undefined : data;
+  if (data !== undefined && !data.member) {
+    return data;
+  }
+  /*
+   * Nothing usable for this photograph yet — first visit, or a member's
+   * stale answer. The session still knows whether this person is a member,
+   * and for a non-member that is the whole message: the invitation does not
+   * depend on the photograph at all, so it renders immediately instead of
+   * blinking out for a round trip on every first visit.
+   */
+  return sessionIsMember === false ? { member: false } : undefined;
 }
 
 /**
