@@ -36,7 +36,7 @@ export function EnvironmentBanner() {
     env === "preview" ? "on a preview deployment" : "in local development";
 
   return (
-    <div className="flex items-start gap-2.5 border-amber-400/25 border-b bg-amber-400/[0.07] px-4 py-2.5 text-[0.8125rem] text-amber-100/90">
+    <div className="flex items-start gap-2.5 border-caution-edge border-b bg-caution-fill/[0.07] px-4 py-2.5 text-[0.8125rem] text-caution">
       <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={14} />
       <p>
         <span className="sr-only">Warning: </span>

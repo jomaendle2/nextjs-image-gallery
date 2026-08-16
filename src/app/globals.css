@@ -88,6 +88,37 @@
   /* For the rare element that fills solid and needs dark text on top. */
   --color-accent-ink: oklch(0.24 0.035 210);
 
+  /* ------------------------------------------------------------------
+   * The three states that are not the accent.
+   *
+   * Danger for what cannot be undone, caution for what needs reading
+   * before it is agreed to, positive for what worked. Twenty-two
+   * different Tailwind palette utilities were doing this job — three
+   * treatments of the same published/draft badge, destructive buttons
+   * copied verbatim in three files — and `design.test.ts` did not catch
+   * them because it only forbade hex.
+   *
+   * Same shape as the accent so a component reaches for the same four
+   * names whichever state it is in: a text colour, a fill, its hover, and
+   * an edge. Lightness is kept high enough that every text token clears
+   * AA on the ground.
+   * ------------------------------------------------------------------ */
+
+  --color-danger: oklch(0.80 0.11 25);
+  --color-danger-fill: oklch(0.62 0.20 25 / 0.16);
+  --color-danger-fill-hover: oklch(0.62 0.20 25 / 0.26);
+  --color-danger-edge: oklch(0.72 0.16 25 / 0.42);
+
+  --color-caution: oklch(0.88 0.10 85);
+  --color-caution-fill: oklch(0.80 0.15 85 / 0.16);
+  --color-caution-fill-hover: oklch(0.80 0.15 85 / 0.26);
+  --color-caution-edge: oklch(0.80 0.15 85 / 0.42);
+
+  --color-positive: oklch(0.87 0.12 155);
+  --color-positive-fill: oklch(0.75 0.16 155 / 0.16);
+  --color-positive-fill-hover: oklch(0.75 0.16 155 / 0.26);
+  --color-positive-edge: oklch(0.75 0.16 155 / 0.38);
+
   --glass-blur-thin: 14px;
   --glass-blur-regular: 22px;
   --glass-blur-thick: 32px;

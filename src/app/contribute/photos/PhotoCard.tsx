@@ -43,7 +43,7 @@ function exifSummary(exif: PhotoExif | null): string | null {
 function Status({ photo }: { photo: OwnPhotoRow }) {
   if (photo.is_opener) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 font-medium text-[0.6875rem] text-amber-100 uppercase tracking-[0.08em]">
+      <span className="inline-flex items-center gap-1 rounded-full bg-caution-fill px-2 py-0.5 font-medium text-[0.6875rem] text-caution uppercase tracking-[0.08em]">
         <Pin aria-hidden="true" size={10} />
         Opener
       </span>
@@ -54,7 +54,7 @@ function Status({ photo }: { photo: OwnPhotoRow }) {
       Draft
     </span>
   ) : (
-    <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 font-medium text-[0.6875rem] text-emerald-100 uppercase tracking-[0.08em]">
+    <span className="rounded-full bg-positive-fill px-2 py-0.5 font-medium text-[0.6875rem] text-positive uppercase tracking-[0.08em]">
       Published
     </span>
   );

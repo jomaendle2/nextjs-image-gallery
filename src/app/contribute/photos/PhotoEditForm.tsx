@@ -246,7 +246,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
               Keep
             </GlassButton>
             <GlassButton
-              className="border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+              variant="danger"
               disabled={isMutating}
               onClick={handleDelete}
               size="sm"
@@ -257,7 +257,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
           </>
         ) : (
           <GlassButton
-            className="text-white/60 hover:text-red-200"
+            variant="arm"
             disabled={isMutating}
             onClick={armDelete}
             size="sm"

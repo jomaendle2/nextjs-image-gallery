@@ -123,7 +123,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
                       ? "Untitled draft"
                       : photo.title}
                     {photo.is_opener ? (
-                      <span className="ml-2 rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[0.625rem] text-amber-100 uppercase tracking-[0.08em]">
+                      <span className="ml-2 rounded-full bg-caution-fill px-1.5 py-0.5 text-[0.625rem] text-caution uppercase tracking-[0.08em]">
                         Opener
                       </span>
                     ) : null}

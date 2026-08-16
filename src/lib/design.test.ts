@@ -160,3 +160,53 @@ describe("text stays readable on the ground", () => {
     ).toEqual([]);
   });
 });
+
+describe("state colour comes from the tokens too", () => {
+  /*
+   * `design.test.ts` forbade hex and nothing else, so forty-three Tailwind
+   * palette utilities walked straight past it: three treatments of the same
+   * published/draft badge, and the destructive button copied verbatim into
+   * three files. A rule that catches one spelling of a mistake and not the
+   * other is most of the way to no rule.
+   */
+  const PALETTE =
+    /\b(?:bg|text|border)-(?:red|amber|emerald|green|blue|yellow|orange|rose|sky|teal)-\d/;
+
+  it("no component reaches for a Tailwind palette colour", () => {
+    const offenders = allSourceFiles()
+      .filter((file) => PALETTE.test(readFileSync(file, "utf8")))
+      .map((file) => file.replace(SRC, ""));
+
+    expect(
+      offenders,
+      "Use the danger / caution / positive tokens in globals.css, or add a " +
+        "state there first. The palette is not the design system.",
+    ).toEqual([]);
+  });
+
+  it("the destructive button is a variant, not a class run", () => {
+    const button = readFileSync(
+      join(SRC, "components", "ui", "glass-button.tsx"),
+      "utf8",
+    );
+    expect(button).toContain('variant === "danger"');
+
+    /*
+     * Two files own a danger fill: the button, and `Notice`, which is the
+     * component every message goes through. Anywhere else means somebody
+     * built a third way to say "this is destructive".
+     */
+    const owners = [
+      join("/components", "ui", "glass-button.tsx"),
+      join("/components", "ui", "Notice.tsx"),
+    ];
+    const offenders = allSourceFiles()
+      .filter((file) =>
+        /bg-danger-fill(?!-hover)/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => file.replace(SRC, ""))
+      .filter((file) => !owners.includes(file));
+
+    expect(offenders).toEqual([]);
+  });
+});

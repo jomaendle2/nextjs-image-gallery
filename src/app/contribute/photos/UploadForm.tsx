@@ -63,14 +63,14 @@ function ItemStatus({
   }
   if (item.status === "done") {
     return (
-      <span className="flex flex-shrink-0 items-center gap-1.5 text-emerald-200/80">
+      <span className="flex flex-shrink-0 items-center gap-1.5 text-positive">
         <Check aria-hidden="true" size={14} />
         added
       </span>
     );
   }
   return (
-    <span className="flex flex-shrink-0 items-center gap-1.5 text-red-200">
+    <span className="flex flex-shrink-0 items-center gap-1.5 text-danger">
       <AlertCircle aria-hidden="true" size={14} />
       {item.error ?? "failed"}
     </span>

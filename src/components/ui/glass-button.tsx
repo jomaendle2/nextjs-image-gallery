@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "primary" | "icon";
+  variant?: "default" | "primary" | "danger" | "arm" | "icon";
   size?: "default" | "icon" | "sm";
   ref?: Ref<HTMLButtonElement>;
 }
@@ -62,6 +62,21 @@ export function GlassButton({
          */
         variant === "primary" &&
           "rounded-2xl border-accent-edge bg-accent-fill text-accent-bright hover:bg-accent-fill-hover",
+        /*
+         * The armed destructive action: the one that goes through.
+         *
+         * This class run was copied verbatim into three files, which is
+         * three chances for the one control that cannot be undone to stop
+         * looking like itself.
+         */
+        variant === "danger" &&
+          "rounded-2xl border-danger-edge bg-danger-fill text-danger hover:bg-danger-fill-hover",
+        /*
+         * The step before it. Quiet until hovered, because arming a delete
+         * should not shout from a row of ordinary buttons — it is the
+         * confirmation that carries the weight, not the thing that opens it.
+         */
+        variant === "arm" && "rounded-2xl text-white/60 hover:text-danger",
         variant === "icon" && "rounded-full",
 
         // Sizes

@@ -38,14 +38,10 @@ export function ContributorRowActions({ row }: { row: ContributorRow }) {
         marked.
       */}
       <GlassButton
-        className={
-          isRevoked
-            ? ""
-            : "border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
-        }
         disabled={pending}
         onClick={toggle}
         size="sm"
+        variant={isRevoked ? "default" : "danger"}
       >
         {isRevoked ? (
           <UserCheck aria-hidden="true" className="mr-1.5" size={14} />

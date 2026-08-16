@@ -26,20 +26,20 @@ const TONES: Record<
   { border: string; text: string; icon: typeof Info; label: string }
 > = {
   error: {
-    border: "border-red-400/30 bg-red-500/[0.07]",
-    text: "text-red-100/90",
+    border: "border-danger-edge bg-danger-fill/[0.07]",
+    text: "text-danger",
     icon: AlertTriangle,
     label: "Error",
   },
   warning: {
-    border: "border-amber-400/30 bg-amber-400/[0.07]",
-    text: "text-amber-100/90",
+    border: "border-caution-edge bg-caution-fill/[0.07]",
+    text: "text-caution",
     icon: AlertTriangle,
     label: "Warning",
   },
   success: {
-    border: "border-emerald-400/30 bg-emerald-400/[0.07]",
-    text: "text-emerald-100/90",
+    border: "border-positive-edge bg-positive-fill/[0.07]",
+    text: "text-positive",
     icon: CheckCircle2,
     label: "Done",
   },

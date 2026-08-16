@@ -64,7 +64,7 @@ function ConfirmSend({
         Not yet
       </GlassButton>
       <GlassButton
-        className="border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25"
+        className="border-caution-edge bg-caution-fill text-caution hover:bg-caution-fill-hover"
         disabled={sending}
         onClick={onSend}
         size="sm"

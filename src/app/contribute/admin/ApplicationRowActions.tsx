@@ -32,7 +32,7 @@ export function ApplicationRowActions({ id }: { id: string }) {
           {pending ? "Working…" : "Approve"}
         </GlassButton>
         <GlassButton
-          className="text-white/50 hover:text-red-200"
+          variant="arm"
           disabled={pending}
           onClick={decline}
           size="sm"

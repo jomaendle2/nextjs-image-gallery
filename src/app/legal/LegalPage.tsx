@@ -34,9 +34,9 @@ export function LegalPage({
         <Notice className="mb-8 max-w-prose" tone="warning">
           <strong className="font-semibold">Unfinished.</strong> The operator's
           postal address has not been filled in, so this notice does not yet
-          meet §5 DDG. Set <code className="text-amber-100">street</code> and{" "}
-          <code className="text-amber-100">city</code> in{" "}
-          <code className="text-amber-100">src/lib/legal.ts</code> before taking
+          meet §5 DDG. Set <code className="text-caution">street</code> and{" "}
+          <code className="text-caution">city</code> in{" "}
+          <code className="text-caution">src/lib/legal.ts</code> before taking
           real payments.
         </Notice>
       )}

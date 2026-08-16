@@ -40,7 +40,7 @@ function DeleteConfirmation({
 
   return (
     <div className="w-full space-y-3 border-white/10 border-t pt-3">
-      <p className="text-sm text-red-100/90">
+      <p className="text-sm text-danger">
         Delete {count(chosen.length, "photograph")} for good? The stored files
         go too, and nothing here can bring them back.
       </p>
@@ -67,7 +67,7 @@ function DeleteConfirmation({
           Keep them
         </GlassButton>
         <GlassButton
-          className="border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
+          variant="danger"
           disabled={pending}
           onClick={onConfirm}
           size="sm"
@@ -125,7 +125,7 @@ export function BulkBar({
               Clear
             </GlassButton>
             <GlassButton
-              className="text-white/60 hover:text-red-200"
+              variant="arm"
               disabled={pending}
               onClick={onArmDelete}
               size="sm"
