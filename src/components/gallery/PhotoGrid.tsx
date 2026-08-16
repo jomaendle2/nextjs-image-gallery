@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
-import { GROUND, photoGlow } from "@/lib/photo-ground";
+import { FALLBACK_TINT, GROUND, photoGlow } from "@/lib/photo-ground";
 import { photoAltText } from "@/lib/photos/alt-text";
 import { ContributorHeader } from "./ContributorHeader";
 
@@ -28,7 +28,7 @@ export function PhotoGrid({
    * the lead photograph's colour. Without it this page was flat black while
    * the slideshow glowed — one photographer, two different rooms.
    */
-  const tint = images[0]?.bgColor ?? "#2a6b7c";
+  const tint = images[0]?.bgColor ?? FALLBACK_TINT;
 
   return (
     <div

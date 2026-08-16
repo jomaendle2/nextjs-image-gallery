@@ -37,3 +37,18 @@ export function photoGround(bgColor: string): string {
 export function photoGlow(bgColor: string): string {
   return `color-mix(in oklab, ${bgColor} 38%, transparent)`;
 }
+
+/**
+ * The wash to use when there is no photograph to take a colour from.
+ *
+ * `var(--color-accent)` rather than a literal. A sea-teal was typed into
+ * `PhotoGrid` by eye, and it turned out to be the same colour the accent was
+ * later derived from by measuring the whole published set. Two people
+ * reaching the same colour independently is a good sign it is the right one;
+ * two copies of it in the codebase is not.
+ *
+ * (Written without naming the hex, because `design.test.ts` forbids colour
+ * literals in components and does not read prose differently from code —
+ * which it demonstrated by failing on the first draft of this paragraph.)
+ */
+export const FALLBACK_TINT = "var(--color-accent)";

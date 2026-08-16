@@ -35,6 +35,10 @@ function docFiles(): string[] {
 function allProse(): { file: string; text: string }[] {
   return [
     { file: "README.md", text: readFileSync(join(ROOT, "README.md"), "utf8") },
+    {
+      file: "DESIGN.md",
+      text: readFileSync(join(ROOT, "DESIGN.md"), "utf8"),
+    },
     ...docFiles().map((file) => ({
       file: file.replace(ROOT, ""),
       text: readFileSync(file, "utf8"),

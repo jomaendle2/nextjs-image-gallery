@@ -94,6 +94,14 @@ is nothing to remember at the command line:
 | `npm run stripe:portal-setup` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
 | `npm run mint-link -- you@example.com` | Break-glass sign-in link when mail is down. |
 
+## Design
+
+[DESIGN.md](DESIGN.md) is the design system: the two registers (the viewer
+and the reading pages), the colour tokens, the shared components to reach
+for before writing classes, and the mistakes that have actually been made
+here. The mechanical half of it is enforced by `src/lib/design.test.ts` and
+`src/app/manifest.test.ts` rather than left as prose.
+
 ## Toolchain
 
 Biome 2 replaces ESLint and Prettier and does linting, formatting and
