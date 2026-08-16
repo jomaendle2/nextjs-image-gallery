@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { allSourceFiles, read, SRC } from "./source-text";
 
@@ -159,5 +160,75 @@ describe("I3 — anything the interface refuses, the server refuses", () => {
         "requireOwner()",
       );
     }
+  });
+});
+
+describe("I12 — a third door into the gallery, through the same lock", () => {
+  /*
+   * Contributors can now invite photographers, which makes three ways to
+   * become one: the owner invites, somebody applies and is approved, or a
+   * contributor spends one of their three. All three must end at the same
+   * module, because "who is allowed to publish here" is the question this
+   * whole site is arranged around and it should be answerable by reading one
+   * file.
+   */
+  it("only the contributors module creates a contributor", () => {
+    const writers = allSourceFiles()
+      .filter((file) =>
+        /INSERT INTO contributors/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => file.replace(SRC, ""));
+
+    expect(writers).toEqual([join("/lib", "auth", "contributors.ts")]);
+  });
+
+  /*
+   * The quota is the control, and it only works if the check and the spend
+   * are the same statement. A read followed by a write lets two tabs both
+   * see "1 left" and both spend it — which `scripts/smoke-invite.mts` proves
+   * against a real database, and which this catches at the shape level so
+   * the refactor that reintroduces it fails here first.
+   */
+  it("the invite claim spends and inserts in one statement", () => {
+    const source = read("lib", "auth", "contributors.ts");
+    /*
+     * To the next top-level declaration, not to the first `\n}` — the
+     * function's own parameter object closes at column zero, so that cut the
+     * body off before the statement this test is about and the check passed
+     * on an empty string.
+     */
+    const claim = source.slice(
+      source.indexOf("export async function claimInvite"),
+    );
+    const end = claim.indexOf("\nexport ", 1);
+    const body = end === -1 ? claim : claim.slice(0, end);
+
+    // One tagged template, containing both halves.
+    expect(body.match(/await sql`/g)?.length).toBe(1);
+    expect(body).toContain("SET invites_remaining = a.invites_remaining - 1");
+    expect(body).toContain("INSERT INTO contributors");
+  });
+
+  it("a contributor's invite is rate limited and needs a session", () => {
+    const action = read("app", "contribute", "invite", "actions.ts");
+    expect(action).toContain("requireContributor()");
+    expect(action).toMatch(/inviteLimiter\.check/);
+  });
+
+  /*
+   * Who invited whom is recorded and never rendered publicly. The allow-list
+   * is what keeps that a rule rather than a current fact — the same shape as
+   * the check on the two columns a membership pays for.
+   */
+  it("invited_by stays out of the public pages", () => {
+    const named = allSourceFiles()
+      .filter((file) => /\binvited_by\b/.test(readFileSync(file, "utf8")))
+      .map((file) => file.replace(SRC, ""))
+      .sort((a, b) => a.localeCompare(b));
+
+    expect(named).toEqual([
+      join("/lib", "auth", "contributors.ts"),
+      join("/lib", "schema.ts"),
+    ]);
   });
 });

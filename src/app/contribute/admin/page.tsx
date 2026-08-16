@@ -10,11 +10,12 @@ import { listAllPhotos, listUnannouncedPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 import { ContributeShell } from "../ContributeShell";
+import { InviteForm } from "../InviteForm";
 import { AllPhotos } from "./AllPhotos";
 import { AnnounceActions } from "./AnnounceActions";
 import { ApplicationRowActions } from "./ApplicationRowActions";
+import { invite } from "./actions";
 import { ContributorRowActions } from "./ContributorRowActions";
-import { InviteForm } from "./InviteForm";
 
 export const metadata: Metadata = {
   title: "Contributors — the beauty of earth.",
@@ -106,7 +107,7 @@ export default async function AdminPage() {
           <code className="text-white/70">/contribute</code> with this address
           and can publish straight away.
         </p>
-        <InviteForm />
+        <InviteForm action={invite} />
       </section>
 
       <section className="mt-8">
@@ -129,6 +130,19 @@ export default async function AdminPage() {
                 <p className="truncate text-white/45 text-xs">
                   {row.email} · {count(row.photo_count, "photograph")} ·{" "}
                   <TextLink href={`/by/${row.slug}`}>/by/{row.slug}</TextLink>
+                  {/*
+                    Who brought them in, and what they have left to spend.
+                    Here and nowhere public: it tells you which invitations
+                    led to good work, which is the only way to know whether
+                    the mechanism is worth keeping, and it would rank
+                    photographers against each other on their own pages.
+                  */}
+                  {row.invited_by_name === null
+                    ? null
+                    : ` · invited by ${row.invited_by_name}`}
+                  {row.role === "owner"
+                    ? null
+                    : ` · ${row.invites_remaining} invites left`}
                 </p>
               </div>
               <ContributorRowActions row={row} />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GlassButton } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
+import { invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { listOwnPhotos } from "@/lib/photos/repository";
@@ -21,7 +22,10 @@ export default async function PhotosPage() {
     redirect("/contribute");
   }
 
-  const photos = await listOwnPhotos(contributor.id);
+  const [photos, invites] = await Promise.all([
+    listOwnPhotos(contributor.id),
+    invitesRemaining(contributor.id),
+  ]);
   const published = photos.filter((photo) => photo.published_at !== null);
 
   return (
@@ -45,6 +49,16 @@ export default async function PhotosPage() {
         {isOwner(contributor) ? (
           <TextLink href="/contribute/admin" standalone={true}>
             Manage contributors
+          </TextLink>
+        ) : null}
+        {/*
+          Hidden once spent, rather than shown as a dead "0 left". The count
+          is the whole message: somebody who has three is being told they can
+          bring people in, and somebody who has none has nothing to act on.
+        */}
+        {invites > 0 ? (
+          <TextLink href="/contribute/invite" standalone={true}>
+            Invite a photographer ({invites} left)
           </TextLink>
         ) : null}
       </div>

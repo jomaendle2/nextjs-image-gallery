@@ -149,15 +149,35 @@ export async function sendLoginEmail(to: string, url: string): Promise<void> {
 export async function sendInvitation(
   to: string,
   displayName: string,
+  invitedByName?: string,
 ): Promise<void> {
   const url = `${siteOrigin()}/contribute`;
   const name = escapeHtml(displayName);
+
+  /*
+   * Who sent it, when a photographer rather than the owner did.
+   *
+   * An invitation from a peer that does not name the peer reads as spam: an
+   * unsolicited message telling a stranger they have been chosen, by nobody
+   * in particular. Naming the person makes it the thing it actually is, and
+   * it is the whole reason a peer invite is worth more than a form. Optional,
+   * so the owner's own invite is unchanged and still speaks for the gallery.
+   */
+  const from = invitedByName?.trim() ?? "";
+  const opening =
+    from === ""
+      ? `${displayName}, you have been invited to publish on the beauty of earth.`
+      : `${displayName}, ${from} has invited you to publish on the beauty of earth.`;
+  const openingHtml =
+    from === ""
+      ? `${name}, you have been invited to publish on the beauty of earth.`
+      : `${name}, ${escapeHtml(from)} has invited you to publish on the beauty of earth.`;
 
   await send({
     to,
     subject: "An invitation — the beauty of earth.",
     text: [
-      `${displayName}, you have been invited to publish on the beauty of earth.`,
+      opening,
       "",
       `Sign in with this address — there is no password and nothing to accept: ${url}`,
       "",
@@ -170,7 +190,7 @@ export async function sendInvitation(
     ].join("\n"),
     html: page(
       `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${name}, you have been invited to publish on the beauty of earth.
+         ${openingHtml}
        </p>
        ${button(url, "Sign in and add your work")}
        <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">

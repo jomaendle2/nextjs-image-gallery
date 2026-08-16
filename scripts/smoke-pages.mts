@@ -99,6 +99,7 @@ try {
   await renders("/contribute/photos", "Search by title or location", cookie);
   await renders("/contribute/photos", "Filter by status", cookie);
   await renders("/contribute/admin", "Every photograph", cookie);
+  await renders("/contribute/invite", "Invite a photographer", cookie);
 } finally {
   await sql`DELETE FROM sessions WHERE id = ${hashSecret(secret)};`;
 }

@@ -25,6 +25,7 @@ import {
 } from "@/lib/photos/repository";
 import { siteOrigin } from "@/lib/site-url";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
+import type { InviteState } from "../invite-state";
 
 /** What a send did, for the button to report. */
 export interface AnnounceResult {
@@ -33,9 +34,13 @@ export interface AnnounceResult {
   photographs: number;
 }
 
-export interface AdminFormState {
-  message: string | null;
-}
+/**
+ * Kept as a name rather than a shape: the form is now shared with the
+ * contributor invite, so the shape lives in `../invite-state` and this is an
+ * alias. A type alias is erased, so it is legal to export from a
+ * `"use server"` module where a value would not be.
+ */
+export type AdminFormState = InviteState;
 
 const MAX_NAME = 80;
 
@@ -67,14 +72,20 @@ export async function invite(
   const siteUrlRaw = String(formData.get("site_url") ?? "").trim();
 
   if (!looksLikeEmail(email) || displayName === "") {
-    return { message: "An email address and a display name are required." };
+    return {
+      message: "An email address and a display name are required.",
+      tone: "error" as const,
+    };
   }
 
   let siteUrl: string | null = null;
   if (siteUrlRaw !== "") {
     siteUrl = normaliseSiteUrl(siteUrlRaw);
     if (siteUrl === null) {
-      return { message: "That website address does not look like a URL." };
+      return {
+        message: "That website address does not look like a URL.",
+        tone: "error" as const,
+      };
     }
   }
 
@@ -85,7 +96,10 @@ export async function invite(
   });
 
   if (created === null) {
-    return { message: "That address is already invited." };
+    return {
+      message: "That address is already invited.",
+      tone: "error" as const,
+    };
   }
 
   /*
@@ -113,6 +127,7 @@ export async function invite(
     message: mailed
       ? `Invited ${created.display_name} — an invitation is on its way to ${created.email}.`
       : `Invited ${created.display_name}, but the email could not be sent. Tell them to sign in at /contribute with ${created.email}.`,
+    tone: mailed ? ("success" as const) : ("error" as const),
   };
 }
 

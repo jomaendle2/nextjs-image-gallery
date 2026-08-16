@@ -22,7 +22,8 @@
     "stripe:portal-setup": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/setup-billing-portal.mts",
     "probe:scale": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/scale-probe.mts",
     "smoke:pages": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-pages.mts",
-    "smoke": "npm run smoke:pages && npm run smoke:upload && npm run smoke:membership && npm run smoke:portal",
+    "smoke:invite": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-invite.mts",
+    "smoke": "npm run smoke:invite && npm run smoke:pages && npm run smoke:upload && npm run smoke:membership && npm run smoke:portal",
     "mint-link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts",
     "db:import-assets": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
     "auth:link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"

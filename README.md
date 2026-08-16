@@ -86,6 +86,7 @@ is nothing to remember at the command line:
 | --- | --- |
 | `npm run smoke` | Every suite below that needs no arguments. |
 | `npm run smoke:pages` | Each page renders, signed in and out. Catches a server component that throws. |
+| `npm run smoke:invite` | The invite quota, including two concurrent claims racing for one invitation. |
 | `npm run smoke:upload` | The ingest path. Mints its own session; nothing to paste. |
 | `npm run smoke:membership` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
 | `npm run smoke:portal` | The member's side: real customer, real session, real cookie. |

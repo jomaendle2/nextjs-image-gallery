@@ -43,6 +43,8 @@ export async function listContributors(): Promise<
     revoked_at: string | null;
     photo_count: number;
     published_count: number;
+    invites_remaining: number;
+    invited_by_name: string | null;
   })[]
 > {
   /*
@@ -56,19 +58,23 @@ export async function listContributors(): Promise<
    */
   const rows = await sql`
     SELECT c.id, c.email, c.slug, c.display_name, c.site_url, c.role,
-           c.revoked_at,
+           c.revoked_at, c.invites_remaining,
+           inviter.display_name AS invited_by_name,
            COUNT(p.id)::int AS photo_count,
            COUNT(p.id) FILTER (WHERE p.published_at IS NOT NULL)::int
              AS published_count
     FROM contributors c
     LEFT JOIN photos p ON p.author_id = c.id
-    GROUP BY c.id
+    LEFT JOIN contributors inviter ON inviter.id = c.invited_by
+    GROUP BY c.id, inviter.display_name
     ORDER BY c.created_at ASC;
   `;
   return rows as (Contributor & {
     revoked_at: string | null;
     photo_count: number;
     published_count: number;
+    invites_remaining: number;
+    invited_by_name: string | null;
   })[];
 }
 
@@ -94,6 +100,154 @@ export async function inviteContributor(input: {
     RETURNING id, email, slug, display_name, site_url, role;
   `;
   return firstContributor(rows as Record<string, unknown>[]);
+}
+
+/** Why a contributor's invite did or did not create somebody. */
+export type ClaimOutcome =
+  | { status: "invited"; contributor: Contributor; remaining: number }
+  | { status: "no-invites-left" }
+  | { status: "already-a-contributor" }
+  | { status: "inviter-not-eligible" };
+
+/**
+ * Spending one of a contributor's three invites.
+ *
+ * The quota check and the insert are deliberately one statement. A read
+ * followed by a write would let two tabs — or two taps on a slow phone —
+ * both see "1 left" and both spend it, and the whole point of a scarce
+ * invite is that it is scarce. Postgres runs a data-modifying CTE as one
+ * statement in one implicit transaction, so either the counter drops and
+ * the row appears, or neither happens.
+ *
+ * Three races, and what each does:
+ *
+ *   - Same inviter twice at once. The second UPDATE blocks on the first's
+ *     row lock, then re-evaluates its WHERE against the committed row under
+ *     READ COMMITTED. It sees the decremented count and stops at zero.
+ *   - Two inviters, same new address. Both snapshots pass `NOT EXISTS`, one
+ *     INSERT wins, the other raises 23505 — and the whole statement rolls
+ *     back, decrement included, so the loser is not charged.
+ *   - Two people with the same display name. `nextFreeSlug` reads before
+ *     this statement, so the slugs can collide; that also raises 23505 and
+ *     also rolls back, which is what makes a retry safe.
+ *
+ * Nothing is ever refunded, because nothing is spent unless the row is
+ * created. A compensating UPDATE would be a second write that can fail on
+ * its own.
+ *
+ * The diagnosis comes back in the same statement rather than from a
+ * follow-up SELECT: a second read is a second snapshot, and could report a
+ * reason that was never true at the moment the claim was refused.
+ */
+export async function claimInvite(input: {
+  inviterId: string;
+  email: string;
+  display_name: string;
+  site_url: string | null;
+}): Promise<ClaimOutcome> {
+  const email = normaliseEmail(input.email);
+  const slug = await nextFreeSlug(slugify(input.display_name));
+
+  const rows = await sql`
+    WITH taken AS (
+      SELECT 1 FROM contributors WHERE email = ${email}
+    ),
+    inviter AS (
+      SELECT id, invites_remaining, revoked_at
+      FROM contributors WHERE id = ${input.inviterId}
+    ),
+    claimed AS (
+      UPDATE contributors AS a
+         SET invites_remaining = a.invites_remaining - 1
+       WHERE a.id = ${input.inviterId}
+         AND a.revoked_at IS NULL
+         AND a.invites_remaining > 0
+         AND NOT EXISTS (SELECT 1 FROM taken)
+      RETURNING a.id, a.invites_remaining
+    ),
+    inserted AS (
+      INSERT INTO contributors
+        (id, email, slug, display_name, site_url, role, invited_by)
+      SELECT ${nanoid(ID_LENGTH)}, ${email}, ${slug},
+             ${input.display_name}, ${input.site_url}, 'contributor', c.id
+        FROM claimed c
+      RETURNING id, email, slug, display_name, site_url, role
+    )
+    SELECT i.id, i.email, i.slug, i.display_name, i.site_url, i.role,
+           (SELECT count(*) FROM taken) > 0 AS email_taken,
+           COALESCE(
+             (SELECT revoked_at IS NOT NULL FROM inviter), TRUE
+           ) AS inviter_blocked,
+           COALESCE(
+             (SELECT invites_remaining FROM claimed),
+             (SELECT invites_remaining FROM inviter),
+             0
+           ) AS remaining
+      FROM (SELECT 1) AS always
+      LEFT JOIN inserted i ON TRUE;
+  `;
+
+  const row = rows[0] as Record<string, unknown> | undefined;
+  if (row === undefined) {
+    return { status: "inviter-not-eligible" };
+  }
+
+  /*
+   * The LEFT JOIN always returns a row, so a refusal comes back with every
+   * contributor column NULL rather than as an empty result. `firstContributor`
+   * only guards against a missing row, so handing it this one would build a
+   * Contributor whose id is null — checking the id is what distinguishes
+   * "refused" from "created".
+   */
+  if (row["id"] !== null && row["id"] !== undefined) {
+    const contributor = firstContributor([row]);
+    if (contributor !== null) {
+      return {
+        status: "invited",
+        contributor,
+        remaining: Number(row["remaining"] ?? 0),
+      };
+    }
+  }
+
+  // Refused. The flags come from the same snapshot as the refusal, so this
+  // reports the reason that actually applied rather than a later one.
+  if (row["email_taken"] === true) {
+    return { status: "already-a-contributor" };
+  }
+  if (row["inviter_blocked"] === true) {
+    return { status: "inviter-not-eligible" };
+  }
+  return { status: "no-invites-left" };
+}
+
+/** How many invites this contributor has left to give. */
+export async function invitesRemaining(contributorId: string): Promise<number> {
+  const rows = await sql`
+    SELECT invites_remaining FROM contributors WHERE id = ${contributorId};
+  `;
+  return Number(rows[0]?.["invites_remaining"] ?? 0);
+}
+
+/** The photographers this contributor brought in, newest first. */
+export async function listInvitees(
+  contributorId: string,
+): Promise<{ slug: string; display_name: string; published_count: number }[]> {
+  const rows = await sql`
+    SELECT c.slug, c.display_name,
+           COUNT(p.id) FILTER (WHERE p.published_at IS NOT NULL)::int
+             AS published_count
+    FROM contributors c
+    LEFT JOIN photos p ON p.author_id = c.id
+    WHERE c.invited_by = ${contributorId}
+    GROUP BY c.id, c.slug, c.display_name, c.created_at
+    ORDER BY c.created_at DESC;
+  `;
+  return rows as {
+    slug: string;
+    display_name: string;
+    published_count: number;
+  }[];
 }
 
 async function nextFreeSlug(base: string): Promise<string> {

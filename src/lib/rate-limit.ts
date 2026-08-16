@@ -90,3 +90,17 @@ export const signInLimiter = createLimiter();
  * the moment you are trying to pay is its own kind of failure.
  */
 export const stripeLimiter = createLimiter(15);
+
+/**
+ * Contributor invites.
+ *
+ * Five per window, matching sign-in rather than the more generous Stripe
+ * allowance: nobody legitimately invites five photographers in a quarter of
+ * an hour, and each one sends mail from this domain.
+ *
+ * Note this limiter is not the real control — a contributor only ever has
+ * three invites, enforced in the database. This is here to stop a loop
+ * hammering the mail provider inside one window, and because a contributor
+ * account is a smaller thing to compromise than the owner's.
+ */
+export const inviteLimiter = createLimiter();

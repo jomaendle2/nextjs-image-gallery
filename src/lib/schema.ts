@@ -302,4 +302,27 @@ export const MIGRATIONS: readonly string[] = [
    */
   `CREATE UNIQUE INDEX IF NOT EXISTS photos_display_pathname_idx
      ON photos (display_pathname) WHERE display_pathname IS NOT NULL;`,
+
+  /*
+   * Contributors can bring in photographers of their own.
+   *
+   * Every photographer used to arrive through one person's attention — the
+   * owner invites, or somebody applies and the owner approves — which is a
+   * ceiling on the thing this gallery says is scarce. Three each, and the
+   * default applies to everyone who already exists, so an invitee can
+   * invite in turn. That is the part that compounds.
+   *
+   * A plain counter rather than a table of invitations: there is no pending
+   * state to model. The contributor row *is* the invitation here, exactly
+   * as it is for the two older doors.
+   */
+  "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS invites_remaining INTEGER NOT NULL DEFAULT 3;",
+
+  /*
+   * Who brought them in. Recorded, never rendered on a public page — it
+   * tells the owner which invites led to good work, which is the only way
+   * to know whether the mechanism is worth keeping, and it would rank
+   * photographers against each other if it were shown.
+   */
+  "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS invited_by TEXT REFERENCES contributors(id);",
 ];

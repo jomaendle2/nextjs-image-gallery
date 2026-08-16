@@ -124,13 +124,32 @@ announcement.
 
 ### Make somebody a contributor
 
-`/contribute/admin` → invite by email address. **They receive an invitation
-email automatically**, telling them where to sign in and that nothing happens
-until they do. If the send fails the panel says so, so you know to follow up
-by hand rather than assuming it went out.
+Three doors, and all three end at `inviteContributor`/`claimInvite` in
+`src/lib/auth/contributors.ts` — the only file in `src/` that inserts a
+contributor, which is asserted by a test so it stays that way.
 
-Applications from `/contribute/apply` appear on the same page, and approving
-one sends its own message.
+1. **You invite them.** `/contribute/admin` → invite by email address. No
+   quota; you can invite as many people as you like.
+2. **They apply.** `/contribute/apply` submissions appear on the same page,
+   and approving one sends its own message.
+3. **A photographer invites them.** Every contributor has **three
+   invitations, ever**, spent from `/contribute/invite`. Whoever they bring
+   in becomes a contributor immediately and gets three of their own.
+
+All three send an invitation email automatically, telling the recipient
+where to sign in and that nothing happens until they do. A peer invitation
+names the photographer who sent it, because an unsolicited "you have been
+chosen" from nobody in particular reads as spam. If a send fails the panel
+says so, so you know to follow up by hand rather than assuming it went out.
+
+**What to watch.** The People list on `/contribute/admin` shows who invited
+whom and how many invitations each person has left. Nothing about this is
+public — a photographer's page never says who brought them in. Revoke is
+the control if an invitation turns out badly; it takes effect immediately
+and deletes their sessions.
+
+Invites compound: three each, and their invitees get three too. That is
+deliberate, and it is the thing to keep an eye on as the gallery grows.
 
 ### Publish a photograph
 
