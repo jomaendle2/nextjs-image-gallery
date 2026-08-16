@@ -72,20 +72,6 @@ export async function incrementViewCount(imageId: string): Promise<number> {
   }
 }
 
-export async function getViewCount(imageId: string): Promise<number> {
-  try {
-    const result = await sql`
-      SELECT view_count
-      FROM image_views
-      WHERE image_id = ${imageId};
-    `;
-    return (result[0]?.["view_count"] as number | undefined) ?? 0;
-  } catch (error) {
-    console.error("Error getting view count:", error);
-    return 0;
-  }
-}
-
 /**
  * Every count the gallery could actually display, and nothing else.
  *

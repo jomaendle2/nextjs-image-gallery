@@ -22,13 +22,10 @@ interface ViewCountRow {
 interface UseViewCountReturn {
   viewCount: number;
   incrementView: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
 }
 
-const viewCountKeys = {
-  all: ["viewCount"] as const,
-};
+/** One key for the whole table: every count arrives in a single request. */
+const VIEW_COUNTS = ["viewCount"] as const;
 
 const incrementViewCount = async (imageId: string): Promise<number> => {
   const response = await fetch("/api/views", {
@@ -59,7 +56,7 @@ const sameId = (a: string | number, b: string | number) =>
 
 export function prefetchAllViewCounts(queryClient: QueryClient) {
   return queryClient.prefetchQuery({
-    queryKey: viewCountKeys.all,
+    queryKey: VIEW_COUNTS,
     queryFn: fetchAllViewCounts,
     staleTime: STALE_TIME_MS,
   });
@@ -68,12 +65,8 @@ export function prefetchAllViewCounts(queryClient: QueryClient) {
 export function useViewCount(imageId: string): UseViewCountReturn {
   const queryClient = useQueryClient();
 
-  const {
-    data: viewCount = 0,
-    isLoading,
-    error: queryError,
-  } = useQuery({
-    queryKey: viewCountKeys.all,
+  const { data: viewCount = 0 } = useQuery({
+    queryKey: VIEW_COUNTS,
     queryFn: fetchAllViewCounts,
     // `select` previously returned undefined for an image with no row yet,
     // which the return type claimed was a number.
@@ -90,20 +83,17 @@ export function useViewCount(imageId: string): UseViewCountReturn {
    */
   const writeCount = useCallback(
     (nextCount: number) => {
-      queryClient.setQueryData<ViewCountRow[]>(
-        viewCountKeys.all,
-        (rows = []) => {
-          const existing = rows.find((row) => sameId(row.image_id, imageId));
-          if (!existing) {
-            return [...rows, { image_id: imageId, view_count: nextCount }];
-          }
-          return rows.map((row) =>
-            sameId(row.image_id, imageId)
-              ? { ...row, view_count: nextCount }
-              : row,
-          );
-        },
-      );
+      queryClient.setQueryData<ViewCountRow[]>(VIEW_COUNTS, (rows = []) => {
+        const existing = rows.find((row) => sameId(row.image_id, imageId));
+        if (!existing) {
+          return [...rows, { image_id: imageId, view_count: nextCount }];
+        }
+        return rows.map((row) =>
+          sameId(row.image_id, imageId)
+            ? { ...row, view_count: nextCount }
+            : row,
+        );
+      });
     },
     [queryClient, imageId],
   );
@@ -118,10 +108,5 @@ export function useViewCount(imageId: string): UseViewCountReturn {
     await mutateAsync();
   }, [mutateAsync]);
 
-  return {
-    viewCount,
-    incrementView,
-    isLoading: isLoading || incrementMutation.isPending,
-    error: queryError?.message ?? incrementMutation.error?.message ?? null,
-  };
+  return { viewCount, incrementView };
 }

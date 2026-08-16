@@ -5,6 +5,7 @@ import { PhotoGrid } from "@/components/gallery/PhotoGrid";
 import { StructuredData } from "@/components/StructuredData";
 import { getGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
+import { contributorAlternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographerSchema } from "@/lib/structured-data";
 
@@ -55,21 +56,11 @@ export async function generateMetadata({
   return {
     title: `${contributor.display_name} — the beauty of earth.`,
     description: `Photographs by ${contributor.display_name}.`,
-    alternates: {
-      canonical: `/by/${contributor.slug}`,
-      /*
-       * Their own feed, so a reader pointed at a photographer's page
-       * subscribes to that photographer rather than to the whole gallery.
-       */
-      types: {
-        "application/rss+xml": [
-          {
-            url: `/by/${contributor.slug}/feed.xml`,
-            title: `${contributor.display_name} — the beauty of earth.`,
-          },
-        ],
-      },
-    },
+    alternates: contributorAlternates(
+      `/by/${contributor.slug}`,
+      contributor.slug,
+      contributor.display_name,
+    ),
     openGraph: {
       title: contributor.display_name,
       description: `Photographs by ${contributor.display_name}.`,

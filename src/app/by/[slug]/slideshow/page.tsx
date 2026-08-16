@@ -4,6 +4,7 @@ import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { getGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
+import { contributorAlternates } from "@/lib/metadata";
 
 export const revalidate = 3600;
 
@@ -31,21 +32,11 @@ export async function generateMetadata({
   return {
     title: `${contributor.display_name} — the beauty of earth.`,
     description: `Photographs by ${contributor.display_name}.`,
-    alternates: {
-      canonical: `/by/${contributor.slug}/slideshow`,
-      /*
-       * Their own feed, so a reader pointed at a photographer's page
-       * subscribes to that photographer rather than to the whole gallery.
-       */
-      types: {
-        "application/rss+xml": [
-          {
-            url: `/by/${contributor.slug}/feed.xml`,
-            title: `${contributor.display_name} — the beauty of earth.`,
-          },
-        ],
-      },
-    },
+    alternates: contributorAlternates(
+      `/by/${contributor.slug}/slideshow`,
+      contributor.slug,
+      contributor.display_name,
+    ),
     openGraph: {
       title: contributor.display_name,
       description: `Photographs by ${contributor.display_name}.`,

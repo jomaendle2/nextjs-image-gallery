@@ -4,9 +4,9 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewCount } from "@/components/gallery/ViewCount";
+import { ShareButton } from "@/components/ui/ShareButton";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { MemberDetails } from "./MemberDetails";
-import { SharePhoto } from "./SharePhoto";
 
 /**
  * The right half of the wall label: who made the photograph, and how.
@@ -114,7 +114,14 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
           on mount and never again, and a ✓ from one photograph stayed lit
           over the next.
         */}
-        <SharePhoto image={image} key={image.id} />
+        <ShareButton
+          className="text-white/55 hover:text-white"
+          key={image.id}
+          label={image.title === "" ? "this photograph" : image.title}
+          path={`/photo/${image.id}`}
+          text={image.description}
+          title={`${image.title} by ${image.author.name}`}
+        />
       </div>
 
       {/*
