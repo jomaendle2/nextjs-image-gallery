@@ -186,9 +186,8 @@ export async function decideApplication(
   }
 
   /*
-   * Declining used to send nothing, while the apply form promised a reply
-   * "in a few days" — so a no was indistinguishable from being ignored, for
-   * as long as the applicant cared to wait. Same failure handling as the
+   * The apply form promises a reply, so a decline has to send one — silence
+   * is indistinguishable from being ignored. Same failure handling as the
    * approval: the decision is already recorded, so a bounced message is
    * logged rather than raised.
    */

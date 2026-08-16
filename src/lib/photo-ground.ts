@@ -41,14 +41,7 @@ export function photoGlow(bgColor: string): string {
 /**
  * The wash to use when there is no photograph to take a colour from.
  *
- * `var(--color-accent)` rather than a literal. A sea-teal was typed into
- * `PhotoGrid` by eye, and it turned out to be the same colour the accent was
- * later derived from by measuring the whole published set. Two people
- * reaching the same colour independently is a good sign it is the right one;
- * two copies of it in the codebase is not.
- *
- * (Written without naming the hex, because `design.test.ts` forbids colour
- * literals in components and does not read prose differently from code —
- * which it demonstrated by failing on the first draft of this paragraph.)
+ * The token, not a literal — `design.test.ts` forbids colour literals in
+ * components, and this is the one the accent was derived from anyway.
  */
 export const FALLBACK_TINT = "var(--color-accent)";

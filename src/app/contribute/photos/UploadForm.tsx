@@ -38,26 +38,11 @@ function itemId(file: File, index: number): string {
 }
 
 /**
- * Uploads straight from the browser to Blob, then asks the server to read the
- * file back and derive its metadata.
- *
- * `multipart` matters more than it looks: photographers routinely upload
- * 20 MB originals, and a single PUT that fails at 90% has to start over.
- *
- * Several files at a time, because a photographer arriving with a shoot had
- * to drive this form once per photograph — pick, wait, pick, wait — which is
- * where somebody with forty good images contributes four. They go up one
- * after another rather than at once: twenty megabytes each in parallel would
- * saturate the connection, make every progress bar meaningless, and lose the
- * whole batch to one flaky moment.
- */
-/**
  * How one file is doing.
  *
- * A failure used to render in the same grey as a success: "added" and
- * "could not be read" were the same weight, the same colour, in the same
- * column. After dropping ten files you could not see at a glance which ones
- * did not make it, which is the whole reason to show a list at all.
+ * A failure must not render in the same grey as a success. After dropping
+ * ten files, seeing at a glance which did not make it is the whole reason to
+ * show a list at all.
  *
  * Its own component because the parent was already at the edge of the
  * complexity limit, and three branches of colour plus three of content is
@@ -92,6 +77,16 @@ function ItemStatus({
   );
 }
 
+/**
+ * Uploads straight from the browser to Blob, then asks the server to read the
+ * file back and derive its metadata.
+ *
+ * Two things here are load-bearing. `multipart` because a single PUT of a
+ * 20 MB original that fails at 90% starts over. And the files go up one
+ * after another rather than in parallel: twenty megabytes each at once
+ * saturates the connection, makes every progress bar meaningless, and loses
+ * the whole batch to one flaky moment.
+ */
 export function UploadForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);

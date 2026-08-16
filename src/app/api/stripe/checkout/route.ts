@@ -29,7 +29,7 @@ function whoIsBuying(
 /**
  * Starts a subscription checkout, for a signed-in member or a new one.
  *
- * This used to require a session, on the reasoning that the membership is
+ * No session is required, though the reasoning that a membership is
  * keyed on an email address and letting somebody type a different one would
  * buy access for an inbox they may not own. That reasoning was sound and the
  * rule built from it was not: signing in requires already being a

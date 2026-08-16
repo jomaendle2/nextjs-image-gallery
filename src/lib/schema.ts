@@ -102,18 +102,12 @@ export const MIGRATIONS: readonly string[] = [
    * Re-key both auth tables on email.
    *
    * A person is identified by their address; "contributor" is a capability
-   * attached to it, not the identity itself. Keying tokens and sessions on
-   * `contributor_id` made the two the same thing, so a second capability —
-   * a paying member, who has an address but no contributors row — would have
-   * needed a second login flow, a second cookie and a second set of tokens.
-   * With email as the operative column, the same magic link and the same
-   * session serve both, and each capability is one lookup off the address.
+   * attached to it. Keying tokens and sessions on `contributor_id` made the
+   * two the same thing, so a member — an address with no contributors row —
+   * would have needed a second login flow, cookie and token set. On email,
+   * one magic link and one session serve both.
    *
-   * `contributor_id` stays: still written, still cascading on delete, and
-   * still the thing to fall back to if the cutover proves wrong. It is also
-   * still NOT NULL, which is exactly the constraint that has to be dropped
-   * before a non-contributor can hold a session — that belongs with the
-   * change that introduces one, not here.
+   * `contributor_id` stays: still written, still cascading on delete.
    */
   "ALTER TABLE login_tokens ADD COLUMN IF NOT EXISTS email TEXT;",
   "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS email TEXT;",
@@ -135,35 +129,21 @@ export const MIGRATIONS: readonly string[] = [
   /*
    * People who asked to hear when new work is published.
    *
-   * Double opt-in, which is not a nicety here: an address is only ever added
-   * by someone typing it, and anyone can type anyone's. `confirmed_at` stays
-   * null until the person clicks a link sent to that address, so an
-   * unconfirmed row is a request rather than a subscription and is never
-   * mailed anything except its own confirmation.
+   * Double opt-in: an address is only ever added by somebody typing it, and
+   * anyone can type anyone's, so `confirmed_at` stays null until a link sent
+   * to that address is clicked. An unconfirmed row is a request, not a
+   * subscription, and is never mailed anything but its own confirmation.
    *
-   * `confirm_token_hash` follows the same shape as `login_tokens`: the
-   * secret goes in the URL, only its hash is stored, so a dump of this table
-   * cannot be used to confirm anybody.
+   * `confirm_token_hash` is hashed like `login_tokens`. `unsubscribe_token`
+   * is deliberately **not**, and the asymmetry is the point: a login token
+   * grants a session, an unsubscribe token grants deleting its own row, and
+   * anybody holding this table can already delete rows. Hashing it would buy
+   * nothing and cost the feature, because every message has to carry an
+   * unsubscribe link and a link cannot be built from a hash.
    *
-   * `unsubscribe_token` is stored **in the clear**, and the difference is
-   * the point. A login token grants a session, so hashing it means a leaked
-   * database cannot be used to sign in as anyone. An unsubscribe token
-   * grants exactly one thing — deleting its own row — and anybody holding
-   * this table can already delete rows and already has the addresses.
-   * Hashing it buys nothing and costs the feature: every message has to
-   * carry an unsubscribe link, and a link cannot be built from a hash. The
-   * first version of this table stored the hash and made that promise
-   * unkeepable.
-   *
-   * It also does not expire. A footer link that stopped working after
-   * fifteen minutes would be worse than useless — it is the one link in the
-   * email that has to work whenever the person gets round to it.
-   *
-   * There is no `ALTER` accompanying the correction of that first version,
-   * because this table has never been deployed: it and the fix arrived on
-   * the same unreleased branch, so `CREATE TABLE IF NOT EXISTS` is the whole
-   * story. A development database that ran the earlier shape needs
-   * `DROP TABLE subscribers` once, by hand, and has nothing in it to lose.
+   * It also never expires. A footer link that stopped working after fifteen
+   * minutes is the one link in the email that has to work whenever the
+   * person gets round to it.
    */
   `CREATE TABLE IF NOT EXISTS subscribers (
      email              TEXT PRIMARY KEY,
@@ -190,7 +170,7 @@ export const MIGRATIONS: readonly string[] = [
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS announced_at TIMESTAMPTZ;",
 
   /*
-   * The constraint the re-keying note above said would have to go.
+   * The NOT NULL that had to go before a member could hold a session.
    *
    * Tokens and sessions are keyed on email so that "contributor" is a
    * capability attached to an address rather than the identity itself. A

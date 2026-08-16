@@ -81,23 +81,6 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     placeholderData: keepPreviousData,
   });
 
-  /*
-   * What may be shown while the new photograph's answer is in flight.
-   *
-   * Membership is a property of the session, not of the photograph, so the
-   * previous answer's `member` flag is still true or false for this one —
-   * which means a non-member's invitation can stay put across every switch
-   * instead of blinking out and in for ~100ms per swipe. That blink was the
-   * "short layout shift while loading": the link unmounted while the next
-   * fetch ran, the held line under it was 4px shorter than the link's
-   * resting height, and the photograph absorbed the difference.
-   *
-   * The location and technique are the opposite case: they belong to one
-   * photograph, and showing the previous photograph's location under the
-   * next one — even for a tenth of a second — would be quietly wrong in the
-   * one place this site promises precision. So for members the text is
-   * blanked during the fetch and only the line's height is held.
-   */
   const shown = whatToShow(data, isPlaceholderData);
 
   return <Line>{body(shown)}</Line>;
@@ -142,23 +125,10 @@ function whatToShow(
 /**
  * Holds the line whether or not there is anything to put on it.
  *
- * This used to return `null` while the request was in flight, on the
- * reasoning that a placeholder resolving into an invitation would be one
- * more thing moving in a bar this codebase worked hard to make still. That
- * had it backwards: rendering nothing and then something *is* the movement,
- * and because the lookup is per photograph it happened on every single image
- * change — the caption bar grew by a line a moment after each one, and the
- * photograph above absorbed the difference.
- *
- * The exif line two elements up already solved this, with an empty paragraph
- * holding `min-h-4` and a comment describing the identical bug. Same idiom
- * here — but the first attempt reserved `min-h-5` for a link that actually
- * rests at 24.3px, because an inline-flex child sits on a text baseline and
- * the parent's line-box strut adds ~4px beyond the margin box. That missing
- * 4px was still a visible jump on every swipe. `flex` removes the strut:
- * the child's 44px touch target is pulled back to exactly 20px by its
- * negative margins, matching the reservation, so empty and full are now the
- * same height to the pixel.
+ * Rendering nothing and then something is movement, and because the lookup is
+ * per photograph it happened on every image change. `flex` rather than a
+ * block removes the line-box strut, so the child's 44px target is pulled back
+ * to exactly the reserved 20px and empty matches full to the pixel.
  */
 function Line({ children }: { children: ReactNode }) {
   return (

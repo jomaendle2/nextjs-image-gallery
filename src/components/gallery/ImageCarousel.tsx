@@ -67,19 +67,6 @@ export function ImageCarousel({
     onClose,
   });
 
-  /*
-   * There was a `currentIndex`/`onIndexChange` pair here, and an effect
-   * mirroring the incoming prop into local state — the state-sync shape,
-   * with a long comment about a scroll-feedback hazard. No caller ever
-   * passed either prop: the three mount sites give `images`, `contributor`
-   * and `initialIndex` only. So it was a controlled/uncontrolled hybrid
-   * maintained for nobody, and the hazard it warned about was unreachable.
-   *
-   * If external control is ever wanted, `key` on the carousel or an
-   * imperative `scrollToIndex` handle are the shapes that do not need a
-   * mirror.
-   */
-
   // Jump to the requested starting image on first paint.
   useEffect(() => {
     if (initialIndex > 0) {

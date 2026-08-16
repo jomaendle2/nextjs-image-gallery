@@ -31,7 +31,7 @@ const OFFERS: readonly Offer[] = [
       "Your name sits on every photograph wherever it appears, linking out to your own site. Nothing here is published anonymously.",
   },
   /*
-   * This used to say "GPS is stripped from every upload", which the bullet
+   * Not "GPS is stripped from every upload", which the bullet
    * directly below it contradicted: the original is kept exactly as sent,
    * and stripping it would mean altering the file we promise not to touch.
    * Both cannot be true, and the one people rely on for their own safety is

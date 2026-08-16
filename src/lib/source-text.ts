@@ -17,12 +17,10 @@ import { join } from "node:path";
  * looked at `src/lib` and `src/app` and forgot `src/components`, so a test
  * about partial coverage was itself partial.
  *
- * Note for whoever edits this comment: one invariant pins the exact set of
- * files allowed to name either of the two columns a membership pays for. It
- * matches text, not code, so an ordinary English sentence that happens to
- * use one of those words as a word will fail it — which is how this very
- * paragraph failed on its first draft, twice. Reword rather than widening
- * the allow-list; the list is the control.
+ * One invariant pins the exact set of files allowed to name either of the
+ * two columns a membership pays for, and it matches text rather than code —
+ * so an ordinary sentence using one of those words as a word fails it.
+ * Reword rather than widening the allow-list; the list is the control.
  */
 
 export const SRC = join(import.meta.dirname, "..");

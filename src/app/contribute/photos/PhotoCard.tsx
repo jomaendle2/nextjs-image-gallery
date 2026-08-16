@@ -10,7 +10,7 @@ import { PhotoEditForm } from "./PhotoEditForm";
 /**
  * One photograph in the dashboard: a row you can scan, opening into a form.
  *
- * It used to render the whole of `PhotoEditForm` inline, always open. That
+ * The edit form is mounted on first open rather than inline. Always-open
  * is fine for the three photographs it was built against and unusable at
  * fifty: every row was a 255-line form, so finding one picture meant
  * scrolling past every other picture's title, description, location and

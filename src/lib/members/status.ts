@@ -36,40 +36,32 @@ export function isActive(member: Member | null): boolean {
   );
 }
 
-/**
- * Statuses where Stripe still considers the subscription live, and so a
- * second checkout would be a second bill.
- *
- * Wider than `isActive` on purpose, and the difference is the point.
- * `past_due` does not grant access — Stripe is still retrying the card, and
- * serving paid content through that window is a decision we declined to
- * make — but it very much still bills, so offering checkout again would
- * charge somebody twice for the same month the moment the retry cleared.
- * Access and billing are different questions and this codebase asks them
- * separately.
- */
 /*
  * `incomplete` is deliberately absent, and it is the one that took thought.
- *
  * It looks like it belongs — Stripe considers the subscription to exist —
- * but it is the status where the *first* payment never cleared, so nothing
- * has been billed. Including it meant somebody whose card was declined at
- * checkout had no access and could not start another checkout either, until
- * Stripe expired the attempt about a day later. That is the worst possible
- * response to a failed payment: refusing the person's second attempt to give
- * you money.
+ * but it is the status where the first payment never cleared, so nothing has
+ * been billed. Including it left somebody whose card was declined with no
+ * access and no way to try again until Stripe expired the attempt a day
+ * later: the worst possible answer to a failed payment.
  */
 const LIVE_STATUSES = new Set([
   "active",
   "trialing",
   "past_due",
   "unpaid",
-  // Collection paused, subscription intact — resuming bills, so a second
-  // checkout would be a second bill.
+  // Collection paused, subscription intact — resuming bills.
   "paused",
 ]);
 
-/** Whether a new checkout would duplicate a subscription that already bills. */
+/**
+ * Whether a new checkout would duplicate a subscription that already bills.
+ *
+ * Deliberately wider than `isActive`, and the difference is the point.
+ * `past_due` does not grant access — Stripe is still retrying the card — but
+ * it very much still bills, so offering checkout again would charge somebody
+ * twice for the same month the moment the retry cleared. Access and billing
+ * are different questions and are asked separately.
+ */
 export function hasLiveSubscription(member: Member | null): boolean {
   return member !== null && LIVE_STATUSES.has(member.status);
 }

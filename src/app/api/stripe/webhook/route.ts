@@ -125,20 +125,8 @@ async function handleCheckout(
     eventAt,
   });
 
-  /*
-   * We refused to record this payment, so we must not keep it.
-   *
-   * `wrong-customer` means the address already belongs to a different Stripe
-   * customer. There are two ways to arrive here and cancelling is right for
-   * both: somebody trying to seize another person's membership, who should
-   * get their money back rather than a foothold; and a genuine subscriber
-   * who checked out twice while signed out — Checkout mints a fresh customer
-   * each time, so they would otherwise be billed monthly, twice, for a
-   * subscription with no row and no way to reach the portal and cancel it.
-   *
-   * Taking money for a membership we have declined to grant is the one
-   * outcome that is indefensible either way.
-   */
+  // See `cancelRefusedSubscription`: we must not keep money for a
+  // membership we have declined to grant.
   if (outcome === "wrong-customer") {
     await cancelRefusedSubscription(subscriptionId);
     return;

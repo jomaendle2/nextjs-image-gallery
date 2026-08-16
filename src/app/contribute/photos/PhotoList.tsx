@@ -27,11 +27,8 @@ import { SelectAll } from "./SelectAll";
  * photographs, at which point the query — and `listOwnPhotos`, which has no
  * LIMIT — is what needs to change, not this component.
  *
- * That sentence used to guess "a few hundred". It has since been measured
- * with `npm run probe:scale`: 0.67 KB of HTML per row, so 300 rows is a
- * 384 KB page rendering in 99 ms and 600 rows is 585 KB in 117 ms. The real
- * ceiling is past a thousand. Re-run the probe rather than re-reasoning if
- * this changes; the numbers are in `docs/next-version.md`.
+ * Measured with `npm run probe:scale` rather than guessed; the numbers are
+ * in `docs/next-version.md`. Re-run it rather than re-reasoning.
  *
  * This component owns the state and nothing else: the two bars it composes
  * are in their own files, and the filtering itself is in `filter.ts`, where
@@ -41,17 +38,10 @@ import { SelectAll } from "./SelectAll";
 /*
  * How many rows to render before asking.
  *
- * I originally refused pagination outright, on the grounds that a filter
- * narrowing fifty rows to three beats pages of ten and hides nothing behind
- * a click. I still think that about *numbered pages* — but it was the wrong
- * answer to what was actually asked, which was that a very long list is
- * unpleasant regardless of how good the search is.
- *
- * So: a cap and a button, not pages. Nothing is hidden behind a page number
- * you have to guess at, the count is always visible, and one press shows
- * everything. Filtering searches the whole set rather than the visible
- * window, so narrowing never misses a match that happened to fall past the
- * cap — which is the way paginated search usually goes wrong.
+ * A cap and a button, not numbered pages. Filtering searches the whole set
+ * rather than the visible window, so narrowing never misses a match that
+ * happened to fall past the cap — which is how paginated search usually goes
+ * wrong.
  */
 const INITIAL_ROWS = 30;
 

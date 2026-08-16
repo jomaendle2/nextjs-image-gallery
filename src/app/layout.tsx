@@ -15,11 +15,10 @@ const geistSans = Geist({
 /*
  * One source of truth for the origin, shared with the magic-link emails.
  *
- * This used to be a second, hardcoded domain that disagreed with
- * `siteOrigin()`. Every canonical URL and every OG image the site served
- * therefore pointed at a host it was not being served from, which is the
- * kind of mistake that quietly costs a site its search ranking: crawlers
- * take `og:url` and the canonical tag at their word.
+ * A second hardcoded domain here would put every canonical URL and every OG
+ * image on a host the site is not served from, which quietly costs a site its
+ * search ranking — crawlers take `og:url` and the canonical tag at their
+ * word.
  */
 const SITE_URL = siteOrigin();
 const TITLE = "the beauty of earth.";

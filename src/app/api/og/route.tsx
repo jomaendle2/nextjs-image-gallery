@@ -101,11 +101,9 @@ function truncate(value: string, limit: number): string {
 /**
  * The card this site presents everywhere it is linked.
  *
- * It used to be a different design altogether — flat black, ninety-six point
- * extra-bold with a drop shadow, an emoji, and a bordered translucent panel
- * — which shared no colour, weight or spacing with the gallery it was
- * advertising. This is the same near-black ground, the same restrained
- * setting and the same small-caps metadata the site uses everywhere else.
+ * The same near-black ground, restrained setting and small-caps metadata the
+ * site uses everywhere else, so the card and the page it advertises look
+ * like the same product.
  *
  * Note that a photograph's own link does not come through here at all:
  * `/photo/[id]` uses the photograph as its `og:image`, which is the right

@@ -22,13 +22,10 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 /**
  * Every cached surface a photograph appears on.
  *
- * This used to be two paths, and the gap was the one that matters most:
- * `/photo/[id]` is its own ISR entry with `revalidate = 3600` and nothing
- * ever invalidated it. Unpublishing removed a photograph from the gallery
- * and the contributor page while `/photo/<id>` went on serving it — title,
- * description, OG card, HTTP 200 — for up to an hour, which is the exact URL
- * somebody would have shared. After a delete, the same page rendered a
- * broken image, because the blob was already gone.
+ * `/photo/[id]` is its own ISR entry with `revalidate = 3600`, so leaving it
+ * out means unpublishing removes a photograph everywhere except the URL
+ * somebody actually shared — which goes on serving it, with a 200, for up to
+ * an hour. After a delete that page renders a broken image.
  *
  * A dynamic route needs its pattern and a type; passing one concrete URL
  * only clears that URL. `/photographers` is here for the same reason:
@@ -207,23 +204,13 @@ export async function bulkSetPublished(
 /**
  * Deletes several photographs, having been told exactly which.
  *
- * I refused to build this and wrote the refusal into a test, on the grounds
- * that a checkbox is the control most likely to produce a misclick and
- * deleting is the one action that cannot be undone. Both halves of that are
- * true. What was wrong was concluding that the need therefore should not be
- * met — clearing twenty test uploads through the single-photograph path is
- * sixty clicks, and I spent the evening deleting my own test rows with SQL
- * rather than face it, which is the clearest possible evidence that the gap
- * was real.
+ * The confirmation lists the titles rather than a count: a number cannot be
+ * checked against intent, but a misclicked row shows up as a name the person
+ * did not mean to see. That is what makes offering this safe.
  *
- * The objection is answered in the confirmation instead of by absence: it
- * lists the titles rather than a count, so a misclicked selection is
- * visible as a name you did not mean to see. A number cannot be checked
- * against intent; a list of titles can.
- *
- * Authorisation is per row and unchanged, exactly as in `bulkSetPublished`:
- * `deletePhoto` carries `AND author_id = ...` for a contributor, so a forged
- * id in this list deletes nothing rather than somebody else's work.
+ * Authorisation is per row, exactly as in `bulkSetPublished`: `deletePhoto`
+ * carries `AND author_id = ...` for a contributor, so a forged id in this
+ * list deletes nothing rather than somebody else's work.
  */
 export async function bulkRemovePhotos(
   ids: readonly string[],

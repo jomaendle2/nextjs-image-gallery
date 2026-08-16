@@ -17,15 +17,12 @@ export const metadata: Metadata = {
  * email and deserves more than a redirect. Not indexed: every URL that
  * reaches it carries a single-use token.
  *
- * It used to confirm while rendering the GET, which mail gateways perform
- * on the recipient's behalf before they see the message. Nothing was
- * destroyed by that — they had asked to subscribe — but the record of
- * consent became a scanner rather than a person, which is the whole point
- * of double opt-in and the basis the privacy policy claims. And the token
- * was spent, so the real click landed on "that link didn't work" at the
- * moment it had actually worked.
- *
- * One button now. Scanners do not POST.
+ * Confirming must happen on POST. Mail gateways fetch the URL on the
+ * recipient's behalf, so confirming while rendering the GET would make the
+ * record of consent a scanner rather than a person — which is the whole
+ * point of double opt-in and the basis the privacy policy claims — and would
+ * spend the token, so the real click would land on "that link didn't work"
+ * at the moment it had actually worked. Scanners do not POST.
  */
 export default async function ConfirmPage({
   searchParams,

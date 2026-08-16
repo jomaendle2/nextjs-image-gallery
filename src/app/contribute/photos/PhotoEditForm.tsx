@@ -34,12 +34,9 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
    * formAction, so these buttons do not submit the surrounding edit form and
    * discard the contributor's unsaved title.
    *
-   * The shared hook, not a private copy. This file used to carry its own
-   * `run`, identical to the admin one down to the `router.refresh()` — and
-   * identical in its one defect: no catch, so a failed unpublish or delete
-   * threw into the error boundary and replaced the contributor's dashboard
-   * with "That didn't load", losing every unsaved title on the page. One
-   * implementation means fixing that once rather than finding it twice.
+   * The shared hook rather than a private copy: it catches, so a failed
+   * unpublish does not throw into the error boundary and replace the
+   * dashboard — which would lose every unsaved title on the page.
    */
   const { pending: isMutating, error: actionError, run } = useServerAction();
 

@@ -13,13 +13,9 @@ import { count } from "@/lib/plural";
  * photographs, then publish ten photographs, which meant ten
  * expand-click-collapse cycles down the list.
  *
- * Deleting is here too, and the comment this replaced used to say it never
- * would be — "no dialog makes 'delete these nine, one of which you
- * misclicked' a safe offer". The claim was too strong. A dialog naming a
- * count cannot make that safe; one naming the titles can, because a
- * misclicked row appears as a name the person did not expect to read. That
- * is what `DeleteConfirmation` does, and it is why the objection no longer
- * holds.
+ * Deleting is here too, behind a confirmation that names the titles rather
+ * than a count — a count cannot be checked against intent, but a misclicked
+ * row appears as a name the person did not expect to read.
  */
 
 /** How many titles to list before summarising the rest. */

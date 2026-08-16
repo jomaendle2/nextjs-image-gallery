@@ -11,16 +11,14 @@ export const metadata: Metadata = {
 /**
  * One click, no sign-in — but a click, not a page load.
  *
- * This page used to delete the row while rendering the GET. That is one
- * click fewer and quietly catastrophic: corporate link scanners fetch every
- * URL in an inbound message before the recipient sees it, so the first
- * announcement sent to anybody behind SafeLinks or Proofpoint would have
- * unsubscribed them automatically, with the token spent and no way back.
+ * The deletion must happen on POST. Corporate link scanners fetch every URL
+ * in an inbound message before the recipient sees it, so deleting while
+ * rendering the GET would unsubscribe anybody behind SafeLinks or Proofpoint
+ * automatically, with the token spent and no way back. Scanners do not POST.
  *
- * Deleting from a POST fixes that, because scanners do not POST. What it
- * deliberately does not add is a confirmation step — asking somebody to
- * confirm that they meant to leave is a dark pattern with a polite face.
- * The button on this page is the unsubscribe itself.
+ * There is deliberately no confirmation step: asking somebody to confirm
+ * they meant to leave is a dark pattern with a polite face. The button on
+ * this page is the unsubscribe itself.
  */
 export default async function UnsubscribePage({
   searchParams,
