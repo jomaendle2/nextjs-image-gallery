@@ -6,7 +6,7 @@ import { TOUCH_LINK } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 
 export const metadata: Metadata = {
-  title: "Confirm your subscription — the beauty of earth.",
+  title: "Confirm — the beauty of earth.",
   robots: { index: false },
 };
 
@@ -38,8 +38,8 @@ export default async function ConfirmPage({
   if (state === "done") {
     return (
       <StatusPage
-        detail="You will hear from us when new photographs are published. There is an unsubscribe link in every message, including the one just sent."
-        title="You're subscribed"
+        detail="You will hear from us when new photographs are published. Every message carries a one-tap link to stop, including the one just sent."
+        title="You're following"
       />
     );
   }
@@ -71,11 +71,13 @@ export default async function ConfirmPage({
       action={
         <form action={confirmAction}>
           <input name="token" type="hidden" value={token} />
-          <GlassButton type="submit">Confirm</GlassButton>
+          <GlassButton type="submit" variant="primary">
+            Yes, follow the gallery
+          </GlassButton>
         </form>
       }
-      detail="One press and you are on the list. We send one message when new photographs go up, and nothing else — with an unsubscribe link in every one."
-      title="Confirm your subscription"
+      detail="One press and you are on the list. We send one message when new photographs go up, and nothing else — with a one-tap link to stop in every one."
+      title="One more tap"
     />
   );
 }

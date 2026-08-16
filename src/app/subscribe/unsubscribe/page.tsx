@@ -4,7 +4,7 @@ import { StatusPage } from "@/components/StatusPage";
 import { GlassButton } from "@/components/ui/glass-button";
 
 export const metadata: Metadata = {
-  title: "Unsubscribe — the beauty of earth.",
+  title: "Stop following — the beauty of earth.",
   robots: { index: false },
 };
 
@@ -33,7 +33,7 @@ export default async function UnsubscribePage({
     return (
       <StatusPage
         detail="Your address has been deleted, not just flagged. Nothing further will be sent to it."
-        title="Unsubscribed"
+        title="No longer following"
       />
     );
   }
@@ -42,7 +42,7 @@ export default async function UnsubscribePage({
     return (
       <StatusPage
         detail="That link did not match a subscription — it may already have been used, in which case nothing is being sent to you anyway."
-        title="Nothing to unsubscribe"
+        title="Nothing to stop"
       />
     );
   }
@@ -52,11 +52,11 @@ export default async function UnsubscribePage({
       action={
         <form action={unsubscribeAction}>
           <input name="token" type="hidden" value={token} />
-          <GlassButton type="submit">Unsubscribe</GlassButton>
+          <GlassButton type="submit">Stop following</GlassButton>
         </form>
       }
-      detail="One click and your address is deleted rather than flagged. You will not be asked to confirm twice, and you can subscribe again any time with one field."
-      title="Unsubscribe?"
+      detail="One click and your address is deleted rather than flagged. You will not be asked to confirm twice, and you can follow again any time with one field."
+      title="Stop following?"
     />
   );
 }

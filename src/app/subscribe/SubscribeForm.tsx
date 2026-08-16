@@ -58,7 +58,7 @@ export function SubscribeForm() {
       </div>
 
       <GlassButton disabled={pending} size="sm" type="submit" variant="primary">
-        {pending ? "Sending…" : "Email me new work"}
+        {pending ? "Sending…" : "Follow the gallery"}
       </GlassButton>
 
       <p aria-live="polite" className="min-h-5 text-sm text-white/55">

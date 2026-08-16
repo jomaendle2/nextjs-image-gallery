@@ -27,8 +27,8 @@ export default function SubscribePage() {
 
         <p className="mt-8 text-sm text-white/45">
           We send one message when new work goes up, and nothing else. Your
-          address is confirmed before anything is sent, every message carries an
-          unsubscribe link, and unsubscribing deletes the address rather than
+          address is confirmed before anything is sent, every message carries a
+          one-tap link to stop, and stopping deletes the address rather than
           flagging it.
         </p>
 

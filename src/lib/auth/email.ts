@@ -409,7 +409,7 @@ export async function sendSubscribeConfirmation(
 ): Promise<void> {
   await send({
     to,
-    subject: "Confirm your subscription",
+    subject: "Confirm — the beauty of earth.",
     text: [
       "Someone asked to hear when new photographs are published on",
       "the beauty of earth. If that was you, confirm here:",
@@ -424,7 +424,7 @@ export async function sendSubscribeConfirmation(
          Someone asked to hear when new photographs are published. If that was
          you, confirm below — the link expires in a day.
        </p>
-       ${button(url, "Confirm subscription")}
+       ${button(url, "Yes, follow the gallery")}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
          If it was not you, ignore this. Nothing will be sent to this address.
        </p>`,
@@ -447,7 +447,7 @@ export async function sendSubscribeWelcome(
 
   await send({
     to,
-    subject: "You're subscribed — the beauty of earth.",
+    subject: "You're following — the beauty of earth.",
     text: [
       "You will hear from us when new photographs are published.",
       "Not often, and never for anything else.",
@@ -463,7 +463,7 @@ export async function sendSubscribeWelcome(
        </p>
        ${button(gallery, "See the gallery")}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Unsubscribe</a>
+         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Stop following</a>
          at any time.
        </p>`,
     ),

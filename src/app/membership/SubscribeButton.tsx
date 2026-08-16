@@ -28,7 +28,7 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
       <GlassButton disabled={busy} onClick={go} variant="primary">
         {busy
           ? "Opening checkout…"
-          : `Subscribe — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
+          : `Become a member — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
       </GlassButton>
       <p className="mt-2 text-sm text-white/45">
         Billed by Stripe, every {MEMBERSHIP.interval}, until you cancel. Cancel

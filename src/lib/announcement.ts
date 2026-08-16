@@ -92,7 +92,7 @@ ${items}
        </ul>
        ${moreHtml}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Unsubscribe</a>
+         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Stop following</a>
        </p>`,
   };
 }
