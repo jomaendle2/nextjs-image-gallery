@@ -232,3 +232,33 @@ describe("I12 — a third door into the gallery, through the same lock", () => {
     ]);
   });
 });
+
+describe("I13 — saving is not publishing", () => {
+  /*
+   * `publishPhoto` set `published_at` on every save, so a photographer could
+   * not write a title without the photograph going live — captioning an
+   * evening's uploads meant pushing each one into the feed and the
+   * announcement queue and pulling it back. The form now sends an intent and
+   * the column only moves when it says publish.
+   */
+  it("the update only sets published_at when asked", () => {
+    const repository = read("lib", "photos", "repository.ts");
+    const fn = repository.slice(
+      repository.indexOf("export async function publishPhoto"),
+    );
+    const body = fn.slice(0, fn.indexOf("\nexport ", 1));
+
+    expect(body).toMatch(/CASE WHEN \$\{publish\}/);
+    expect(body).toContain("ELSE p.published_at END");
+  });
+
+  it("the form offers both, and says which happened", () => {
+    const form = read("app", "contribute", "photos", "PhotoEditForm.tsx");
+    expect(form).toMatch(/value="save"/);
+    expect(form).toMatch(/value="publish"/);
+
+    const actions = read("app", "contribute", "photos", "actions.ts");
+    expect(actions).toContain('formData.get("intent") === "publish"');
+    expect(actions).toContain("Draft saved. Not published yet.");
+  });
+});

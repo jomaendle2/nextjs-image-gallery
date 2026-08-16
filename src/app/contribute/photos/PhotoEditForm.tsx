@@ -44,8 +44,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
   const { pending: isMutating, error: actionError, run } = useServerAction();
 
   const isPublished = photo.published_at !== null;
-  const savedLabel = isPublished ? "Save changes" : "Publish";
-  const submitLabel = pending ? "Saving…" : savedLabel;
+  const saveLabel = pending ? "Saving…" : "Save changes";
 
   const handleUnpublish = useCallback(() => {
     run(() => togglePublished(photo.id, false));
@@ -190,9 +189,35 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
-        <GlassButton disabled={pending} size="sm" type="submit">
-          {submitLabel}
+        {/*
+          Two buttons, because saving and publishing are two decisions. One
+          button meant a photographer could not write a title without the
+          photograph going live, so captioning an evening's uploads pushed
+          each one into the feed and the announcement queue and then pulled
+          it back. `name="intent"` is how the server learns which was pressed.
+        */}
+        <GlassButton
+          disabled={pending}
+          name="intent"
+          size="sm"
+          type="submit"
+          value="save"
+        >
+          {saveLabel}
         </GlassButton>
+
+        {isPublished ? null : (
+          <GlassButton
+            disabled={pending}
+            name="intent"
+            size="sm"
+            type="submit"
+            value="publish"
+            variant="primary"
+          >
+            {pending ? "Publishing…" : "Publish"}
+          </GlassButton>
+        )}
 
         {isPublished ? (
           <GlassButton

@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/contributors";
 import {
   sendApplicationApproved,
+  sendApplicationDeclined,
   sendInvitation,
   sendNewWorkAnnouncement,
 } from "@/lib/auth/email";
@@ -181,6 +182,24 @@ export async function decideApplication(
     } catch (error) {
       // The invitation exists either way; a failed email is recoverable.
       console.error("Could not send the welcome email:", error);
+    }
+  }
+
+  /*
+   * Declining used to send nothing, while the apply form promised a reply
+   * "in a few days" — so a no was indistinguishable from being ignored, for
+   * as long as the applicant cared to wait. Same failure handling as the
+   * approval: the decision is already recorded, so a bounced message is
+   * logged rather than raised.
+   */
+  if (decision === "declined") {
+    try {
+      await sendApplicationDeclined(
+        application.email,
+        application.display_name,
+      );
+    } catch (error) {
+      console.error("Could not send the decline email:", error);
     }
   }
 

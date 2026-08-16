@@ -119,8 +119,16 @@ export async function completeSignIn(formData: FormData): Promise<void> {
 
   /*
    * Somebody with no contributors row has nothing to do on the contributor
-   * dashboard — it would refuse them the moment they arrived. A member is
-   * sent to the gallery, which is what they signed in to see.
+   * dashboard — it would refuse them the moment they arrived.
+   *
+   * They go to `/membership` rather than the gallery, because the gallery
+   * looks exactly the same signed in as signed out. A member who had just
+   * proved they own the address landed on a page with no acknowledgement of
+   * it, and somebody whose card is failing landed on the non-member
+   * experience with no explanation. `/membership` can say which of those is
+   * true.
    */
-  redirect(redeemed.contributor === null ? "/" : "/contribute/photos");
+  redirect(
+    redeemed.contributor === null ? "/membership" : "/contribute/photos",
+  );
 }

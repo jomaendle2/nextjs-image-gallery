@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { signOut } from "@/app/contribute/actions";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { TOUCH_LINK } from "@/components/ui/field";
+import { GlassButton } from "@/components/ui/glass-button";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
 import { isActive } from "@/lib/members/status";
@@ -80,6 +82,22 @@ export default async function MembershipPage({
 
   return (
     <ContributeShell
+      action={
+        /*
+         * The only sign-out a member has.
+         *
+         * It was wired into the contributor dashboard alone, which a member
+         * cannot reach — so somebody with a thirty-day cookie on a borrowed
+         * laptop had no way to end the session at all.
+         */
+        email === null ? undefined : (
+          <form action={signOut}>
+            <GlassButton size="sm" type="submit">
+              Sign out
+            </GlassButton>
+          </form>
+        )
+      }
       subtitle={`See exactly where each photograph was taken, and how it was made. ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}.`}
       title="Membership"
     >

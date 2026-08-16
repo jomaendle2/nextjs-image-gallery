@@ -82,7 +82,7 @@ a missing one prints the message to the terminal, which is how you read a
 sign-in link locally. In production it *throws*: printing would put live
 tokens in the platform log while telling somebody to check an empty inbox.
 
-Seven templates in `src/lib/auth/email.ts`: sign-in link, invitation,
+Eight templates in `src/lib/auth/email.ts`: sign-in link, invitation,
 application approved, subscribe confirmation, subscribe welcome, new-work
 announcement, and the weekly reminder to you. Every value interpolated into one is HTML-escaped,
 because contributors type titles and captions.

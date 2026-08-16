@@ -55,7 +55,7 @@ export async function savePhoto(
 
   const id = formData.get("id");
   if (typeof id !== "string" || id === "") {
-    return { message: "Missing photo." };
+    return { message: "Missing photograph." };
   }
 
   const title = text(formData, "title", MAX_TITLE);
@@ -78,9 +78,17 @@ export async function savePhoto(
   const preciseLocation = text(formData, "precise_location", MAX_TITLE);
   const technique = text(formData, "technique", MAX_TECHNIQUE);
 
+  /*
+   * Which button was pressed. Saving and publishing are separate actions on
+   * one form, so a photographer can write a title without the photograph
+   * going live — and the message afterwards says which of the two happened
+   * rather than always claiming "Published."
+   */
+  const publish = formData.get("intent") === "publish";
+
   // publishPhoto scopes the UPDATE to the actor unless they are the owner,
   // so a forged id changes nothing and returns null.
-  const slug = await publishPhoto(
+  const saved = await publishPhoto(
     id,
     {
       title,
@@ -91,14 +99,20 @@ export async function savePhoto(
       bg_color: bgColor,
     },
     actor,
+    publish,
   );
 
-  if (slug === null) {
-    return { message: "That photo could not be found." };
+  if (saved === null) {
+    return { message: "That photograph could not be found." };
   }
 
-  revalidateFeeds(slug);
-  return { message: "Published." };
+  revalidateFeeds(saved.slug);
+  if (publish) {
+    return { message: "Published." };
+  }
+  return {
+    message: saved.live ? "Changes saved." : "Draft saved. Not published yet.",
+  };
 }
 
 export async function togglePublished(

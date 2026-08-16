@@ -238,6 +238,51 @@ export async function sendApplicationApproved(
 }
 
 /**
+ * The answer nobody was getting.
+ *
+ * `/contribute/apply` says a reply "takes a few days rather than a few
+ * minutes", and declining sent nothing at all — so an applicant who was not
+ * a fit waited indefinitely for a message that had been promised and would
+ * never arrive. A short no is a better thing to receive than silence, and it
+ * is the only version of this that makes the form's promise true.
+ *
+ * Deliberately brief, and deliberately not a critique. The gallery is small
+ * on purpose; that is a fact about the gallery rather than about their
+ * photographs, and it is the honest reason in nearly every case.
+ */
+export async function sendApplicationDeclined(
+  to: string,
+  displayName: string,
+): Promise<void> {
+  const name = escapeHtml(displayName);
+
+  await send({
+    to,
+    subject: "About your application — the beauty of earth.",
+    text: [
+      `${displayName}, thank you for showing us your work.`,
+      "",
+      "We are not able to add you to the gallery at the moment. It stays",
+      "deliberately small, which means saying no to photographs we like.",
+      "",
+      "You are welcome to apply again later.",
+    ].join("\n"),
+    html: page(
+      `<p style="margin:0 0 20px;color:#a8adb4;line-height:1.6">
+         ${name}, thank you for showing us your work.
+       </p>
+       <p style="margin:0 0 20px;color:#a8adb4;line-height:1.6">
+         We are not able to add you to the gallery at the moment. It stays
+         deliberately small, which means saying no to photographs we like.
+       </p>
+       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
+         You are welcome to apply again later.
+       </p>`,
+    ),
+  });
+}
+
+/**
  * The "new work is up" message, to one subscriber.
  *
  * The body is built by `lib/announcement.ts` and passed in already

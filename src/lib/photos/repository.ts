@@ -199,40 +199,50 @@ export async function insertDraftPhoto(
   return id;
 }
 
+/** What a save did, so the caller can say so. */
+export interface SaveResult {
+  slug: string;
+  live: boolean;
+}
+
 /**
- * Authorisation lives in the WHERE clause, not in the caller. A contributor's
+ * Authorisation lives in the WHERE clause, not in the caller: a contributor's
  * update carries `AND author_id = ...`, so a forged id updates zero rows
- * instead of someone else's photo; the owner's does not, so they can moderate.
- * Returns the author's slug for cache revalidation, or null if nothing matched.
+ * instead of somebody else's photograph. The owner's clause is satisfied by
+ * the role instead, so they can moderate.
+ *
+ * `publish` is separate from saving because it was not, and a photographer
+ * could not write a title without the photograph going live — so captioning
+ * an evening's uploads meant publishing each one into the feed and the
+ * announcement queue and pulling it back. Saving a draft leaves
+ * `published_at` alone; publishing sets it once and never moves it, so
+ * re-publishing does not reorder the gallery.
  */
 export async function publishPhoto(
   id: string,
   input: PublishInput,
   actor: Contributor,
-): Promise<string | null> {
-  const rows = isOwner(actor)
-    ? await sql`
-        UPDATE photos p SET title = ${input.title},
-               description = ${input.description},
-               location = ${input.location},
-               precise_location = ${input.precise_location},
-               technique = ${input.technique},
-               bg_color = ${input.bg_color},
-               published_at = COALESCE(p.published_at, now())
-        FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
-        RETURNING c.slug;`
-    : await sql`
-        UPDATE photos p SET title = ${input.title},
-               description = ${input.description},
-               location = ${input.location},
-               precise_location = ${input.precise_location},
-               technique = ${input.technique},
-               bg_color = ${input.bg_color},
-               published_at = COALESCE(p.published_at, now())
-        FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
-          AND p.author_id = ${actor.id}
-        RETURNING c.slug;`;
-  return (rows[0]?.["slug"] as string | undefined) ?? null;
+  publish: boolean,
+): Promise<SaveResult | null> {
+  const rows = await sql`
+    UPDATE photos p SET title = ${input.title},
+           description = ${input.description},
+           location = ${input.location},
+           precise_location = ${input.precise_location},
+           technique = ${input.technique},
+           bg_color = ${input.bg_color},
+           published_at = CASE WHEN ${publish}
+                               THEN COALESCE(p.published_at, now())
+                               ELSE p.published_at END
+    FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
+      AND (${isOwner(actor)} OR p.author_id = ${actor.id})
+    RETURNING c.slug, p.published_at IS NOT NULL AS live;`;
+
+  const row = rows[0] as Record<string, unknown> | undefined;
+  if (row === undefined) {
+    return null;
+  }
+  return { slug: row["slug"] as string, live: row["live"] === true };
 }
 
 export async function setPublished(

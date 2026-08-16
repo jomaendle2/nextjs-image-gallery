@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SiteFooter } from "@/components/SiteFooter";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { FALLBACK_TINT, GROUND, photoGlow } from "@/lib/photo-ground";
 import { photoAltText } from "@/lib/photos/alt-text";
@@ -97,6 +98,16 @@ export function PhotoGrid({
             </li>
           ))}
         </ul>
+
+        {/*
+          The legal footer, which this page had none of.
+          
+          `SiteFooter`'s own note says it appears on every page that scrolls,
+          and this one scrolls — so a photographer's page, the URL they
+          actually share, was three clicks from the Impressum rather than the
+          two the German rule is read as requiring.
+        */}
+        <SiteFooter className="mt-16 justify-center pb-4" />
       </main>
     </div>
   );
