@@ -21,6 +21,77 @@ const MAX_SUBTITLE = 90;
 
 const WORDMARK = "the beauty of earth.";
 
+/**
+ * How many photographs a photographer's card carries.
+ *
+ * A card for a photographer that shows no photography is the worst share
+ * preview a gallery can have — `/by/[slug]` is the link they send about
+ * their own work, and it previewed as a name on a gradient. One large
+ * photograph would crop badly across the mix of portrait and landscape
+ * here; three lets the shapes disagree without any of them being wrong.
+ */
+const PREVIEW_COUNT = 3;
+const PREVIEW_HEIGHT = 380;
+
+/**
+ * The type scale, which steps down when photographs take the top two-thirds.
+ *
+ * 630 less the strip and the padding leaves about 160px for three stacked
+ * lines, and the standalone card's 72px title does not fit in that on its
+ * own.
+ */
+function typeScale(hasPreviews: boolean, isWordmark: boolean) {
+  if (isWordmark) {
+    return { title: "92px", tracking: "-4.5px", gap: "20px", metaGap: "24px" };
+  }
+  return hasPreviews
+    ? { title: "54px", tracking: "-2px", gap: "10px", metaGap: "12px" }
+    : { title: "72px", tracking: "-2px", gap: "20px", metaGap: "24px" };
+}
+
+/**
+ * The strip of work across the top of a photographer's card.
+ *
+ * Satori has no `object-fit` shorthand on a container, so each photograph is
+ * its own flex child sized to cover — equal columns, shapes allowed to
+ * differ, which suits a mix of portrait and landscape better than one large
+ * image cropped to a banner.
+ */
+function PhotographStrip({ urls }: { urls: string[] }) {
+  return (
+    <div style={{ display: "flex", width: "100%", height: PREVIEW_HEIGHT }}>
+      {/*
+        biome-ignore-start lint/performance/noImgElement: this tree is
+        rendered by Satori into a PNG on the server. `next/image` is a
+        browser component and has no runtime here.
+      */}
+      {urls.map((url) => (
+        <img
+          alt=""
+          height={PREVIEW_HEIGHT}
+          key={url}
+          src={url}
+          style={{ objectFit: "cover", flex: "1 1 0", height: PREVIEW_HEIGHT }}
+          width={WIDTH / urls.length}
+        />
+      ))}
+      {/* biome-ignore-end lint/performance/noImgElement: as above. */}
+    </div>
+  );
+}
+
+/** Absolute image URLs, bounded so a crafted query cannot stall the render. */
+function previewUrls(raw: string | null): string[] {
+  if (raw === null || raw === "") {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((url) => url.trim())
+    .filter((url) => url.startsWith("https://"))
+    .slice(0, PREVIEW_COUNT);
+}
+
 function truncate(value: string, limit: number): string {
   return value.length <= limit
     ? value
@@ -51,10 +122,13 @@ export function GET(request: NextRequest) {
      * cacheable, so an unbounded string here is an invitation to make the
      * layout engine chew through a hundred kilobytes per request.
      */
+    const previews = previewUrls(searchParams.get("previews"));
     const rawSubtitle = searchParams.get("subtitle");
     const subtitle =
       rawSubtitle === null ? null : truncate(rawSubtitle, MAX_SUBTITLE);
     const isWordmark = title === WORDMARK;
+    const scale = typeScale(previews.length > 0, isWordmark);
+    const isHandle = (subtitle ?? "").startsWith("@");
 
     return new ImageResponse(
       <div
@@ -64,7 +138,7 @@ export function GET(request: NextRequest) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-end",
-          padding: "72px",
+          padding: previews.length > 0 ? "0" : "72px",
           backgroundColor: GROUND,
           // The same wash of colour the gallery lays over its ground, so the
           // card reads as lit from above rather than as a flat rectangle.
@@ -73,50 +147,66 @@ export function GET(request: NextRequest) {
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        {/*
+        {previews.length === 0 ? null : <PhotographStrip urls={previews} />}
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            padding: previews.length > 0 ? "36px 72px 52px" : "0",
+          }}
+        >
+          {/*
           The wordmark sits above the title unless it *is* the title, in
           which case printing it twice would be the only thing on the card.
         */}
-        {isWordmark ? null : (
+          {isWordmark ? null : (
+            <div
+              style={{
+                display: "flex",
+                fontSize: "26px",
+                fontWeight: 600,
+                letterSpacing: "-0.5px",
+                color: "rgba(255,255,255,0.45)",
+                marginBottom: scale.gap,
+              }}
+            >
+              {WORDMARK}
+            </div>
+          )}
+
           <div
             style={{
               display: "flex",
-              fontSize: "26px",
+              fontSize: scale.title,
               fontWeight: 600,
-              letterSpacing: "-0.5px",
-              color: "rgba(255,255,255,0.45)",
-              marginBottom: "20px",
+              // Matches the tight tracking the site sets its headings in.
+              letterSpacing: scale.tracking,
+              lineHeight: 1.05,
+              color: "#ffffff",
             }}
           >
-            {WORDMARK}
+            {title}
           </div>
-        )}
 
-        <div
-          style={{
-            display: "flex",
-            fontSize: isWordmark ? "92px" : "72px",
-            fontWeight: 600,
-            // Matches the tight tracking the site sets its headings in.
-            letterSpacing: isWordmark ? "-4.5px" : "-3px",
-            lineHeight: 1.05,
-            color: "#ffffff",
-          }}
-        >
-          {title}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            marginTop: "24px",
-            fontSize: "24px",
-            letterSpacing: "3px",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.4)",
-          }}
-        >
-          {subtitle ?? "Photographs from around the world"}
+          <div
+            style={{
+              display: "flex",
+              marginTop: scale.metaGap,
+              fontSize: previews.length > 0 ? "20px" : "24px",
+              letterSpacing: isHandle ? "0.5px" : "3px",
+              /*
+               * Handles are lowercase everywhere they appear — @jo-maendle,
+               * never @JO-MAENDLE. The small-caps treatment is right for a
+               * label like "photographs from around the world" and wrong for
+               * something a person types.
+               */
+              textTransform: isHandle ? "none" : "uppercase",
+              color: "rgba(255,255,255,0.4)",
+            }}
+          >
+            {subtitle ?? "Photographs from around the world"}
+          </div>
         </div>
       </div>,
       { width: WIDTH, height: HEIGHT },

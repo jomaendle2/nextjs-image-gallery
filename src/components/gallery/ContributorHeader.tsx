@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowUpRight, Rss } from "lucide-react";
 import Link from "next/link";
+import { ShareButton } from "@/components/ui/ShareButton";
 import type { GalleryAuthor } from "@/data/galleryData";
 import { count } from "@/lib/plural";
 import { ViewToggle } from "./ViewToggle";
@@ -48,6 +49,19 @@ export function ContributorHeader({
             {contributor.name}
           </h1>
 
+          {/*
+            The handle, under the name and above the counts.
+            
+            A photographer's page is the thing they will actually send
+            people, so it needs something a person can repeat out loud and
+            type from memory. `/by/jo-maendle` is a path; `@jo-maendle` is a
+            name. Same URL either way — this is a label, not a second route
+            to keep working.
+          */}
+          <p className="mt-0.5 font-medium text-[0.8125rem] text-accent">
+            @{contributor.slug}
+          </p>
+
           <p className="mt-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
             {count(photoCount, "photograph")}
             {contributor.siteUrl === null ? null : (
@@ -75,6 +89,20 @@ export function ContributorHeader({
               follow
               <Rss aria-hidden="true" size={10} />
             </a>
+            {/*
+              Sharing a photographer, which had no affordance at all — the
+              site could share one photograph and not the person who took
+              it, which is backwards for the page most likely to be passed
+              on.
+            */}
+            <ShareButton
+              className="ml-2 translate-y-px text-white/55 hover:text-white"
+              key={contributor.slug}
+              label={`${contributor.name}'s photographs`}
+              path={`/by/${contributor.slug}`}
+              text={`Photographs by ${contributor.name}`}
+              title={`${contributor.name} — the beauty of earth.`}
+            />
           </p>
         </div>
 

@@ -32,9 +32,25 @@ export async function generateMetadata({
    * shares, and until now it previewed with the generic gallery image — so
    * the one link they send about their own work said nothing about them.
    */
-  const card = `/api/og?title=${encodeURIComponent(contributor.display_name)}&subtitle=${encodeURIComponent(
-    "Photographs on the beauty of earth",
-  )}`;
+  /*
+   * Their photographs go on the card, not just their name.
+   *
+   * This is the link a photographer sends about their own work, and it
+   * previewed as a name on a gradient — a gallery whose share preview
+   * contains no photography. The three most recent are enough to say what
+   * kind of photographer they are before anybody clicks.
+   */
+  const images = await getGalleryImages(contributor.slug);
+  const previews = images
+    .slice(0, 3)
+    .map((image) => image.src.src)
+    .filter((url) => url.startsWith("https://"))
+    .join(",");
+
+  const card =
+    `/api/og?title=${encodeURIComponent(contributor.display_name)}` +
+    `&subtitle=${encodeURIComponent(`@${contributor.slug}`)}` +
+    (previews === "" ? "" : `&previews=${encodeURIComponent(previews)}`);
 
   return {
     title: `${contributor.display_name} — the beauty of earth.`,
