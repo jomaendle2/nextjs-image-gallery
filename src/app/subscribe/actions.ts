@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import type { FormState } from "@/app/form-state";
 import {
   sendSubscribeConfirmation,
   sendSubscribeWelcome,
@@ -17,16 +18,14 @@ import {
 } from "@/lib/subscribers/repository";
 import { validateSubscription } from "@/lib/subscribers/validate";
 
-export interface SubscribeState {
-  status: "idle" | "sent" | "error";
-  message: string | null;
-}
+/** One shape for every form on the site. See `@/app/form-state`. */
+export type SubscribeState = FormState;
 
 /*
  * A "use server" module may only export async functions, so the form's
  * initial state lives with the form. Type exports are erased and are fine.
  */
-const SENT: SubscribeState = { status: "sent", message: null };
+const SENT: SubscribeState = { tone: "sent", message: null };
 
 /**
  * Takes an address and sends it a confirmation, or appears to.
@@ -48,7 +47,7 @@ export async function subscribe(
     if (result.error === "SILENT_DROP") {
       return SENT;
     }
-    return { status: "error", message: result.error };
+    return { tone: "error", message: result.error };
   }
 
   const headerList = await headers();

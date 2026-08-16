@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { type FormState, IDLE } from "@/app/form-state";
 import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
-import { type InviteState, NO_MESSAGE } from "./invite-state";
 
 /**
  * The three fields that bring a photographer into the gallery.
@@ -26,11 +26,11 @@ export function InviteForm({
   remaining,
   submitLabel = "Invite",
 }: {
-  action: (state: InviteState, formData: FormData) => Promise<InviteState>;
+  action: (state: FormState, formData: FormData) => Promise<FormState>;
   remaining?: number;
   submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, NO_MESSAGE);
+  const [state, formAction, pending] = useActionState(action, IDLE);
   const emailId = useId();
   const nameId = useId();
   const siteId = useId();
@@ -101,7 +101,9 @@ export function InviteForm({
         had happened.
       */}
       {state.message ? (
-        <Notice tone={state.tone}>{state.message}</Notice>
+        <Notice tone={state.tone === "error" ? "error" : "success"}>
+          {state.message}
+        </Notice>
       ) : null}
     </form>
   );

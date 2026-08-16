@@ -5,14 +5,14 @@ import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { type SubscribeState, subscribe } from "./actions";
 
-const INITIAL: SubscribeState = { status: "idle", message: null };
+const INITIAL: SubscribeState = { tone: "idle", message: null };
 
 export function SubscribeForm() {
   const [state, formAction, pending] = useActionState(subscribe, INITIAL);
   const emailId = useId();
   const honeypotId = useId();
 
-  if (state.status === "sent") {
+  if (state.tone === "sent") {
     return (
       <p
         aria-live="polite"

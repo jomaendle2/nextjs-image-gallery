@@ -5,7 +5,7 @@ import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { type ApplyState, apply } from "./actions";
 
-const INITIAL: ApplyState = { status: "idle", message: null };
+const INITIAL: ApplyState = { tone: "idle", message: null };
 
 export function ApplyForm() {
   const [state, formAction, pending] = useActionState(apply, INITIAL);
@@ -15,7 +15,7 @@ export function ApplyForm() {
   const noteId = useId();
   const trapId = useId();
 
-  if (state.status === "sent") {
+  if (state.tone === "sent") {
     return (
       <div className="glass-thin rounded-2xl p-6">
         <h2 className="font-semibold text-lg tracking-[-0.03em]">

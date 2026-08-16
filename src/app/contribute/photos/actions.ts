@@ -2,6 +2,7 @@
 
 import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
+import { type FormState, failed, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
 import {
   deletePhoto,
@@ -9,9 +10,8 @@ import {
   setPublished,
 } from "@/lib/photos/repository";
 
-export interface PhotoFormState {
-  message: string | null;
-}
+/** One shape for every form on the site. See `@/app/form-state`. */
+export type PhotoFormState = FormState;
 
 const MAX_TITLE = 120;
 const MAX_DESCRIPTION = 300;
@@ -52,18 +52,18 @@ export async function savePhoto(
 
   const id = formData.get("id");
   if (typeof id !== "string" || id === "") {
-    return { message: "Missing photograph." };
+    return failed("Missing photograph.");
   }
 
   const title = text(formData, "title", MAX_TITLE);
   const description = text(formData, "description", MAX_DESCRIPTION);
   if (title === "" || description === "") {
-    return { message: "A title and a description are both required." };
+    return failed("A title and a description are both required.");
   }
 
   const bgColor = text(formData, "bg_color", 7);
   if (!HEX_COLOR.test(bgColor)) {
-    return { message: "The background colour must be a hex value." };
+    return failed("The background colour must be a hex value.");
   }
 
   const location = text(formData, "location", MAX_TITLE);
@@ -100,16 +100,16 @@ export async function savePhoto(
   );
 
   if (saved === null) {
-    return { message: "That photograph could not be found." };
+    return failed("That photograph could not be found.");
   }
 
   revalidateFeeds(saved.slug);
   if (publish) {
-    return { message: "Published." };
+    return succeeded("Published.");
   }
-  return {
-    message: saved.live ? "Changes saved." : "Draft saved. Not published yet.",
-  };
+  return succeeded(
+    saved.live ? "Changes saved." : "Draft saved. Not published yet.",
+  );
 }
 
 export async function togglePublished(

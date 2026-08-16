@@ -1,21 +1,20 @@
 "use server";
 
 import { headers } from "next/headers";
+import type { FormState } from "@/app/form-state";
 import { submitApplication } from "@/lib/applications/repository";
 import { validateApplication } from "@/lib/applications/validate";
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 
-export interface ApplyState {
-  status: "idle" | "sent" | "error";
-  message: string | null;
-}
+/** One shape for every form on the site. See `@/app/form-state`. */
+export type ApplyState = FormState;
 
 /*
  * No value exports here beyond the actions themselves: a "use server" module
  * may only export async functions, so the form's initial state lives with the
  * form. Type exports are erased at compile time and are fine.
  */
-const SENT: ApplyState = { status: "sent", message: null };
+const SENT: ApplyState = { tone: "sent", message: null };
 
 export async function apply(
   _previous: ApplyState,
@@ -31,7 +30,7 @@ export async function apply(
     if (result.error === "SILENT_DROP") {
       return SENT;
     }
-    return { status: "error", message: result.error };
+    return { tone: "error", message: result.error };
   }
 
   const headerList = await headers();
@@ -44,7 +43,7 @@ export async function apply(
   } catch (error) {
     console.error("Application failed:", error);
     return {
-      status: "error",
+      tone: "error",
       message: "Something went wrong. Please try again in a moment.",
     };
   }

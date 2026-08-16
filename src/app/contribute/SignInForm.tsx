@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useId } from "react";
+import { IDLE } from "@/app/form-state";
 import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { requestSignIn, type SignInState } from "./actions";
 
-const INITIAL: SignInState = { message: null };
+const INITIAL: SignInState = IDLE;
 
 export function SignInForm() {
   const [state, formAction, pending] = useActionState(requestSignIn, INITIAL);

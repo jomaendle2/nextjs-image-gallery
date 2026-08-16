@@ -2,6 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useActionState, useCallback, useState } from "react";
+import { IDLE } from "@/app/form-state";
 import { ActionError } from "@/components/ui/ActionError";
 import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -14,7 +15,7 @@ import {
   togglePublished,
 } from "./actions";
 
-const INITIAL: PhotoFormState = { message: null };
+const INITIAL: PhotoFormState = IDLE;
 
 /**
  * Everything about a photograph that a contributor can change.

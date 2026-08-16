@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { type FormState, failed, succeeded } from "@/app/form-state";
 import { sendLoginEmail } from "@/lib/auth/email";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { looksLikeEmail, normaliseEmail } from "@/lib/auth/slug";
@@ -14,9 +15,8 @@ import {
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 
-export interface SignInState {
-  message: string | null;
-}
+/** One shape for every form on the site. See `@/app/form-state`. */
+export type SignInState = FormState;
 
 /**
  * Always reports the same thing.
@@ -33,7 +33,7 @@ export async function requestSignIn(
 ): Promise<SignInState> {
   const raw = formData.get("email");
   if (typeof raw !== "string" || !looksLikeEmail(raw)) {
-    return { message: "That does not look like an email address." };
+    return failed("That does not look like an email address.");
   }
 
   const email = normaliseEmail(raw);
@@ -45,7 +45,7 @@ export async function requestSignIn(
   if (
     !(signInLimiter.check(`ip:${ip}`) && signInLimiter.check(`em:${email}`))
   ) {
-    return { message: NEUTRAL };
+    return succeeded(NEUTRAL);
   }
 
   /*
@@ -78,7 +78,7 @@ export async function requestSignIn(
     }
   });
 
-  return { message: NEUTRAL };
+  return succeeded(NEUTRAL);
 }
 
 export async function signOut(): Promise<void> {

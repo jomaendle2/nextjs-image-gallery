@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import type { FormState } from "@/app/form-state";
 import { claimInvite } from "@/lib/auth/contributors";
 import { sendInvitation } from "@/lib/auth/email";
 import { requireContributor } from "@/lib/auth/session";
@@ -11,12 +12,11 @@ import {
   normaliseSiteUrl,
 } from "@/lib/auth/slug";
 import { clientIp, inviteLimiter } from "@/lib/rate-limit";
-import type { InviteState } from "../invite-state";
 
 /** Matches the owner's invite form, which slices names to the same length. */
 const MAX_NAME = 80;
 
-function refuse(message: string): InviteState {
+function refuse(message: string): FormState {
   return { message, tone: "error" };
 }
 
@@ -85,9 +85,9 @@ function readInvite(formData: FormData, actorEmail: string): ReadInvite {
  * signed in — the same two-key shape the sign-in form uses.
  */
 export async function inviteAsContributor(
-  _previous: InviteState,
+  _previous: FormState,
   formData: FormData,
-): Promise<InviteState> {
+): Promise<FormState> {
   const actor = await requireContributor();
 
   const headerList = await headers();

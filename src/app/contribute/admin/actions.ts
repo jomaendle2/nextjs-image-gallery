@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { FormState } from "@/app/form-state";
 import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
 import {
@@ -26,7 +27,6 @@ import {
 } from "@/lib/photos/repository";
 import { siteOrigin } from "@/lib/site-url";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
-import type { InviteState } from "../invite-state";
 
 /** What a send did, for the button to report. */
 export interface AnnounceResult {
@@ -41,7 +41,7 @@ export interface AnnounceResult {
  * alias. A type alias is erased, so it is legal to export from a
  * `"use server"` module where a value would not be.
  */
-export type AdminFormState = InviteState;
+export type AdminFormState = FormState;
 
 const MAX_NAME = 80;
 
