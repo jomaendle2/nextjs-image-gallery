@@ -84,7 +84,7 @@ Operational scripts, run with `node --env-file=.env.local`:
 | Script | What it does |
 | --- | --- |
 | `scripts/setup-billing-portal.mts` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
-| `scripts/smoke-membership.mts` | Webhook forgery, replay, dunning, cancellation. Needs `stripe listen`. |
+| `scripts/smoke-membership.mts` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
 | `scripts/smoke-portal.mts` | The member's side: real customer, real session, real cookie. |
 | `scripts/smoke-email.mts` | Sends one of every email template. Needs the `alias-loader` import. |
 

@@ -243,6 +243,8 @@ item on this list that has a legal rather than a technical deadline.
 # Once per Stripe mode — test today, live before launch.
 node --env-file=.env.local scripts/setup-billing-portal.mts
 
+# Only for clicking through a real checkout — the scripts below sign their
+# own events and need no tunnel.
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 node --env-file=.env.local scripts/smoke-membership.mts   # the attacker's side
 node --env-file=.env.local scripts/smoke-portal.mts       # the member's side

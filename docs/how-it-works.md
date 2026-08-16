@@ -175,13 +175,14 @@ Forty checks across the three paths that matter — ingest, the attacker's
 side of the membership, the member's side — with no setup and nothing left
 behind. Individually: `smoke:upload`, `smoke:membership`, `smoke:portal`.
 
-The membership half needs a webhook tunnel; the rest do not:
+None of them needs `stripe listen`: the membership checks sign their own
+events with `STRIPE_WEBHOOK_SECRET` and post straight to the local endpoint,
+which is the same code path Stripe drives including the signature check. A
+tunnel is only for the different job of clicking through a real checkout in
+a browser and having Stripe's servers reach your machine.
 
 ```bash
-# 1. Webhooks need a tunnel in development.
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-
-# 2. Once per Stripe mode — test now, live before launch.
+# Once per Stripe mode — test now, live before launch.
 node --env-file=.env.local scripts/setup-billing-portal.mts
 
 # 3. The attacker's side: forgery, replay, dunning, cancellation.
@@ -215,9 +216,10 @@ afterwards to unlock what you bought.
   press exists because mail gateways fetch every URL in an inbound message,
   and a link that signed you in on arrival was spent before you touched it.
   The same is true of the unsubscribe and subscribe-confirmation links.
-- **Local webhooks need `stripe listen` running.** Without it a checkout
-  completes, no event arrives, and the member row is never written — which
-  looks exactly like a bug in the code.
+- **A real checkout in the browser needs `stripe listen` running.** Without
+  it the payment completes, no event reaches your machine, and the member
+  row is never written — which looks exactly like a bug in the code. The
+  smoke tests do not need it; they sign their own events.
 - **`EMAIL_FROM` is as necessary as the API key**, and in production its
   absence now *throws* rather than printing to the log. It used to fail
   silently, which meant live sign-in tokens written into the platform logs
