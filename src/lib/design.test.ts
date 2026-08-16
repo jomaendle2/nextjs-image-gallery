@@ -106,3 +106,57 @@ describe("the accent is used through the system, not around it", () => {
     ]);
   });
 });
+
+describe("text stays readable on the ground", () => {
+  /*
+   * Measured rather than asserted by taste. Compositing white at alpha over
+   * `--ground` (#0b0e12) and computing relative luminance both sides gives:
+   *
+   *   white/30 ≈ 2.3:1   white/35 ≈ 2.9:1
+   *   white/40 ≈ 3.8:1   white/45 ≈ 4.2:1   white/55 ≈ 5.3:1
+   *
+   * WCAG AA wants 4.5:1 for normal text, and nearly every one of these was
+   * on 11px uppercase metadata — nowhere near the large-text exemption. The
+   * site had 57 of them, including the legal footer and the hint under every
+   * form field.
+   */
+  const TOO_FAINT = /text-white\/(?:1\d|2\d|3\d|4[0-5])\b/;
+
+  it("no text uses an opacity below the AA floor", () => {
+    const offenders: string[] = [];
+
+    for (const file of allSourceFiles()) {
+      const lines = readFileSync(file, "utf8").split("\n");
+
+      const faint = lines
+        .map((line, index) => ({ line, index }))
+        .filter(({ line }) => TOO_FAINT.test(line))
+        /*
+         * Decoration is exempt, and rightly: the separators and arrows this
+         * catches are `aria-hidden`, carry no information, and raising them
+         * to a text weight would put a slash in competition with the words
+         * on either side of it. WCAG 1.4.3 says the same about incidental
+         * content. The attribute is usually a line or two above the class,
+         * so the window looks back a little rather than at one line.
+         */
+        .filter(({ index }) =>
+          lines
+            .slice(Math.max(0, index - 3), index + 1)
+            .every((near) => !near.includes("aria-hidden")),
+        )
+        .map(({ line }) => TOO_FAINT.exec(line)?.[0] ?? "");
+
+      if (faint.length > 0) {
+        offenders.push(
+          `${file.replace(SRC, "")} → ${[...new Set(faint)].join(", ")}`,
+        );
+      }
+    }
+
+    expect(
+      offenders,
+      "Use text-white/55 or higher. Below that it fails WCAG AA on this " +
+        "background, and the small uppercase metadata is where it hurts most.",
+    ).toEqual([]);
+  });
+});

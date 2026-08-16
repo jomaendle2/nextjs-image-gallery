@@ -27,7 +27,7 @@ export function StatusPage({ title, detail, action }: StatusPageProps) {
       style={{ backgroundColor: GROUND }}
     >
       <div className="w-full max-w-sm text-center">
-        <p className="font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em]">
+        <p className="font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em]">
           the beauty of earth.
         </p>
 

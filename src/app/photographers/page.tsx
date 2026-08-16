@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
+import { TextLink } from "@/components/ui/TextLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
@@ -36,7 +37,7 @@ export default async function PhotographersPage() {
       <div className="mx-auto w-full max-w-[1536px] px-4 py-10 sm:px-8 sm:py-14">
         <header>
           <Link
-            className={`${TOUCH_LINK} gap-1.5 font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+            className={`${TOUCH_LINK} gap-1.5 font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
             href="/"
           >
             <ArrowLeft aria-hidden="true" size={13} />
@@ -46,7 +47,7 @@ export default async function PhotographersPage() {
           <h1 className="mt-1.5 font-semibold text-2xl tracking-[-0.035em] sm:text-3xl">
             Photographers
           </h1>
-          <p className="mt-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+          <p className="mt-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
             {count(contributors.length, "contributor")}
           </p>
         </header>
@@ -68,7 +69,7 @@ export default async function PhotographersPage() {
                     <p className="truncate font-semibold text-base tracking-[-0.02em] sm:text-lg">
                       {person.display_name}
                     </p>
-                    <p className="mt-0.5 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+                    <p className="mt-0.5 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
                       {count(person.photo_count, "photograph")}
                     </p>
                   </div>
@@ -145,13 +146,10 @@ export default async function PhotographersPage() {
               One email when new photographs go up, and nothing else. There is a
               feed too, if you would rather not give us an address.
             </p>
-            <Link
-              className={`${TOUCH_LINK} mt-3 gap-1.5 font-medium text-sm text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-              href="/subscribe"
-            >
+            <TextLink href="/subscribe">
               Follow the gallery
               <ArrowRight aria-hidden="true" size={13} />
-            </Link>
+            </TextLink>
           </section>
         </main>
 

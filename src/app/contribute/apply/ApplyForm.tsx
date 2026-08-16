@@ -74,7 +74,7 @@ export function ApplyForm() {
           placeholder="annaweber.com — or your Instagram"
           required={true}
         />
-        <p className="text-white/35 text-xs">
+        <p className="text-white/55 text-xs">
           A portfolio, an Instagram, anything with photographs on it.
         </p>
       </div>

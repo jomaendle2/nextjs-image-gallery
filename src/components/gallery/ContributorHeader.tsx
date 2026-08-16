@@ -38,7 +38,7 @@ export function ContributorHeader({
             dropping its period made it read as a different logo.
           */}
           <Link
-            className="-my-3 inline-flex min-h-11 items-center gap-1.5 rounded-full py-3 font-semibold text-[0.8125rem] text-white/45 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className="-my-3 inline-flex min-h-11 items-center gap-1.5 rounded-full py-3 font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
             href="/"
           >
             <ArrowLeft aria-hidden="true" size={13} />
@@ -62,7 +62,7 @@ export function ContributorHeader({
             @{contributor.slug}
           </p>
 
-          <p className="mt-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+          <p className="mt-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
             {count(photoCount, "photograph")}
             {contributor.siteUrl === null ? null : (
               <a

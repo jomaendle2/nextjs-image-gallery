@@ -145,16 +145,20 @@ export function AnnounceActions({
         ) : null}
 
         {noSubscribers ? (
-          <span className="text-sm text-white/45">
+          <span className="text-sm text-white/55">
             Nobody has confirmed a subscription yet.
           </span>
         ) : null}
 
-        {result === null ? null : (
-          <p aria-live="polite" className="text-sm text-white/70">
-            {result}
-          </p>
-        )}
+        {/*
+          Rendered whether or not there is a result. A live region mounted at
+          the same moment its text arrives announces nothing — the element
+          has to be in the document before the content changes — so the
+          outcome of mailing every subscriber was silent to a screen reader.
+        */}
+        <p aria-live="polite" className="text-sm text-white/70">
+          {result}
+        </p>
       </div>
 
       <ActionError message={error} />

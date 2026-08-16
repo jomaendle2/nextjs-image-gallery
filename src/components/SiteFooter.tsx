@@ -19,7 +19,7 @@ import { membershipConfigured } from "@/lib/stripe";
 export function SiteFooter({ className = "" }: { className?: string }) {
   return (
     <footer
-      className={`flex flex-wrap items-center gap-x-5 gap-y-1 text-white/35 text-xs ${className}`}
+      className={`flex flex-wrap items-center gap-x-5 gap-y-3 text-white/55 text-xs ${className}`}
     >
       <span>
         ©{" "}

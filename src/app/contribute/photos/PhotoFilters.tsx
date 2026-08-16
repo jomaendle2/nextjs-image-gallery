@@ -35,7 +35,7 @@ export function PhotoFilters({
       <div className="relative flex-1">
         <Search
           aria-hidden="true"
-          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/30"
+          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/50"
           size={15}
         />
         <input
@@ -49,7 +49,7 @@ export function PhotoFilters({
         {query === "" ? null : (
           <button
             aria-label="Clear search"
-            className="-translate-y-1/2 absolute top-1/2 right-2 flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
+            className="-translate-y-1/2 absolute top-1/2 -mr-1 right-2 flex size-11 items-center justify-center rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
             onClick={onClearQuery}
             type="button"
           >
@@ -70,7 +70,7 @@ export function PhotoFilters({
         <legend className="sr-only">Filter by status</legend>
         {FILTERS.map(({ value, label }) => (
           <label
-            className={`inline-flex min-h-9 cursor-pointer items-center rounded-lg px-3 font-medium text-[0.8125rem] transition-colors focus-within:outline-2 focus-within:outline-white/80 ${
+            className={`inline-flex min-h-11 cursor-pointer items-center rounded-lg px-3 font-medium text-[0.8125rem] transition-colors focus-within:outline-2 focus-within:outline-white/80 ${
               filter === value
                 ? "bg-white/10 text-white"
                 : "text-white/50 hover:text-white/80"

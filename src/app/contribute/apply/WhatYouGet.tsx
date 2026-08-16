@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TextLink } from "@/components/ui/TextLink";
 
 interface Offer {
   title: string;
@@ -54,7 +54,7 @@ const OFFERS: readonly Offer[] = [
 export function WhatYouGet() {
   return (
     <section className="mb-10">
-      <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
         What you get
       </h2>
 
@@ -76,14 +76,11 @@ export function WhatYouGet() {
         send their photographs wants to see the page they would get, not read
         about it.
       */}
-      <p className="mt-4 text-[0.8125rem] text-white/45">
+      <p className="mt-4 text-[0.8125rem] text-white/55">
         See one:{" "}
-        <Link
-          className="text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
-          href="/photographers"
-        >
+        <TextLink href="/photographers">
           the photographers already here
-        </Link>
+        </TextLink>
         .
       </p>
     </section>

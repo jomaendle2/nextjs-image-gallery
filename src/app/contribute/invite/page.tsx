@@ -68,7 +68,7 @@ export default async function InvitePage() {
 
       {invitees.length === 0 ? null : (
         <section className="mt-12">
-          <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+          <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
             You brought in
           </h2>
           <ul className="mt-4 space-y-2">
@@ -80,7 +80,7 @@ export default async function InvitePage() {
                 <TextLink href={`/by/${person.slug}`}>
                   {person.display_name}
                 </TextLink>
-                <span className="text-white/40 text-xs">
+                <span className="text-white/55 text-xs">
                   {person.published_count === 0
                     ? "nothing published yet"
                     : count(person.published_count, "photograph")}

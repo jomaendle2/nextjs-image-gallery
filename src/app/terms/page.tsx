@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
+import { TextLink } from "@/components/ui/TextLink";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
 import { alternates } from "@/lib/metadata";
 
@@ -29,14 +29,9 @@ export default function TermsPage() {
       <Section heading="Who you are contracting with">
         <p>
           {OPERATOR.name}, whose full details are in the{" "}
-          <Link
-            className="underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
-            href="/imprint"
-          >
-            imprint
-          </Link>
-          . These terms cover the membership only. Reading the gallery requires
-          no agreement with anybody.
+          <TextLink href="/imprint">imprint</TextLink>. These terms cover the
+          membership only. Reading the gallery requires no agreement with
+          anybody.
         </p>
       </Section>
 
@@ -75,15 +70,10 @@ export default function TermsPage() {
       <Section heading="Ending it">
         <p>
           Cancel whenever you like, from the{" "}
-          <Link
-            className="underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
-            href="/membership"
-          >
-            membership page
-          </Link>
-          , without asking anybody and without giving a reason. Cancelling stops
-          the next payment; access continues to the end of the period you have
-          already paid for. There is no minimum term and no notice period.
+          <TextLink href="/membership">membership page</TextLink>, without
+          asking anybody and without giving a reason. Cancelling stops the next
+          payment; access continues to the end of the period you have already
+          paid for. There is no minimum term and no notice period.
         </p>
       </Section>
 

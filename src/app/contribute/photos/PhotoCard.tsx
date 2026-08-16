@@ -164,11 +164,11 @@ export const PhotoCard = memo(function PhotoCardRow({
 
           <div className="min-w-0 flex-1">
             <p
-              className={`truncate font-medium text-[0.9375rem] ${untitled ? "text-white/40 italic" : "text-white"}`}
+              className={`truncate font-medium text-[0.9375rem] ${untitled ? "text-white/55 italic" : "text-white"}`}
             >
               {untitled ? "Untitled" : photo.title}
             </p>
-            <p className="mt-0.5 truncate text-white/40 text-xs">
+            <p className="mt-0.5 truncate text-white/55 text-xs">
               <span>
                 {(photo.location ?? "").trim() === ""
                   ? "No location"
@@ -187,7 +187,7 @@ export const PhotoCard = memo(function PhotoCardRow({
 
           <ChevronDown
             aria-hidden="true"
-            className="shrink-0 text-white/30 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+            className="shrink-0 text-white/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
             size={16}
           />
         </summary>
@@ -213,7 +213,7 @@ export const PhotoCard = memo(function PhotoCardRow({
                   />
                 </div>
                 {exif === null ? null : (
-                  <p className="mt-2 text-pretty text-white/40 text-xs">
+                  <p className="mt-2 text-pretty text-white/55 text-xs">
                     {exif}
                   </p>
                 )}

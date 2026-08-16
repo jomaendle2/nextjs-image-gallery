@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
+import { TextLink } from "@/components/ui/TextLink";
 import { OPERATOR } from "@/lib/legal";
 import { alternates } from "@/lib/metadata";
 
@@ -75,14 +76,9 @@ export default function ImprintPage() {
         <p>
           The European Commission provides a platform for online dispute
           resolution at{" "}
-          <a
-            className="underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
-            href="https://ec.europa.eu/consumers/odr/"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
+          <TextLink external={true} href="https://ec.europa.eu/consumers/odr/">
             ec.europa.eu/consumers/odr
-          </a>
+          </TextLink>
           . We are neither obliged nor willing to take part in dispute
           resolution proceedings before a consumer arbitration board, and would
           much rather you simply wrote to us.

@@ -30,7 +30,7 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
           ? "Opening checkout…"
           : `Become a member — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
       </GlassButton>
-      <p className="mt-2 text-sm text-white/45">
+      <p className="mt-2 text-sm text-white/55">
         Billed by Stripe, every {MEMBERSHIP.interval}, until you cancel. Cancel
         any time in one click — no notice period.
       </p>
@@ -41,7 +41,7 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
          * Stripe is a decision rather than a detail — and finding that out
          * on the receipt is too late to change it.
          */
-        <p className="mt-3 text-sm text-white/45">
+        <p className="mt-3 text-sm text-white/55">
           Use an address you can read: your membership is unlocked by a link
           sent there, and it is how you will sign in afterwards.
         </p>

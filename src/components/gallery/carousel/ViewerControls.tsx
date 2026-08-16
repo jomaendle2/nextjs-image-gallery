@@ -29,18 +29,10 @@ export function ViewerControls({
 }) {
   return (
     <div className={`absolute top-4 left-4 z-10 flex gap-2 ${chrome}`}>
-      <GlassButton
-        aria-label="Zoom in"
-        className="rounded-full p-2"
-        onClick={onZoomIn}
-      >
+      <GlassButton aria-label="Zoom in" size="icon" onClick={onZoomIn}>
         <ZoomIn size={20} />
       </GlassButton>
-      <GlassButton
-        aria-label="Zoom out"
-        className="rounded-full p-2"
-        onClick={onZoomOut}
-      >
+      <GlassButton aria-label="Zoom out" size="icon" onClick={onZoomOut}>
         <ZoomOut size={20} />
       </GlassButton>
       <GlassButton

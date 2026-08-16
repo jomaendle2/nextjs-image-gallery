@@ -29,7 +29,7 @@ export function ViewToggle({
   const base =
     "inline-flex size-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
   const on = "bg-white/15 text-white";
-  const off = "text-white/40 hover:text-white/80";
+  const off = "text-white/55 hover:text-white/80";
 
   return (
     <div className="glass-hairline inline-flex items-center gap-1 rounded-xl p-1">

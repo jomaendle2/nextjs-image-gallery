@@ -8,8 +8,8 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { TextLink } from "@/components/ui/TextLink";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
 
 /**
@@ -75,7 +75,7 @@ function Row({
 export function WhatYouGet() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
         What you get
       </h2>
       <ul className="mt-5 space-y-5">
@@ -112,7 +112,7 @@ export function WhatYouGet() {
 export function BeforeYouPay() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
         Be aware
       </h2>
       <ul className="mt-5 space-y-5">
@@ -148,7 +148,7 @@ export function BeforeYouPay() {
 export function HowPaymentWorks() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
         The money
       </h2>
       <ul className="mt-5 space-y-5">
@@ -174,29 +174,12 @@ export function HowPaymentWorks() {
         </Row>
       </ul>
 
-      <p className="mt-6 text-[0.8125rem] text-white/40 leading-relaxed">
+      <p className="mt-6 text-[0.8125rem] text-white/55 leading-relaxed">
         Run by {OPERATOR.name} in {OPERATOR.country} — a real person, with an{" "}
-        <Link
-          className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/70"
-          href="/imprint"
-        >
-          address and a name
-        </Link>{" "}
-        you can check. Read the{" "}
-        <Link
-          className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/70"
-          href="/terms"
-        >
-          terms
-        </Link>{" "}
-        and the{" "}
-        <Link
-          className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/70"
-          href="/privacy"
-        >
-          privacy policy
-        </Link>
-        , both of which are short.
+        <TextLink href="/imprint">address and a name</TextLink> you can check.
+        Read the <TextLink href="/terms">terms</TextLink> and the{" "}
+        <TextLink href="/privacy">privacy policy</TextLink>, both of which are
+        short.
       </p>
     </section>
   );

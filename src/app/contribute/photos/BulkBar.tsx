@@ -59,7 +59,7 @@ function DeleteConfirmation({
             {titleOf(photo)}
           </li>
         ))}
-        {extra > 0 ? <li className="text-white/40">and {extra} more</li> : null}
+        {extra > 0 ? <li className="text-white/55">and {extra} more</li> : null}
       </ul>
       <div className="flex flex-wrap gap-2">
         <GlassButton

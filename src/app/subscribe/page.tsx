@@ -25,14 +25,14 @@ export default function SubscribePage() {
       <div className="max-w-md">
         <SubscribeForm />
 
-        <p className="mt-8 text-sm text-white/45">
+        <p className="mt-8 text-sm text-white/55">
           We send one message when new work goes up, and nothing else. Your
           address is confirmed before anything is sent, every message carries a
           one-tap link to stop, and stopping deletes the address rather than
           flagging it.
         </p>
 
-        <p className="mt-4 text-sm text-white/45">
+        <p className="mt-4 text-sm text-white/55">
           Prefer a reader?{" "}
           <TextLink href="/feed.xml" standalone={true}>
             The feed is here

@@ -23,7 +23,7 @@ export function ContributorRowActions({ row }: { row: ContributorRow }) {
 
   // Revoking the owner would lock everyone out of this page.
   if (row.role === "owner") {
-    return <span className="text-sm text-white/35">owner</span>;
+    return <span className="text-sm text-white/55">owner</span>;
   }
 
   return (

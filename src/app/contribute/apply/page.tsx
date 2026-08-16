@@ -23,7 +23,7 @@ export default function ApplyPage() {
 
       <ApplyForm />
 
-      <p className="mt-8 text-sm text-white/45">
+      <p className="mt-8 text-sm text-white/55">
         Already invited?{" "}
         <TextLink href="/contribute" standalone={true}>
           Sign in

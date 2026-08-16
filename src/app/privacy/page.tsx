@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
+import { TextLink } from "@/components/ui/TextLink";
 import { OPERATOR, PROCESSORS } from "@/lib/legal";
 import { alternates } from "@/lib/metadata";
 
@@ -117,31 +118,60 @@ export default function PrivacyPage() {
           Only the services needed to run the site. Each is bound by a data
           processing agreement, and none receives more than is listed here.
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] border-collapse text-[0.8125rem]">
-            <thead>
-              <tr className="border-white/10 border-b text-left text-white/45">
-                <th className="py-2 pr-4 font-medium">Service</th>
-                <th className="py-2 pr-4 font-medium">Purpose</th>
-                <th className="py-2 font-medium">What it receives</th>
+        {/*
+          A list on a phone, a table on a screen wide enough for one.
+
+          This was a 544px-wide table inside a 342px column, scrolling
+          sideways with no affordance saying so and no way for a keyboard to
+          reach the third column — on the page a reader is most likely to
+          have arrived at for a specific fact. Making it focusable would have
+          satisfied the checker; not needing to scroll satisfies the reader.
+        */}
+        <dl className="space-y-4 sm:hidden">
+          {PROCESSORS.map((processor) => (
+            <div className="space-y-1" key={processor.name}>
+              <dt className="font-medium text-[0.8125rem] text-white/85">
+                {processor.name}
+              </dt>
+              <dd className="text-[0.8125rem] text-white/75">
+                {processor.role}
+              </dd>
+              <dd className="text-[0.8125rem] text-white/55">
+                {processor.data}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <table className="hidden w-full border-collapse text-[0.8125rem] sm:table">
+          <thead>
+            <tr className="border-white/10 border-b text-left text-white/55">
+              <th className="py-2 pr-4 font-medium" scope="col">
+                Service
+              </th>
+              <th className="py-2 pr-4 font-medium" scope="col">
+                Purpose
+              </th>
+              <th className="py-2 font-medium" scope="col">
+                What it receives
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {PROCESSORS.map((processor) => (
+              <tr className="border-white/5 border-b" key={processor.name}>
+                <td className="py-3 pr-4 align-top text-white/75">
+                  {processor.name}
+                </td>
+                <td className="py-3 pr-4 align-top">{processor.role}</td>
+                <td className="py-3 align-top text-white/55">
+                  {processor.data}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {PROCESSORS.map((processor) => (
-                <tr className="border-white/5 border-b" key={processor.name}>
-                  <td className="py-3 pr-4 align-top text-white/75">
-                    {processor.name}
-                  </td>
-                  <td className="py-3 pr-4 align-top">{processor.role}</td>
-                  <td className="py-3 align-top text-white/55">
-                    {processor.data}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-sm text-white/45">
+            ))}
+          </tbody>
+        </table>
+        <p className="text-sm text-white/55">
           Some of these are US companies. Transfers rely on the EU–US Data
           Privacy Framework or standard contractual clauses.
         </p>
@@ -163,12 +193,9 @@ export default function PrivacyPage() {
           Under the GDPR you can ask what we hold about you, have it corrected,
           have it deleted, take it elsewhere, or object to it being processed at
           all. Write to{" "}
-          <a
-            className="underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
-            href={`mailto:${OPERATOR.email}`}
-          >
+          <TextLink href={`mailto:${OPERATOR.email}`}>
             {OPERATOR.email}
-          </a>{" "}
+          </TextLink>{" "}
           and you will get an answer within a month, usually much sooner. Given
           how little is held, most requests can be answered in a sentence.
         </p>

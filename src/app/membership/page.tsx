@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { signOut } from "@/app/contribute/actions";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
-import { TOUCH_LINK } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
+import { TextLink } from "@/components/ui/TextLink";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
 import { isActive } from "@/lib/members/status";
@@ -105,14 +104,7 @@ export default async function MembershipPage({
         {member === null ? null : (
           <p className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70">
             You are a member. The location and the notes appear under every
-            photograph.{" "}
-            <Link
-              className="text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
-              href="/"
-            >
-              Go and look
-            </Link>
-            .
+            photograph. <TextLink href="/">Go and look</TextLink>.
           </p>
         )}
 
@@ -134,12 +126,9 @@ export default async function MembershipPage({
                */
               <p>
                 One step left:{" "}
-                <Link
-                  className="text-white/85 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
-                  href="/contribute"
-                >
+                <TextLink href="/contribute">
                   sign in with the address you paid with
-                </Link>{" "}
+                </TextLink>{" "}
                 to unlock it. We will email you a link — there is no password to
                 choose.
               </p>
@@ -168,7 +157,7 @@ export default async function MembershipPage({
         {member === null ? <BeforeYouPay /> : null}
         <HowPaymentWorks />
 
-        <p className="text-sm text-white/45">
+        <p className="text-sm text-white/55">
           The gallery, the feeds and the photographs stay free and always will.
           A membership buys the things only the photographer can tell you.{" "}
           {/*
@@ -177,13 +166,7 @@ export default async function MembershipPage({
             are things somebody deciding whether to pay is entitled to read
             first rather than discover afterwards.
           */}
-          <Link
-            className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/70"
-            href="/terms"
-          >
-            Terms
-          </Link>
-          .
+          <TextLink href="/terms">Terms</TextLink>.
         </p>
       </div>
     </ContributeShell>
@@ -201,14 +184,8 @@ function SubscribeSection({ signedIn }: { signedIn: boolean }) {
          * is only the way back to a membership you already have, and saying
          * otherwise would send new members down a route that refuses them.
          */
-        <p className="mt-3 text-sm text-white/45">
-          Already a member?{" "}
-          <Link
-            className={`${TOUCH_LINK} text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-            href="/contribute"
-          >
-            Sign in
-          </Link>{" "}
+        <p className="mt-3 text-sm text-white/55">
+          Already a member? <TextLink href="/contribute">Sign in</TextLink>{" "}
           instead — it takes one email.
         </p>
       )}

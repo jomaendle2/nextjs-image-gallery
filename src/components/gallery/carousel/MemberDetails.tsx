@@ -176,7 +176,7 @@ function body(data: Details | undefined): ReactNode {
   if (!data.member) {
     return (
       <Link
-        className="-my-3 inline-flex min-h-11 items-center rounded-full py-3 text-[0.6875rem] text-white/35 uppercase tracking-[0.14em] transition-colors hover:text-white/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+        className="-my-3 inline-flex min-h-11 items-center rounded-full py-3 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em] transition-colors hover:text-white/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
         href="/membership"
       >
         Members see where this was taken
@@ -190,7 +190,7 @@ function body(data: Details | undefined): ReactNode {
   // A member is entitled to know there is nothing to know.
   if (location === "" && technique === "") {
     return (
-      <p className="text-[0.6875rem] text-white/30 uppercase tracking-[0.14em]">
+      <p className="text-[0.6875rem] text-white/50 uppercase tracking-[0.14em]">
         No location given
       </p>
     );
@@ -204,7 +204,7 @@ function body(data: Details | undefined): ReactNode {
         </p>
       )}
       {technique === "" ? null : (
-        <p className="text-pretty text-[0.75rem] text-white/45 leading-relaxed">
+        <p className="text-pretty text-[0.75rem] text-white/55 leading-relaxed">
           {technique}
         </p>
       )}

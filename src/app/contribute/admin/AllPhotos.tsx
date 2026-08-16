@@ -58,7 +58,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
         <div className="relative mb-4">
           <Search
             aria-hidden="true"
-            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/30"
+            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/50"
             size={15}
           />
           <input
@@ -72,7 +72,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
           {query === "" ? null : (
             <button
               aria-label="Clear search"
-              className="-translate-y-1/2 absolute top-1/2 right-2 flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
+              className="-translate-y-1/2 absolute top-1/2 -mr-1 right-2 flex size-11 items-center justify-center rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
               onClick={clear}
               type="button"
             >
@@ -133,7 +133,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
                       </span>
                     ) : null}
                   </p>
-                  <p className="truncate text-white/45 text-xs">
+                  <p className="truncate text-white/55 text-xs">
                     {photo.author_name}
                   </p>
                 </div>

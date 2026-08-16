@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { Notice } from "@/components/ui/Notice";
+import { TextLink } from "@/components/ui/TextLink";
 import { legalIsComplete, OPERATOR } from "@/lib/legal";
 
 /**
@@ -43,14 +44,11 @@ export function LegalPage({
       <div className="max-w-prose space-y-8 text-[0.9375rem] text-white/65 leading-relaxed">
         {children}
 
-        <p className="border-white/10 border-t pt-6 text-sm text-white/40">
+        <p className="border-white/10 border-t pt-6 text-sm text-white/55">
           Last updated {updated}. Questions about any of this go to{" "}
-          <a
-            className="underline decoration-white/25 underline-offset-4 transition-colors hover:text-white/70"
-            href={`mailto:${OPERATOR.email}`}
-          >
+          <TextLink href={`mailto:${OPERATOR.email}`}>
             {OPERATOR.email}
-          </a>
+          </TextLink>
           .
         </p>
       </div>

@@ -74,7 +74,7 @@ export default async function AdminPage() {
                       <ArrowUpRight aria-hidden="true" size={12} />
                     </a>
                   </p>
-                  <p className="truncate text-white/45 text-xs">
+                  <p className="truncate text-white/55 text-xs">
                     {application.email}
                     {application.note === null
                       ? null
@@ -124,10 +124,10 @@ export default async function AdminPage() {
                 <p className="truncate font-medium text-sm">
                   {row.display_name}
                   {row.revoked_at === null ? null : (
-                    <span className="ml-2 text-white/40">revoked</span>
+                    <span className="ml-2 text-white/55">revoked</span>
                   )}
                 </p>
-                <p className="truncate text-white/45 text-xs">
+                <p className="truncate text-white/55 text-xs">
                   {row.email} · {count(row.photo_count, "photograph")} ·{" "}
                   <TextLink href={`/by/${row.slug}`}>/by/{row.slug}</TextLink>
                   {/*

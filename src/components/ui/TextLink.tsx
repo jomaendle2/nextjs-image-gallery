@@ -34,9 +34,34 @@ export function TextLink({
   external?: boolean;
   className?: string;
 }) {
-  const classes = [LINK, standalone ? TOUCH_LINK : "", className]
+  /*
+   * An address is one long unbreakable token, and the legal pages render it
+   * inside a `max-w-prose` column with a 24px gutter — so at 390px a long
+   * one ran off the side of the page it is legally required to be readable
+   * on.
+   */
+  const isMail = href.startsWith("mailto:");
+  const classes = [
+    LINK,
+    standalone ? TOUCH_LINK : "",
+    isMail ? "[overflow-wrap:anywhere]" : "",
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
+
+  /*
+   * `mailto:` is not a new tab. Sending it through the external branch would
+   * put `target="_blank"` on a hand-off to a mail client, which some
+   * browsers answer with a blank window nobody asked for.
+   */
+  if (isMail) {
+    return (
+      <a className={classes} href={href}>
+        {children}
+      </a>
+    );
+  }
 
   if (external) {
     return (

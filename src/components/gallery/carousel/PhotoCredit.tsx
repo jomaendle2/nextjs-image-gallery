@@ -72,7 +72,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 lg:items-end">
-      <p className="text-[0.6875rem] text-white/45 uppercase tracking-[0.14em]">
+      <p className="text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
         {linkAuthor ? (
           <AuthorLink author={author} />
         ) : (
@@ -80,7 +80,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
         )}
         {author.siteUrl === null ? null : (
           <a
-            className="ml-1 inline-flex translate-y-px items-center rounded-full text-white/40 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+            className="ml-1 inline-flex translate-y-px items-center rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
             href={author.siteUrl}
             rel="noopener noreferrer nofollow"
             target="_blank"
@@ -90,7 +90,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
           </a>
         )}
         {location === null ? null : (
-          <span className="text-white/35">{` — ${location}`}</span>
+          <span className="text-white/55">{` — ${location}`}</span>
         )}
       </p>
 
@@ -137,7 +137,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
         An empty paragraph holds the line instead. It has no text content, so
         a screen reader passes straight over it.
       */}
-      <p className="hidden min-h-4 max-w-full truncate text-[0.625rem] text-white/30 uppercase leading-4 tabular-nums tracking-[0.12em] sm:block">
+      <p className="hidden min-h-4 max-w-full truncate text-[0.625rem] text-white/50 uppercase leading-4 tabular-nums tracking-[0.12em] sm:block">
         {exif}
       </p>
 

@@ -66,7 +66,7 @@ export function SelectAll({
       />
       <Icon
         aria-hidden="true"
-        className={state === "none" ? "text-white/35" : "text-white/80"}
+        className={state === "none" ? "text-white/55" : "text-white/80"}
         size={16}
       />
       {state === "all"

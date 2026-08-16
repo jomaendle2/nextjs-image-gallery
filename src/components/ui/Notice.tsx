@@ -59,7 +59,15 @@ export function Notice({
   return (
     <div
       className={`flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-sm ${border} ${text} ${className}`}
-      {...(tone === "error" ? { role: "alert" } : {})}
+      /*
+        Errors interrupt; everything else waits for a pause. Without the
+        polite region a success or warning was never announced at all — and
+        for the invite form, the result of the action is the only feedback
+        that anything happened.
+      */
+      {...(tone === "error"
+        ? { role: "alert" }
+        : { "aria-live": "polite" as const })}
     >
       <Icon aria-hidden="true" className="mt-0.5 shrink-0" size={15} />
       {/*

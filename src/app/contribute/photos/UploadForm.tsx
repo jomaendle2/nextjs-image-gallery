@@ -71,10 +71,10 @@ function ItemStatus({
   percent: number;
 }) {
   if (item.status === "uploading") {
-    return <span className="flex-shrink-0 text-white/45">{percent}%</span>;
+    return <span className="flex-shrink-0 text-white/55">{percent}%</span>;
   }
   if (item.status === "waiting") {
-    return <span className="flex-shrink-0 text-white/45">waiting</span>;
+    return <span className="flex-shrink-0 text-white/55">waiting</span>;
   }
   if (item.status === "done") {
     return (

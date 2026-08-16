@@ -13,12 +13,12 @@
  */
 
 export const FIELD =
-  "glass-hairline min-h-11 w-full rounded-xl px-3.5 py-2.5 text-base sm:text-sm text-white transition-colors placeholder:text-white/30 hover:border-white/25 focus-visible:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
+  "glass-hairline min-h-11 w-full rounded-xl px-3.5 py-2.5 text-base sm:text-sm text-white transition-colors placeholder:text-white/50 hover:border-white/25 focus-visible:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80";
 
 export const LABEL = "block font-medium text-sm text-white/70";
 
 /** For the optional-field hint that follows a label. */
-export const LABEL_HINT = "text-white/35";
+export const LABEL_HINT = "text-white/55";
 
 /**
  * A standalone text link that still clears the 44px touch floor.
@@ -42,4 +42,4 @@ export const TOUCH_LINK = "-my-3 inline-flex min-h-11 items-center py-3";
  * nothing else may compete.
  */
 export const LINK =
-  "text-accent underline underline-offset-4 transition-colors hover:text-accent-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-edge";
+  "text-accent underline underline-offset-4 transition-colors hover:text-accent-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent";

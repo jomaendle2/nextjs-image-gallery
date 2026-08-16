@@ -118,7 +118,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
         them in: what everybody sees, then what only members do.
       */}
       <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] p-3.5">
-        <legend className="px-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
+        <legend className="px-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
           Members only
         </legend>
 
@@ -133,7 +133,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
             name="precise_location"
             placeholder="The pull-off below the second switchback"
           />
-          <p className="text-[0.75rem] text-white/35 leading-relaxed">
+          <p className="text-[0.75rem] text-white/55 leading-relaxed">
             Only members see this, and only if you fill it in. Nothing is ever
             read from the file — the GPS block is never opened, so whatever you
             type here is the only location this site knows.

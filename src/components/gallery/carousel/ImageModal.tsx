@@ -179,9 +179,16 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       {/* Close button */}
       <GlassButton
         aria-label="Close full screen view"
-        className={`absolute top-4 right-4 z-10 p-2 rounded-full ${chrome}`}
+        /*
+          `size="icon"` rather than `p-2`. `cn` is twMerge, so a padding
+          utility in `className` overrides the variant's own — which made the
+          close button of the full-screen viewer 40px wide, under the 44px
+          floor this codebase documents and checks everywhere else.
+        */
+        className={`absolute top-4 right-4 z-10 ${chrome}`}
         onClick={handleClose}
         ref={closeButtonRef}
+        size="icon"
       >
         <X size={24} />
       </GlassButton>
