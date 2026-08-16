@@ -58,7 +58,13 @@ export function ContributorHeader({
             name. Same URL either way — this is a label, not a second route
             to keep working.
           */}
-          <p className="mt-0.5 font-medium text-[0.8125rem] text-accent">
+          {/*
+            No accent here. This is the viewer, where the photograph is the
+            only thing allowed a colour — the handle is a label, not an
+            action, and a teal one beside a photograph competes with it.
+            Weight and case carry the distinction instead.
+          */}
+          <p className="mt-0.5 font-medium text-[0.8125rem] text-white/55">
             @{contributor.slug}
           </p>
 

@@ -7,6 +7,36 @@ interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
 }
 
+const GLASS_BASE = cn(
+  "relative inline-flex items-center justify-center",
+  "glass-thin text-white font-medium",
+  "transition-[scale,background-color] duration-300 ease-glass",
+  "hover:bg-[var(--glass-fill-hover)] active:scale-95",
+  "disabled:opacity-50 disabled:pointer-events-none",
+);
+
+/**
+ * The look, separated from the element.
+ *
+ * Three places need a glass control that is not a `<button>`: an anchor
+ * cannot be nested inside one, and two of the carousel's own controls render
+ * links. All three had copied this class run character for character, which
+ * is four copies of a hover colour and an easing curve waiting to disagree.
+ *
+ * Reach for `GlassButton` first. Use this only where the element genuinely
+ * cannot be a button, and say why at the call site.
+ */
+export function glassControl(
+  extra?: string,
+  shape: "round" | "pill" = "pill",
+): string {
+  return cn(
+    GLASS_BASE,
+    shape === "round" ? "rounded-full" : "rounded-2xl",
+    extra,
+  );
+}
+
 export function GlassButton({
   className,
   variant = "default",
@@ -18,12 +48,7 @@ export function GlassButton({
   return (
     <button
       className={cn(
-        // Base styles
-        "relative inline-flex items-center justify-center",
-        "glass-thin text-white font-medium",
-        "transition-[scale,background-color] duration-300 ease-glass",
-        "hover:bg-[var(--glass-fill-hover)] active:scale-95",
-        "disabled:opacity-50 disabled:pointer-events-none",
+        GLASS_BASE,
 
         // Variants
         variant === "default" && "rounded-2xl",

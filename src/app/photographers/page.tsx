@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
+import { glassControl } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { alternates } from "@/lib/metadata";
@@ -122,7 +123,10 @@ export default async function PhotographersPage() {
               it still reads as the primary action.
             */}
             <Link
-              className="glass-thin mt-5 inline-flex min-h-11 items-center rounded-2xl px-5 font-medium text-sm text-white transition-[scale,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 active:scale-95"
+              /* A Link, which cannot nest inside a button. */
+              className={glassControl(
+                "mt-5 min-h-11 px-5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80",
+              )}
               href="/contribute/apply"
             >
               Apply to contribute

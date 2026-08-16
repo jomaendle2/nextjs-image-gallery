@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { glassControl } from "@/components/ui/glass-button";
 
 interface CarouselTopBarProps {
   onClose?: () => void;
@@ -19,7 +20,8 @@ export function CarouselTopBar({ onClose }: CarouselTopBarProps) {
       {onClose ? (
         <button
           onClick={onClose}
-          className="grid place-items-center size-11 rounded-full glass-thin transition-[scale,background-color] duration-300 ease-glass hover:bg-[var(--glass-fill-hover)] hover:scale-105 active:scale-95"
+          /* A Link out of the viewer, so not a button. */
+          className={glassControl("size-11 hover:scale-105", "round")}
           aria-label="Close gallery"
           type="button"
         >
