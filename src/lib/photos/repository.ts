@@ -49,6 +49,24 @@ export async function listPublishedPhotos(
   return rows as PhotoRow[];
 }
 
+/**
+ * How many are waiting, without the rows.
+ *
+ * The admin page and the cron reminder both want only a number, and
+ * `listUnannouncedPhotos` returns every `FEED_COLUMNS` field — including a
+ * base64 blur placeholder per photograph. Fetching a hundred rows to call
+ * `.length` on them is the kind of waste that never announces itself.
+ */
+export async function countUnannouncedPhotos(): Promise<number> {
+  const rows = await sql`
+    SELECT count(*)::int AS n
+    FROM photos p JOIN contributors c ON c.id = p.author_id
+    WHERE p.published_at IS NOT NULL AND p.announced_at IS NULL
+      AND c.revoked_at IS NULL;
+  `;
+  return Number(rows[0]?.["n"] ?? 0);
+}
+
 /** A contributor's own photos, drafts included, newest work first. */
 export async function listOwnPhotos(
   contributorId: string,

@@ -6,9 +6,9 @@ import { listPendingApplications } from "@/lib/applications/repository";
 import { listContributors } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
-import { listAllPhotos, listUnannouncedPhotos } from "@/lib/photos/repository";
+import { countUnannouncedPhotos, listAllPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
-import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
+import { countConfirmedSubscribers } from "@/lib/subscribers/repository";
 import { ContributeShell } from "../ContributeShell";
 import { InviteForm } from "../InviteForm";
 import { AllPhotos } from "./AllPhotos";
@@ -40,8 +40,8 @@ export default async function AdminPage() {
       listPendingApplications(),
       listContributors(),
       listAllPhotos(),
-      listUnannouncedPhotos(),
-      listConfirmedSubscribers(),
+      countUnannouncedPhotos(),
+      countConfirmedSubscribers(),
     ]);
 
   return (
@@ -92,10 +92,7 @@ export default async function AdminPage() {
         The component decides whether it appears at all — see the note in
         `AnnounceActions` about the confirmation outliving the panel.
       */}
-      <AnnounceActions
-        pending={unannounced.length}
-        subscribers={subscribers.length}
-      />
+      <AnnounceActions pending={unannounced} subscribers={subscribers} />
 
       <section className="glass-thin rounded-3xl p-6">
         <h2 className="mb-1 font-semibold text-lg tracking-[-0.03em]">

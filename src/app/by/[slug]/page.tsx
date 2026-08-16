@@ -34,6 +34,16 @@ export async function generateMetadata({
    * photography is the worst version a gallery can have.
    */
   const images = await getGalleryImages(contributor.slug);
+  /*
+   * The display blobs, not the image optimizer.
+   *
+   * These are large — up to 3840px — and Satori fetches all three each time
+   * the card is built, so routing them through `/_next/image` at 640px looked
+   * like free savings. It is not: the optimizer content-negotiates to WebP or
+   * AVIF, Satori decodes neither, and the strip renders empty. A share card
+   * that silently loses its photographs is worse than one that is slow to
+   * build, and the card is cached for a day either way.
+   */
   const previews = images
     .slice(0, 3)
     .map((image) => image.src.src)

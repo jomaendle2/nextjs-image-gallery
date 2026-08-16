@@ -118,6 +118,21 @@ export async function listConfirmedSubscribers(): Promise<
   return rows as { email: string; unsubscribe_token: string }[];
 }
 
+/**
+ * How many people are on the list, without the list.
+ *
+ * The one above returns a live unsubscribe token per subscriber, and two
+ * callers wanted nothing but the count — so a page render and a cron tick
+ * were each pulling every address and every token out of the database to
+ * measure the length of the array.
+ */
+export async function countConfirmedSubscribers(): Promise<number> {
+  const rows = await sql`
+    SELECT count(*)::int AS n FROM subscribers WHERE confirmed_at IS NOT NULL;
+  `;
+  return Number(rows[0]?.["n"] ?? 0);
+}
+
 /** Housekeeping for requests nobody ever confirmed. */
 export async function pruneUnconfirmed(): Promise<void> {
   await sql`

@@ -207,7 +207,16 @@ export function GET(request: NextRequest) {
           </div>
         </div>
       </div>,
-      { width: WIDTH, height: HEIGHT },
+      {
+        width: WIDTH,
+        height: HEIGHT,
+        /*
+         * A share card is the same picture for everyone who asks, and it is
+         * asked for by crawlers rather than people. Without this every
+         * social preview re-rendered it and re-fetched its photographs.
+         */
+        headers: { "Cache-Control": "public, max-age=86400, immutable" },
+      },
     );
   } catch (error) {
     console.error("Error generating OG image:", error);
