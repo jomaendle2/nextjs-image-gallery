@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { sendLoginEmail } from "@/lib/auth/email";
 import { createSession, destroySession } from "@/lib/auth/session";
-import { normaliseEmail } from "@/lib/auth/slug";
+import { looksLikeEmail, normaliseEmail } from "@/lib/auth/slug";
 import {
   consumeLoginToken,
   mintLoginToken,
@@ -32,7 +32,7 @@ export async function requestSignIn(
   formData: FormData,
 ): Promise<SignInState> {
   const raw = formData.get("email");
-  if (typeof raw !== "string" || !raw.includes("@")) {
+  if (typeof raw !== "string" || !looksLikeEmail(raw)) {
     return { message: "That does not look like an email address." };
   }
 

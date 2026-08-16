@@ -5,16 +5,7 @@
  * unauthenticated stranger can post to.
  */
 
-const MAX_EMAIL = 254;
-
-/**
- * Deliberately loose. An address is either deliverable or it is not, and no
- * regex settles that — the confirmation email is the real check, and it is
- * one this form cannot skip. What is worth rejecting here is what is
- * obviously not an address at all, so a typo produces a message rather than
- * a row and a send.
- */
-const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { looksLikeEmail } from "@/lib/auth/slug";
 
 export type SubscribeResult =
   | { ok: true; email: string }
@@ -32,10 +23,10 @@ export function validateSubscription(form: FormData): SubscribeResult {
 
   const email = String(form.get("email") ?? "").trim();
 
-  if (email === "" || email.length > MAX_EMAIL) {
+  if (email === "") {
     return { ok: false, error: "Please enter your email address." };
   }
-  if (!LOOKS_LIKE_EMAIL.test(email)) {
+  if (!looksLikeEmail(email)) {
     return { ok: false, error: "That does not look like an email address." };
   }
 

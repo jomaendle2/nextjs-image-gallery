@@ -14,6 +14,7 @@ import {
   sendNewWorkAnnouncement,
 } from "@/lib/auth/email";
 import { requireContributor } from "@/lib/auth/session";
+import { looksLikeEmail, normaliseSiteUrl } from "@/lib/auth/slug";
 import { isOwner } from "@/lib/auth/types";
 import { toGalleryImage } from "@/lib/photos/map";
 import {
@@ -65,19 +66,14 @@ export async function invite(
     .slice(0, MAX_NAME);
   const siteUrlRaw = String(formData.get("site_url") ?? "").trim();
 
-  if (!email.includes("@") || displayName === "") {
+  if (!looksLikeEmail(email) || displayName === "") {
     return { message: "An email address and a display name are required." };
   }
 
   let siteUrl: string | null = null;
   if (siteUrlRaw !== "") {
-    try {
-      const parsed = new URL(siteUrlRaw);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-        throw new Error("bad protocol");
-      }
-      siteUrl = parsed.toString();
-    } catch {
+    siteUrl = normaliseSiteUrl(siteUrlRaw);
+    if (siteUrl === null) {
       return { message: "That website address does not look like a URL." };
     }
   }

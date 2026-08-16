@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { GROUND } from "@/lib/photo-ground";
+import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
 
@@ -44,8 +45,7 @@ export default async function PhotographersPage() {
             Photographers
           </h1>
           <p className="mt-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
-            {contributors.length}{" "}
-            {contributors.length === 1 ? "contributor" : "contributors"}
+            {count(contributors.length, "contributor")}
           </p>
         </header>
 
@@ -67,8 +67,7 @@ export default async function PhotographersPage() {
                       {person.display_name}
                     </p>
                     <p className="mt-0.5 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
-                      {person.photo_count}{" "}
-                      {person.photo_count === 1 ? "photograph" : "photographs"}
+                      {count(person.photo_count, "photograph")}
                     </p>
                   </div>
 

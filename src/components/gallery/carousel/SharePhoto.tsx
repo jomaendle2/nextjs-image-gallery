@@ -46,16 +46,25 @@ export function SharePhoto({ image }: SharePhotoProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // A photograph can change under this component while the confirmation is
-  // still showing, and the timer would otherwise outlive the page.
-  useEffect(() => {
-    setCopied(false);
-    return () => {
+  /*
+   * Only the timer needs clearing here.
+   *
+   * Resetting the confirmation when the photograph changes used to be this
+   * effect's job too, and it did not do it: the dependency list was empty,
+   * so it ran once on mount while the component went on being re-rendered
+   * with new props. Copy a link, swipe inside the two-second window, and the
+   * next photograph showed a ✓ and announced "Link copied" for a link nobody
+   * had copied. The caller now passes `key={image.id}`, so a new photograph
+   * is a new instance and the reset is React's rather than ours.
+   */
+  useEffect(
+    () => () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   const handleShare = useCallback(async () => {
     const url = `${globalThis.location.origin}/photo/${image.id}`;

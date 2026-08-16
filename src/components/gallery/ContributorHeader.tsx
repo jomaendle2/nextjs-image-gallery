@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Rss } from "lucide-react";
 import Link from "next/link";
 import type { GalleryAuthor } from "@/data/galleryData";
+import { count } from "@/lib/plural";
 import { ViewToggle } from "./ViewToggle";
 
 /**
@@ -48,7 +49,7 @@ export function ContributorHeader({
           </h1>
 
           <p className="mt-1 text-[0.6875rem] text-white/40 uppercase tracking-[0.14em]">
-            {photoCount} {photoCount === 1 ? "photograph" : "photographs"}
+            {count(photoCount, "photograph")}
             {contributor.siteUrl === null ? null : (
               <a
                 className="-my-3 ml-2 inline-flex min-h-11 translate-y-px items-center gap-0.5 rounded-full py-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"

@@ -26,8 +26,19 @@ export default function manifest(): MetadataRoute.Manifest {
      * already the gallery's background before a photograph has loaded.
      */
     background_color: "#0b0e12",
-    // Matches the `themeColor` in the root layout's viewport export.
-    theme_color: "#2a6b7c",
+    /*
+     * The same `--ground`, and it must stay that way.
+     *
+     * This said teal, with a comment claiming it matched the layout — it did
+     * not. An installed Android app takes its toolbar colour from here while
+     * an ordinary tab takes it from the layout's `themeColor`, so the same
+     * gallery had near-black chrome in the browser and teal chrome on the
+     * home screen, over a near-black splash. Exactly the flash of the wrong
+     * colour this file exists to prevent.
+     *
+     * The claim is now a test rather than a comment — see `manifest.test.ts`.
+     */
+    theme_color: "#0b0e12",
     orientation: "any",
     icons: [
       {

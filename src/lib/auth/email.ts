@@ -1,4 +1,5 @@
 import process from "node:process";
+import { count } from "@/lib/plural";
 import { siteOrigin } from "@/lib/site-url";
 
 /**
@@ -244,22 +245,22 @@ export async function sendNewWorkAnnouncement(
  */
 export async function sendAnnouncementReminder(
   to: string,
-  count: number,
+  waiting: number,
 ): Promise<void> {
   const url = `${siteOrigin()}/contribute/admin`;
-  const noun = count === 1 ? "photograph" : "photographs";
+  const phrase = count(waiting, "photograph");
 
   await send({
     to,
-    subject: `${count} ${noun} waiting to be announced`,
+    subject: `${phrase} waiting to be announced`,
     text: [
-      `${count} ${noun} have been published since the last announcement.`,
+      `${phrase} have been published since the last announcement.`,
       "",
       `Send it, or leave it for next week: ${url}`,
     ].join("\n"),
     html: page(
       `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${count} ${noun} have been published since the last announcement.
+         ${phrase} have been published since the last announcement.
        </p>
        ${button(url, "Review and send")}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">

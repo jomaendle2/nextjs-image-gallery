@@ -1,7 +1,6 @@
 import process from "node:process";
 import { cookies } from "next/headers";
 import { sql } from "@/lib/database";
-import { getMemberByEmail } from "@/lib/members/repository";
 import { isActive, type Member } from "@/lib/members/status";
 import { generateSecret, hashSecret } from "./secrets";
 import type { Contributor, ContributorRole } from "./types";
@@ -125,12 +124,38 @@ export async function getCurrentContributor(): Promise<Contributor | null> {
  * here, which is what a gate wants.
  */
 export async function getCurrentMember(): Promise<Member | null> {
-  const email = await getSessionEmail();
-  if (email === null) {
+  const member = await memberForSession();
+  return isActive(member) ? member : null;
+}
+
+/**
+ * The member row behind the current cookie, active or not.
+ *
+ * One join rather than two sequential queries, for the same reason
+ * `getCurrentContributor` above is one: this runs on `/api/photo/[id]/details`,
+ * which a member hits once per photograph, and two round trips to Neon per
+ * swipe is the whole cost of showing a line of text.
+ *
+ * Callers that gate content want `getCurrentMember`, which returns null for
+ * an inactive membership so the check cannot be forgotten. Callers showing
+ * somebody their own billing want this one: a lapsed member has the most
+ * urgent reason of anyone to reach the portal.
+ */
+export async function memberForSession(): Promise<Member | null> {
+  const store = await cookies();
+  const secret = store.get(SESSION_COOKIE)?.value;
+  if (secret === undefined || secret === "") {
     return null;
   }
-  const member = await getMemberByEmail(email);
-  return isActive(member) ? member : null;
+
+  const rows = await sql`
+    SELECT m.email, m.stripe_customer_id, m.status, m.current_period_end
+    FROM sessions s
+    JOIN members m ON m.email = s.email
+    WHERE s.id = ${hashSecret(secret)}
+      AND s.expires_at > now();
+  `;
+  return (rows[0] as Member | undefined) ?? null;
 }
 
 export async function destroySession(): Promise<void> {

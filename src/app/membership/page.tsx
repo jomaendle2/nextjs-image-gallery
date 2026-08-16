@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { TOUCH_LINK } from "@/components/ui/field";
-import { getCurrentMember, getSessionEmail } from "@/lib/auth/session";
+import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
-import { getMemberByEmail } from "@/lib/members/repository";
+import { isActive } from "@/lib/members/status";
 import { membershipConfigured } from "@/lib/stripe";
 import {
   BeforeYouPay,
@@ -33,20 +33,28 @@ export default async function MembershipPage({
 }: {
   searchParams: Promise<{ welcome?: string }>;
 }) {
-  const [{ welcome }, email, member] = await Promise.all([
+  const [{ welcome }, email, billing] = await Promise.all([
     searchParams,
     getSessionEmail(),
-    getCurrentMember(),
+    /*
+     * The billing record, which outlives the entitlement.
+     *
+     * Deliberately not the entitlement: somebody whose card is failing has
+     * no access and the most urgent reason of anyone to reach the portal.
+     * Gating the way out on having access would lock the people who need it
+     * out of it.
+     */
+    memberForSession(),
   ]);
 
   /*
-   * The billing record, which outlives the entitlement.
-   *
-   * Deliberately not `member`: somebody whose card is failing has no access
-   * and the most urgent reason of anyone to reach the portal. Gating the way
-   * out on having access would lock the people who need it out of it.
+   * Entitlement is a predicate over that row, not a second question for the
+   * database. This page used to ask four times — the session, then
+   * `getCurrentMember` (which re-read the session and then the member), then
+   * the same member row again for billing — where two round trips answer
+   * everything, and they now run in parallel.
    */
-  const billing = email === null ? null : await getMemberByEmail(email);
+  const member = isActive(billing) ? billing : null;
 
   /*
    * Just back from checkout, but the webhook has not landed yet.

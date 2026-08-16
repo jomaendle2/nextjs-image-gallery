@@ -105,7 +105,16 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
           imageId={image.id}
           variant="gallery"
         />
-        <SharePhoto image={image} />
+        {/*
+          Keyed by the photograph, so switching to another one gives the
+          share button a fresh instance with fresh state. The alternative —
+          an effect that resets on `image.id` — is the thing React's own docs
+          call an anti-pattern, and it had already gone wrong here: the
+          effect was written with an empty dependency list, so it reset once
+          on mount and never again, and a ✓ from one photograph stayed lit
+          over the next.
+        */}
+        <SharePhoto image={image} key={image.id} />
       </div>
 
       {/*

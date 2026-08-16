@@ -1,4 +1,8 @@
-import { normaliseEmail } from "@/lib/auth/slug";
+import {
+  looksLikeEmail,
+  normaliseEmail,
+  normaliseSiteUrl,
+} from "@/lib/auth/slug";
 
 /**
  * Validation for the public application form, kept pure and free of any
@@ -11,8 +15,6 @@ import { normaliseEmail } from "@/lib/auth/slug";
 const MAX_NAME = 80;
 const MAX_NOTE = 200;
 const MAX_URL = 300;
-
-const HAS_SCHEME = /^https?:\/\//i;
 
 export interface ApplicationInput {
   email: string;
@@ -30,31 +32,6 @@ export type ApplicationResult =
  * scheme, and rejecting that is a pointless obstacle — so a bare host is
  * upgraded to https rather than refused.
  */
-function normaliseUrl(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (trimmed === "" || trimmed.length > MAX_URL) {
-    return null;
-  }
-
-  const withScheme = HAS_SCHEME.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-  let url: URL;
-  try {
-    url = new URL(withScheme);
-  } catch {
-    return null;
-  }
-
-  // A hostname with no dot is a typo or an intranet name, not a portfolio.
-  if (url.protocol !== "https:" && url.protocol !== "http:") {
-    return null;
-  }
-  if (!url.hostname.includes(".")) {
-    return null;
-  }
-
-  return url.toString();
-}
 
 function field(form: FormData, name: string, max: number): string {
   const value = form.get(name);
@@ -77,11 +54,11 @@ export function validateApplication(form: FormData): ApplicationResult {
   }
 
   const email = normaliseEmail(field(form, "email", MAX_URL));
-  if (!email.includes("@") || email.startsWith("@") || email.endsWith("@")) {
+  if (!looksLikeEmail(email)) {
     return { ok: false, error: "That does not look like an email address." };
   }
 
-  const siteUrl = normaliseUrl(field(form, "site_url", MAX_URL));
+  const siteUrl = normaliseSiteUrl(field(form, "site_url", MAX_URL));
   if (siteUrl === null) {
     return {
       ok: false,

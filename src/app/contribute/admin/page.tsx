@@ -7,6 +7,7 @@ import { listContributors } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { listAllPhotos, listUnannouncedPhotos } from "@/lib/photos/repository";
+import { count } from "@/lib/plural";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 import { ContributeShell } from "../ContributeShell";
 import { AllPhotos } from "./AllPhotos";
@@ -126,8 +127,7 @@ export default async function AdminPage() {
                   )}
                 </p>
                 <p className="truncate text-white/45 text-xs">
-                  {row.email} · {row.photo_count}{" "}
-                  {row.photo_count === 1 ? "photo" : "photos"} ·{" "}
+                  {row.email} · {count(row.photo_count, "photograph")} ·{" "}
                   <Link
                     className="underline underline-offset-2 hover:text-white"
                     href={`/by/${row.slug}`}
