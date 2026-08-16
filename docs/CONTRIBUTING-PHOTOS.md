@@ -157,11 +157,12 @@ npm test && npm run lint && npm run typecheck && npm run build
 For the ingest path specifically, against a running dev server:
 
 ```bash
-node --env-file=.env.local scripts/smoke-upload.mts <gallery_session cookie>
+npm run smoke:upload
 ```
 
-Take the cookie from your browser's dev tools after signing in, or mint a
-session directly. Thirteen checks, and the one worth watching is **"never
+It mints its own owner session and cleans up after itself, so there is
+nothing to paste. It used to want a `gallery_session` cookie copied out of
+dev tools, which is the reason nobody ran it for weeks. Thirteen checks, and the one worth watching is **"never
 read the GPS block"** — the synthetic photograph it uploads carries real GPS
 tags, so that assertion is the promise on the apply page, tested.
 

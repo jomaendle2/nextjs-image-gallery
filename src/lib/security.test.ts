@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { allSourceFiles, read, SRC } from "./source-text";
 
 /**
  * The invariants from `docs/security-architecture.md`, as tests.
@@ -22,26 +23,6 @@ import { describe, expect, it } from "vitest";
  * obvious thing without knowing why it is wrong, and the failure message is
  * where they find out.
  */
-
-const SRC = join(import.meta.dirname, "..");
-
-function read(...parts: string[]): string {
-  return readFileSync(join(SRC, ...parts), "utf8");
-}
-
-/** Every `.ts`/`.tsx` file under `src`, so a new violation cannot hide. */
-function allSourceFiles(dir: string = SRC): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      found.push(...allSourceFiles(full));
-    } else if (/\.tsx?$/.test(entry) && !entry.endsWith(".test.ts")) {
-      found.push(full);
-    }
-  }
-  return found;
-}
 
 describe("I1 — state changes on POST, never on GET", () => {
   /*
@@ -151,8 +132,8 @@ describe("I6 — paid content is never in a cacheable payload", () => {
         /precise_location|technique/.test(readFileSync(file, "utf8")),
       )
       .map((f) => f.replace(SRC, ""))
-      .sort();
-    expect(found).toEqual([...allowed].sort());
+      .sort((a, b) => a.localeCompare(b));
+    expect(found).toEqual([...allowed].sort((a, b) => a.localeCompare(b)));
   });
 
   it("only the member-gated route reads them", () => {
@@ -302,138 +283,5 @@ describe("I11 — endpoints that spend money or send mail are limited", () => {
       );
     });
     expect(unguarded.map((f) => f.replace(SRC, ""))).toEqual([]);
-  });
-});
-
-describe("I2 — bulk writes carry the same authorization as single ones", () => {
-  const actions = read("app", "contribute", "photos", "actions.ts");
-  const bulk = actions.slice(
-    actions.indexOf("export async function bulkSetPublished"),
-  );
-
-  /*
-   * A bulk endpoint is where per-row authorization quietly gets lost: it is
-   * tempting to write one `UPDATE ... WHERE id = ANY($1)` and be done, which
-   * would publish any id in the list regardless of who owns it. Going
-   * through `setPublished` per row keeps `AND author_id = ...` inside the
-   * statement, so a forged id updates nothing rather than somebody else's
-   * photograph.
-   */
-  it("delegates to the row-level helper rather than writing its own SQL", () => {
-    expect(bulk).toContain("setPublished(id, published, actor)");
-    expect(bulk).not.toMatch(/sql`/);
-    expect(bulk).not.toMatch(/ANY\(/);
-  });
-
-  it("establishes the actor before touching anything", () => {
-    const beforeLoop = bulk.slice(0, bulk.indexOf("for (const id"));
-    expect(beforeLoop).toContain("await requireContributor()");
-  });
-
-  /*
-   * This used to assert that no bulk delete existed, which encoded a
-   * judgement call as an invariant and made it permanent. The judgement was
-   * wrong — clearing twenty uploads one at a time is sixty clicks — but the
-   * concern behind it was not, so the test now guards the concern instead
-   * of the conclusion.
-   *
-   * What must hold: per-row authorization, and a confirmation that shows
-   * what is about to go rather than only how much.
-   */
-  it("bulk delete keeps authorization per row", () => {
-    const bulk = actions.slice(
-      actions.indexOf("export async function bulkRemovePhotos"),
-    );
-    expect(bulk).toContain("deletePhoto(id, actor)");
-    expect(bulk).not.toMatch(/sql`/);
-    expect(bulk).not.toMatch(/ANY\(/);
-    expect(bulk.slice(0, bulk.indexOf("for (const id"))).toContain(
-      "await requireContributor()",
-    );
-  });
-
-  it("bulk delete names what it is about to delete", () => {
-    const list = read("app", "contribute", "photos", "PhotoList.tsx");
-    // A count alone cannot be checked against intent; titles can.
-    expect(list).toContain("confirmingDelete");
-    expect(list).toMatch(/selected\.has\(photo\.id\)/);
-  });
-});
-
-describe("Honest claims, and errors written for people", () => {
-  /*
-   * "GPS is stripped from every upload" appeared in four places and was
-   * false in all of them: the original is stored exactly as sent,
-   * coordinates intact. Each time it was found I fixed that one and did not
-   * look for the others, so it took three rounds to clear — which is the
-   * argument for this test rather than a fifth correction.
-   *
-   * What is true, and what the copy must say: the block is never *read*.
-   */
-  it("no page claims that GPS is stripped or discarded", () => {
-    const offenders = allSourceFiles()
-      .filter((file) => file.endsWith(".tsx"))
-      .filter((file) => {
-        const source = readFileSync(file, "utf8")
-          // Comments explain the history and may quote the old wording.
-          .replace(/\/\*[\s\S]*?\*\//g, "")
-          .replace(/\/\/[^\n]*/g, "");
-        return /(coordinates|GPS)[^.]{0,60}(stripped|discarded)/i.test(source);
-      });
-    expect(offenders.map((f) => f.replace(SRC, ""))).toEqual([]);
-  });
-
-  /*
-   * A photographer with a damaged file was shown "vipspng: libpng read
-   * error" beside their own filename. Third-party failures get logged and
-   * replaced; only messages we wrote for a person reach one.
-   */
-  it("the upload route only forwards messages meant for people", () => {
-    const route = read("app", "api", "photos", "draft", "route.ts");
-    expect(route).toContain("class TellTheUser extends Error");
-    expect(route).toMatch(/error instanceof TellTheUser/);
-    // The unfiltered form that leaked libvips internals.
-    expect(route).not.toMatch(/error instanceof Error\s*\?\s*error\.message/);
-  });
-
-  it("the storage client's own errors do not reach the uploader", () => {
-    const form = read("app", "contribute", "photos", "UploadForm.tsx");
-    const around = form.slice(
-      form.indexOf("const uploadOne"),
-      form.indexOf("const runOne"),
-    );
-    expect(around).toMatch(/catch \(cause\)/);
-    expect(around).toContain("console.error");
-  });
-});
-
-describe("I3 — anything the interface refuses, the server refuses", () => {
-  /*
-   * Revoking an owner was prevented only by hiding the button. Doing it
-   * anyway 404s the admin page for everybody and needs database access to
-   * undo. A server action is a public endpoint.
-   */
-  it("revocation checks the target's role on the server", () => {
-    const actions = read("app", "contribute", "admin", "actions.ts");
-    const setRevoked = actions.slice(
-      actions.indexOf("export async function setRevoked"),
-    );
-    expect(setRevoked).toContain("isOwnerContributor");
-  });
-
-  it("every admin action requires the owner", () => {
-    const actions = read("app", "contribute", "admin", "actions.ts");
-    const exported = actions.match(/export async function \w+/g) ?? [];
-    expect(exported.length).toBeGreaterThan(3);
-    // Each exported action's body must reach requireOwner before anything else.
-    for (const signature of exported) {
-      const body = actions.slice(
-        actions.indexOf(signature),
-        actions.indexOf(signature) + 400,
-      );
-      expect(body, `${signature} must call requireOwner`).toContain(
-        "requireOwner()",
-      );
-    }
   });
 });

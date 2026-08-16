@@ -514,7 +514,7 @@
       }
     },
     {
-      "includes": ["src/**/*.test.ts"],
+      "includes": ["src/**/*.test.ts", "src/lib/source-text.ts"],
       "linter": {
         "rules": {
           "correctness": {

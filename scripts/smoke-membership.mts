@@ -20,6 +20,19 @@ import { createHmac } from "node:crypto";
 import process from "node:process";
 import { sql } from "../src/lib/database.ts";
 
+/*
+ * A client address unique to this run.
+ *
+ * The Stripe routes are rate limited by `x-forwarded-for`, and a local
+ * request carries none — so every run shared the one "unknown" bucket and
+ * the *second* run of the day started failing with 429s that looked like
+ * broken checkout code. A suite that only passes once an hour is a suite
+ * people learn to re-run until it is green, which is worse than not having
+ * it. Production always supplies this header; supplying it here is the
+ * honest local equivalent, not a bypass.
+ */
+const RUN_IP = `10.0.${Math.floor(process.pid / 256) % 256}.${process.pid % 256}`;
+
 const [, , secretArg, originArg] = process.argv;
 const webhookSecret = secretArg ?? process.env["STRIPE_WEBHOOK_SECRET"];
 if (!webhookSecret) {
@@ -303,6 +316,7 @@ if (photoId !== undefined) {
  */
 const anonymousPortal = await fetch(`${origin}/api/stripe/portal`, {
   method: "POST",
+  headers: { "x-forwarded-for": RUN_IP },
 });
 check("the portal refuses an anonymous caller", anonymousPortal.status === 401);
 const portalBody = (await anonymousPortal.json()) as Record<string, unknown>;
@@ -320,6 +334,7 @@ check("and hands out no URL to follow", !("url" in portalBody));
  */
 const anonymousCheckout = await fetch(`${origin}/api/stripe/checkout`, {
   method: "POST",
+  headers: { "x-forwarded-for": RUN_IP },
 });
 const checkoutBody = (await anonymousCheckout.json()) as { url?: string };
 check("a new visitor can start checkout", anonymousCheckout.ok);

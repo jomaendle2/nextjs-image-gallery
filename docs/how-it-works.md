@@ -171,9 +171,15 @@ With the dev server running:
 npm run smoke
 ```
 
-Forty checks across the three paths that matter — ingest, the attacker's
-side of the membership, the member's side — with no setup and nothing left
-behind. Individually: `smoke:upload`, `smoke:membership`, `smoke:portal`.
+Four paths, with no setup and nothing left behind: every page renders,
+ingest works, the attacker's side of the membership holds, and the member's
+side works. Individually: `smoke:pages`, `smoke:upload`, `smoke:membership`,
+`smoke:portal`.
+
+`smoke:pages` is the shallow one and the one most likely to save you. Until
+it existed nothing in the suite rendered a page at all, so a server
+component that threw — a bad import, an unguarded null — left the tests
+green and the site broken.
 
 None of them needs `stripe listen`: the membership checks sign their own
 events with `STRIPE_WEBHOOK_SECRET` and post straight to the local endpoint,
@@ -183,18 +189,18 @@ a browser and having Stripe's servers reach your machine.
 
 ```bash
 # Once per Stripe mode — test now, live before launch.
-node --env-file=.env.local scripts/setup-billing-portal.mts
+npm run stripe:portal-setup
 
-# 3. The attacker's side: forgery, replay, dunning, cancellation.
-node --env-file=.env.local scripts/smoke-membership.mts
-
-# 4. The member's side: real customer, real session, real cookie.
-node --env-file=.env.local scripts/smoke-portal.mts
-
-# 5. Every email template, sent for real if a key is set.
-node --import ./scripts/alias-loader.mjs --env-file=.env.local \
-  scripts/smoke-email.mts you@example.com
+# Every email template, sent for real if a key is set. The address is
+# required rather than defaulted, because this one really does send.
+npm run smoke:email -- you@example.com
 ```
+
+Prefer the `npm run` names over hand-written `node` lines: each script needs
+a loader flag or two that are easy to omit, and whether omitting one breaks
+depends on a transitive import several files away. `docs.test.ts` also
+checks that every `npm run` name in this documentation exists, which it
+cannot do for a command line typed into prose.
 
 To buy a membership by hand: `/membership` → Become a member → card
 `4242 4242 4242 4242`, any future expiry, any CVC. You do **not** need to be

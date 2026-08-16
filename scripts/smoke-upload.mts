@@ -103,7 +103,7 @@ if (typeof id === "string") {
   const rows = await sql`
     SELECT published_at, width, height, bg_color, exif, display_pathname
     FROM photos WHERE id = ${id};`;
-  const row = rows[0];
+  const [row] = rows;
   check("row exists", rows.length === 1);
   check("row is a draft, not published", row?.["published_at"] === null);
   check("stored the real dimensions", row?.["width"] === 1200);

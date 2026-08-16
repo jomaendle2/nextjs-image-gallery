@@ -1,22 +1,14 @@
 "use client";
 
-import {
-  CheckSquare,
-  ChevronDown,
-  Eye,
-  EyeOff,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
-import { ActionError } from "@/components/ui/ActionError";
-import { FIELD } from "@/components/ui/field";
-import { GlassButton } from "@/components/ui/glass-button";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { bulkRemovePhotos, bulkSetPublished } from "./actions";
+import { BulkBar } from "./BulkBar";
+import { countByStatus, type PhotoFilter, selectPhotos } from "./filter";
 import { PhotoCard } from "./PhotoCard";
+import { PhotoFilters } from "./PhotoFilters";
 
 /**
  * Finding one photograph among many.
@@ -29,12 +21,10 @@ import { PhotoCard } from "./PhotoCard";
  * LIMIT — is what needs to change, not this component. Written down so the
  * next person meets the ceiling on purpose rather than by surprise.
  *
- * There is no pagination for the same reason: a filter that narrows fifty
- * rows to three is a better answer than pages of ten, and it does not hide
- * anything behind a click.
+ * This component owns the state and nothing else: the two bars it composes
+ * are in their own files, and the filtering itself is in `filter.ts`, where
+ * it can be tested without rendering anything.
  */
-
-type Filter = "all" | "published" | "draft";
 
 /*
  * How many rows to render before asking.
@@ -53,37 +43,20 @@ type Filter = "all" | "published" | "draft";
  */
 const INITIAL_ROWS = 30;
 
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "published", label: "Published" },
-  { value: "draft", label: "Drafts" },
-];
-
-function matches(photo: OwnPhotoRow, needle: string): boolean {
-  if (needle === "") {
-    return true;
-  }
-  /*
-   * Title and location only. Description is deliberately excluded: it is
-   * long, so searching it returns rows whose match is invisible in the
-   * collapsed summary — the person sees a result and cannot tell why.
-   */
-  return (
-    (photo.title ?? "").toLowerCase().includes(needle) ||
-    (photo.location ?? "").toLowerCase().includes(needle)
-  );
-}
+/** Below this there is nothing to sift through, so the controls are noise. */
+const CONTROLS_APPEAR_AT = 4;
 
 export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const { pending, error, run } = useServerAction();
+
   const armDelete = useCallback(() => setConfirmingDelete(true), []);
   const cancelDelete = useCallback(() => setConfirmingDelete(false), []);
   const revealAll = useCallback(() => setShowAll(true), []);
-  const { pending, error, run } = useServerAction();
 
   const toggleOne = useCallback((id: string, checked: boolean) => {
     setSelected((current) => {
@@ -103,20 +76,15 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   }, []);
 
   /*
-   * Stable handlers for the bulk bar. Inline closures here would be
-   * recreated on every keystroke in the search box, re-rendering the whole
-   * list behind it.
+   * Stable handlers throughout. Inline closures here would be recreated on
+   * every keystroke in the search box, re-rendering the whole list behind
+   * it — and `PhotoCard` renders a next/image thumbnail apiece, so this is
+   * the difference between typing smoothly at fifty photographs and
+   * stuttering.
    */
   const publishSelected = useCallback(() => {
     run(async () => {
       await bulkSetPublished([...selected], true);
-      clearSelection();
-    });
-  }, [run, selected, clearSelection]);
-
-  const deleteSelected = useCallback(() => {
-    run(async () => {
-      await bulkRemovePhotos([...selected]);
       clearSelection();
     });
   }, [run, selected, clearSelection]);
@@ -128,12 +96,13 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
     });
   }, [run, selected, clearSelection]);
 
-  /*
-   * Stable references, so a keystroke re-renders the input rather than every
-   * card in the list. `PhotoCard` renders a next/image thumbnail apiece, so
-   * this is the difference between a search box that types smoothly at fifty
-   * photographs and one that stutters.
-   */
+  const deleteSelected = useCallback(() => {
+    run(async () => {
+      await bulkRemovePhotos([...selected]);
+      clearSelection();
+    });
+  }, [run, selected, clearSelection]);
+
   const onQueryChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value),
     [],
@@ -143,38 +112,25 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   /*
    * One handler on the group rather than a closure per radio. The value is
    * read off the event, which is what a native radio group gives us for
-   * free — three per-item closures would be recreated on every keystroke in
-   * the search box above.
+   * free.
    */
   const onFilterChange = useCallback(
     (event: ChangeEvent<HTMLFieldSetElement>) => {
       const target = event.target as unknown as HTMLInputElement;
-      setFilter(target.value as Filter);
+      setFilter(target.value as PhotoFilter);
     },
     [],
   );
 
-  const counts = useMemo(
-    () => ({
-      all: photos.length,
-      published: photos.filter((p) => p.published_at !== null).length,
-      draft: photos.filter((p) => p.published_at === null).length,
-    }),
-    [photos],
+  const counts = useMemo(() => countByStatus(photos), [photos]);
+  const visible = useMemo(
+    () => selectPhotos(photos, filter, query),
+    [photos, filter, query],
   );
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return photos.filter((photo) => {
-      if (filter === "published" && photo.published_at === null) {
-        return false;
-      }
-      if (filter === "draft" && photo.published_at !== null) {
-        return false;
-      }
-      return matches(photo, needle);
-    });
-  }, [photos, query, filter]);
+  const chosen = useMemo(
+    () => photos.filter((photo) => selected.has(photo.id)),
+    [photos, selected],
+  );
 
   if (photos.length === 0) {
     return (
@@ -186,194 +142,30 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
 
   return (
     <div className="mt-8">
-      {/*
-        The controls only earn their space once there is enough to sift
-        through. Below that they are chrome around a list you can already
-        see all of.
-      */}
-      {photos.length > 4 ? (
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search
-              aria-hidden="true"
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/30"
-              size={15}
-            />
-            <input
-              aria-label="Search your photographs by title or location"
-              className={`${FIELD} pl-10`}
-              onChange={onQueryChange}
-              placeholder="Search by title or location"
-              type="search"
-              value={query}
-            />
-            {query === "" ? null : (
-              <button
-                aria-label="Clear search"
-                className="-translate-y-1/2 absolute top-1/2 right-2 flex size-8 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
-                onClick={clearQuery}
-                type="button"
-              >
-                <X aria-hidden="true" size={14} />
-              </button>
-            )}
-          </div>
-
-          {/*
-            A radio group rather than buttons: these are three states of one
-            setting, and a screen reader should hear which is chosen rather
-            than three unrelated controls.
-          */}
-          <fieldset
-            className="flex shrink-0 gap-1 rounded-xl bg-white/[0.04] p-1"
-            onChange={onFilterChange}
-          >
-            <legend className="sr-only">Filter by status</legend>
-            {FILTERS.map(({ value, label }) => (
-              <label
-                className={`inline-flex min-h-9 cursor-pointer items-center rounded-lg px-3 font-medium text-[0.8125rem] transition-colors focus-within:outline-2 focus-within:outline-white/80 ${
-                  filter === value
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white/80"
-                }`}
-                key={value}
-              >
-                <input
-                  checked={filter === value}
-                  className="sr-only"
-                  name="photo-filter"
-                  readOnly={true}
-                  type="radio"
-                  value={value}
-                />
-                {label}
-                <span className="ml-1.5 tabular-nums opacity-50">
-                  {counts[value]}
-                </span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
+      {photos.length > CONTROLS_APPEAR_AT ? (
+        <PhotoFilters
+          counts={counts}
+          filter={filter}
+          onClearQuery={clearQuery}
+          onFilterChange={onFilterChange}
+          onQueryChange={onQueryChange}
+          query={query}
+        />
       ) : null}
 
-      {/*
-        The bulk bar exists for one workflow that was genuinely tedious:
-        upload ten photographs, then publish ten photographs, which meant
-        ten expand-click-collapse cycles down the list.
-
-        Deleting is here too, and this comment used to say it never would
-        be — "no dialog makes 'delete these nine, one of which you
-        misclicked' a safe offer". The claim was too strong. A dialog naming
-        a *count* cannot make that safe; one naming the *titles* can, because
-        a misclicked row appears as a name the person did not expect to
-        read. That is what the confirmation below does, and it is the reason
-        the objection no longer holds.
-      */}
-      {selected.size === 0 ? null : (
-        <div className="glass-hairline mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
-          <span className="font-medium text-sm text-white/80">
-            <CheckSquare
-              aria-hidden="true"
-              className="mr-1.5 inline"
-              size={14}
-            />
-            {selected.size} selected
-          </span>
-          <div className="ml-auto flex flex-wrap gap-2">
-            {confirmingDelete ? null : (
-              <>
-                <GlassButton
-                  disabled={pending}
-                  onClick={publishSelected}
-                  size="sm"
-                >
-                  <Eye aria-hidden="true" className="mr-1.5" size={14} />
-                  Publish
-                </GlassButton>
-                <GlassButton
-                  disabled={pending}
-                  onClick={unpublishSelected}
-                  size="sm"
-                >
-                  <EyeOff aria-hidden="true" className="mr-1.5" size={14} />
-                  Unpublish
-                </GlassButton>
-                <GlassButton
-                  disabled={pending}
-                  onClick={clearSelection}
-                  size="sm"
-                >
-                  Clear
-                </GlassButton>
-                <GlassButton
-                  className="text-white/60 hover:text-red-200"
-                  disabled={pending}
-                  onClick={armDelete}
-                  size="sm"
-                >
-                  <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
-                  Delete
-                </GlassButton>
-              </>
-            )}
-          </div>
-          {/*
-            The confirmation lists titles rather than a count.
-            "Delete 9 photographs?" cannot be checked against what somebody
-            meant; nine names can, and a misclicked row shows up as a title
-            they did not expect to read. Capped at eight so the bar stays a
-            bar, with the remainder counted.
-          */}
-          {confirmingDelete ? (
-            <div className="w-full space-y-3 border-white/10 border-t pt-3">
-              <p className="text-sm text-red-100/90">
-                Delete {selected.size}{" "}
-                {selected.size === 1 ? "photograph" : "photographs"} for good?
-                The stored files go too, and nothing here can bring them back.
-              </p>
-              <ul className="space-y-0.5 text-white/60 text-xs">
-                {photos
-                  .filter((photo) => selected.has(photo.id))
-                  .slice(0, 8)
-                  .map((photo) => (
-                    <li className="truncate" key={photo.id}>
-                      {(photo.title ?? "").trim() === ""
-                        ? "Untitled"
-                        : photo.title}
-                    </li>
-                  ))}
-                {selected.size > 8 ? (
-                  <li className="text-white/40">
-                    and {selected.size - 8} more
-                  </li>
-                ) : null}
-              </ul>
-              <div className="flex flex-wrap gap-2">
-                <GlassButton
-                  autoFocus={true}
-                  disabled={pending}
-                  onClick={cancelDelete}
-                  size="sm"
-                >
-                  Keep them
-                </GlassButton>
-                <GlassButton
-                  className="border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25"
-                  disabled={pending}
-                  onClick={deleteSelected}
-                  size="sm"
-                >
-                  <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
-                  {pending ? "Deleting…" : `Delete ${selected.size} for good`}
-                </GlassButton>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="w-full">
-            <ActionError message={error} />
-          </div>
-        </div>
+      {chosen.length === 0 ? null : (
+        <BulkBar
+          chosen={chosen}
+          confirmingDelete={confirmingDelete}
+          error={error}
+          onArmDelete={armDelete}
+          onCancelDelete={cancelDelete}
+          onClear={clearSelection}
+          onDelete={deleteSelected}
+          onPublish={publishSelected}
+          onUnpublish={unpublishSelected}
+          pending={pending}
+        />
       )}
 
       {visible.length === 0 ? (

@@ -241,14 +241,16 @@ item on this list that has a legal rather than a technical deadline.
 
 ```bash
 # Once per Stripe mode — test today, live before launch.
-node --env-file=.env.local scripts/setup-billing-portal.mts
+npm run stripe:portal-setup
 
-# Only for clicking through a real checkout — the scripts below sign their
-# own events and need no tunnel.
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-node --env-file=.env.local scripts/smoke-membership.mts   # the attacker's side
-node --env-file=.env.local scripts/smoke-portal.mts       # the member's side
+npm run smoke:membership   # the attacker's side
+npm run smoke:portal       # the member's side
 ```
+
+Neither needs `stripe listen`: they sign their own events and post to the
+local endpoint, exercising the same handler and the same signature check
+Stripe drives. A tunnel is only for clicking through a real checkout in a
+browser.
 
 Twenty-three checks across the two. `smoke-membership` covers signature
 forgery, replay, dunning, cancellation, the anonymous refusal of all three

@@ -26,6 +26,19 @@ import Stripe from "stripe";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
 
+/*
+ * A client address unique to this run.
+ *
+ * The Stripe routes are rate limited by `x-forwarded-for`, and a local
+ * request carries none — so every run shared the one "unknown" bucket and
+ * the *second* run of the day started failing with 429s that looked like
+ * broken checkout code. A suite that only passes once an hour is a suite
+ * people learn to re-run until it is green, which is worse than not having
+ * it. Production always supplies this header; supplying it here is the
+ * honest local equivalent, not a bypass.
+ */
+const RUN_IP = `10.0.${Math.floor(process.pid / 256) % 256}.${process.pid % 256}`;
+
 const origin = "http://localhost:3000";
 const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"] as string);
 const address = `portal-e2e-${Date.now()}@example.test`;
@@ -55,7 +68,7 @@ const cookie = `gallery_session=${secret}`;
 // 1. A signed-in member gets a portal URL on Stripe's domain.
 const opened = await fetch(`${origin}/api/stripe/portal`, {
   method: "POST",
-  headers: { cookie },
+  headers: { cookie, "x-forwarded-for": RUN_IP },
 });
 const body = (await opened.json()) as { url?: string; error?: string };
 check("a member can open the portal", opened.ok);
@@ -71,7 +84,7 @@ if (!opened.ok) {
 // 2. That member may not check out again — they are already billed.
 const again = await fetch(`${origin}/api/stripe/checkout`, {
   method: "POST",
-  headers: { cookie },
+  headers: { cookie, "x-forwarded-for": RUN_IP },
 });
 check("an existing subscriber cannot buy a second one", again.status === 409);
 
@@ -80,7 +93,7 @@ const photo = await sql`
   SELECT id FROM photos WHERE published_at IS NOT NULL LIMIT 1;`;
 const photoId = photo[0]?.["id"] as string;
 const details = await fetch(`${origin}/api/photo/${photoId}/details`, {
-  headers: { cookie },
+  headers: { cookie, "x-forwarded-for": RUN_IP },
 });
 const detailBody = (await details.json()) as Record<string, unknown>;
 check(
@@ -95,12 +108,12 @@ check(
 // 4. A member who is past due keeps billing access but loses content.
 await sql`UPDATE members SET status = 'past_due' WHERE email = ${address};`;
 const lapsed = await fetch(`${origin}/api/photo/${photoId}/details`, {
-  headers: { cookie },
+  headers: { cookie, "x-forwarded-for": RUN_IP },
 });
 check("a past-due member loses the content", lapsed.status === 403);
 const lapsedPortal = await fetch(`${origin}/api/stripe/portal`, {
   method: "POST",
-  headers: { cookie },
+  headers: { cookie, "x-forwarded-for": RUN_IP },
 });
 check("but can still reach the portal to fix their card", lapsedPortal.ok);
 

@@ -79,14 +79,19 @@ for the invariants `src/lib/security.test.ts` enforces.
 | `npm run db:migrate` | Apply the additive schema (safe to re-run) |
 | `npm run db:import-assets` | One-off import of the original photos (already run) |
 
-Operational scripts, run with `node --env-file=.env.local`:
+Operational scripts. Every one carries the loader flags it needs, so there
+is nothing to remember at the command line:
 
-| Script | What it does |
+| Command | What it does |
 | --- | --- |
-| `scripts/setup-billing-portal.mts` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
-| `scripts/smoke-membership.mts` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
-| `scripts/smoke-portal.mts` | The member's side: real customer, real session, real cookie. |
-| `scripts/smoke-email.mts` | Sends one of every email template. Needs the `alias-loader` import. |
+| `npm run smoke` | Every suite below that needs no arguments. |
+| `npm run smoke:pages` | Each page renders, signed in and out. Catches a server component that throws. |
+| `npm run smoke:upload` | The ingest path. Mints its own session; nothing to paste. |
+| `npm run smoke:membership` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
+| `npm run smoke:portal` | The member's side: real customer, real session, real cookie. |
+| `npm run smoke:email -- you@example.com` | Sends one of every email template. The address is required, because this one really sends. |
+| `npm run stripe:portal-setup` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
+| `npm run mint-link -- you@example.com` | Break-glass sign-in link when mail is down. |
 
 ## Toolchain
 
