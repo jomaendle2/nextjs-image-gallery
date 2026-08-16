@@ -16,8 +16,7 @@ import { ManageButton, SubscribeButton } from "./SubscribeButton";
 
 export const metadata: Metadata = {
   title: "Membership — the beauty of earth.",
-  description:
-    "See exactly where each photograph was taken, and how it was made. €5 a month, cancel any time.",
+  description: `See exactly where each photograph was taken, and how it was made. ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}, cancel any time.`,
   alternates: alternates("/membership"),
 };
 

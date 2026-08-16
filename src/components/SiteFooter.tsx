@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { LEGAL_LINKS } from "@/lib/legal";
+import { membershipConfigured } from "@/lib/stripe";
 
 /**
  * The credit and the three legal notices, on every page that scrolls.
@@ -36,6 +37,28 @@ export function SiteFooter({ className = "" }: { className?: string }) {
           Jo Mändle
         </a>
       </span>
+
+      {/*
+        Membership, where anybody can find it.
+        
+        It was reachable from two places: the terms page, and one small line
+        in the carousel caption. So a reader who never opened a photograph
+        and scrolled to its credit never learned the membership existed at
+        all — which is a strange way to sell something, and it made the
+        careful copy on `/membership` a page almost nobody would reach.
+        
+        Gated on the same predicate that decides whether `/membership`
+        renders anything, so the link cannot advertise a thing that is
+        switched off.
+      */}
+      {membershipConfigured() ? (
+        <Link
+          className={`${TOUCH_LINK} text-accent transition-colors hover:text-accent-bright`}
+          href="/membership"
+        >
+          Membership
+        </Link>
+      ) : null}
 
       {LEGAL_LINKS.map(({ href, label }) => (
         <Link
