@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowUpRight, Rss } from "lucide-react";
 import Link from "next/link";
+import { META } from "@/components/ui/field";
 import { ShareButton } from "@/components/ui/ShareButton";
 import type { GalleryAuthor } from "@/data/galleryData";
 import { count } from "@/lib/plural";
@@ -68,7 +69,7 @@ export function ContributorHeader({
             @{contributor.slug}
           </p>
 
-          <p className="mt-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
+          <p className={`mt-1 ${META}`}>
             {count(photoCount, "photograph")}
             {contributor.siteUrl === null ? null : (
               <a

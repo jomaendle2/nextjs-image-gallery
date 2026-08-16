@@ -80,8 +80,13 @@ describe("I2 — bulk writes carry the same authorization as single ones", () =>
     const bar = read("app", "contribute", "photos", "BulkBar.tsx");
     expect(bar).toContain("titleOf(photo)");
     expect(bar).toMatch(/chosen\.slice\(/);
-    // And the destructive confirm must still be a separate, armed step.
-    expect(bar).toContain("onArmDelete");
+    /*
+     * And the destructive confirm must still be a separate, armed step —
+     * checked on the state that arms it rather than on the prop that used
+     * to, since the bar now owns that itself.
+     */
+    expect(bar).toContain("confirmingDelete");
+    expect(bar).toContain("armDelete");
   });
 });
 

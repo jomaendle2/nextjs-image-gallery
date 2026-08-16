@@ -53,11 +53,8 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const { pending, error, run } = useServerAction();
 
-  const armDelete = useCallback(() => setConfirmingDelete(true), []);
-  const cancelDelete = useCallback(() => setConfirmingDelete(false), []);
   const revealAll = useCallback(() => setShowAll(true), []);
 
   const toggleOne = useCallback((id: string, checked: boolean) => {
@@ -74,7 +71,6 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
 
   const clearSelection = useCallback(() => {
     setSelected(new Set());
-    setConfirmingDelete(false);
   }, []);
 
   /*
@@ -174,10 +170,7 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
       {chosen.length === 0 ? null : (
         <BulkBar
           chosen={chosen}
-          confirmingDelete={confirmingDelete}
           error={error}
-          onArmDelete={armDelete}
-          onCancelDelete={cancelDelete}
           onClear={clearSelection}
           onDelete={deleteSelected}
           onPublish={publishSelected}

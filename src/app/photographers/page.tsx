@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
-import { TOUCH_LINK } from "@/components/ui/field";
+import { META, TOUCH_LINK } from "@/components/ui/field";
 import { glassControl } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
@@ -48,7 +48,7 @@ export default async function PhotographersPage() {
           <h1 className="mt-1.5 font-semibold text-2xl tracking-[-0.035em] sm:text-3xl">
             Photographers
           </h1>
-          <p className="mt-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
+          <p className={`mt-1 ${META}`}>
             {count(contributors.length, "photographer")}
           </p>
         </header>
@@ -70,7 +70,7 @@ export default async function PhotographersPage() {
                     <p className="truncate font-semibold text-base tracking-[-0.02em] sm:text-lg">
                       {person.display_name}
                     </p>
-                    <p className="mt-0.5 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
+                    <p className={`mt-0.5 ${META}`}>
                       {count(person.photo_count, "photograph")}
                     </p>
                   </div>

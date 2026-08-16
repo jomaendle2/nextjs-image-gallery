@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { META } from "@/components/ui/field";
 
 interface Details {
   member: boolean;
@@ -168,11 +169,7 @@ function body(data: Details | undefined): ReactNode {
 
   return (
     <div className="max-w-prose space-y-1 text-left lg:text-right">
-      {location === "" ? null : (
-        <p className="text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-          {location}
-        </p>
-      )}
+      {location === "" ? null : <p className={META}>{location}</p>}
       {technique === "" ? null : (
         <p className="text-pretty text-[0.75rem] text-white/55 leading-relaxed">
           {technique}

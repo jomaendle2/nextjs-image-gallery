@@ -3,7 +3,7 @@
 import { ChevronDown, Pin } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, memo, useCallback, useState } from "react";
-import type { PhotoExif } from "@/lib/photos/derive";
+import { exifLine } from "@/lib/photos/exif-line";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoEditForm } from "./PhotoEditForm";
 
@@ -23,21 +23,6 @@ import { PhotoEditForm } from "./PhotoEditForm";
  * on the one page a photographer uses to fix a typo from their phone on bad
  * hotel wifi.
  */
-
-function exifSummary(exif: PhotoExif | null): string | null {
-  if (!exif) {
-    return null;
-  }
-  const parts = [
-    exif.camera,
-    exif.lens,
-    exif.focal_length,
-    exif.aperture,
-    exif.shutter,
-    exif.iso === undefined ? undefined : `ISO ${exif.iso}`,
-  ].filter((part): part is string => part !== undefined);
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
 
 /** Published, draft, or the one pinned to the front of the gallery. */
 function Status({ photo }: { photo: OwnPhotoRow }) {
@@ -89,7 +74,7 @@ export const PhotoCard = memo(function PhotoCardRow({
   selected?: boolean;
   onSelect?: (id: string, checked: boolean) => void;
 }) {
-  const exif = exifSummary(photo.exif);
+  const exif = exifLine(photo.exif);
   const untitled = (photo.title ?? "").trim() === "";
 
   /*

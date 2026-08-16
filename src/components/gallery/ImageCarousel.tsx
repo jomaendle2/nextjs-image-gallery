@@ -216,11 +216,9 @@ export function ImageCarousel({
       </main>
 
       {/* Full screen image modal */}
-      <ImageModal
-        image={currentImage}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-      />
+      {isModalOpen ? (
+        <ImageModal image={currentImage} onClose={handleModalClose} />
+      ) : null}
     </>
   );
 }

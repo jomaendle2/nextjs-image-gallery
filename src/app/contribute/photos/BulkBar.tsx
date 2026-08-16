@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckSquare, Eye, EyeOff, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { OwnPhotoRow } from "@/lib/photos/types";
@@ -84,25 +85,29 @@ export function BulkBar({
   chosen,
   pending,
   error,
-  confirmingDelete,
   onPublish,
   onUnpublish,
   onClear,
-  onArmDelete,
-  onCancelDelete,
   onDelete,
 }: {
   chosen: OwnPhotoRow[];
   pending: boolean;
   error: string | null;
-  confirmingDelete: boolean;
   onPublish: () => void;
   onUnpublish: () => void;
   onClear: () => void;
-  onArmDelete: () => void;
-  onCancelDelete: () => void;
   onDelete: () => void;
 }) {
+  /*
+   * Whether the delete is armed is this component's own business. The parent
+   * held it in three props and read it for nothing but passing it back — and
+   * because the bar only renders while something is selected, clearing the
+   * selection unmounts it and the state resets itself.
+   */
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const armDelete = useCallback(() => setConfirmingDelete(true), []);
+  const cancelDelete = useCallback(() => setConfirmingDelete(false), []);
+
   return (
     <div className="glass-hairline mb-4 flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
       <span className="font-medium text-sm text-white/80">
@@ -127,7 +132,7 @@ export function BulkBar({
             <GlassButton
               variant="arm"
               disabled={pending}
-              onClick={onArmDelete}
+              onClick={armDelete}
               size="sm"
             >
               <Trash2 aria-hidden="true" className="mr-1.5" size={14} />
@@ -140,7 +145,7 @@ export function BulkBar({
       {confirmingDelete ? (
         <DeleteConfirmation
           chosen={chosen}
-          onCancel={onCancelDelete}
+          onCancel={cancelDelete}
           onConfirm={onDelete}
           pending={pending}
         />

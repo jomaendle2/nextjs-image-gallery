@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { META } from "@/components/ui/field";
 import { Notice } from "@/components/ui/Notice";
 import { TextLink } from "@/components/ui/TextLink";
 import { invitesRemaining, listInvitees } from "@/lib/auth/contributors";
@@ -70,9 +71,7 @@ export default async function InvitePage() {
 
       {invitees.length === 0 ? null : (
         <section className="mt-12">
-          <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-            You brought in
-          </h2>
+          <h2 className={`font-medium ${META}`}>You brought in</h2>
           <ul className="mt-4 space-y-2">
             {invitees.map((person) => (
               <li

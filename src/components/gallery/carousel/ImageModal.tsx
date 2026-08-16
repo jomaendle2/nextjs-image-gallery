@@ -20,17 +20,15 @@ const CLOSE_ANIMATION_MS = 220;
 
 interface ImageModalProps {
   image: GalleryImage;
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
+export function ImageModal({ image, onClose }: ImageModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previouslyFocusedRef = useRef<Element | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -44,18 +42,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     handlePointerMove,
     handlePointerUp,
     handleDoubleClick,
-  } = usePanZoom(isOpen);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-      setIsLoaded(false);
-      setIsClosing(false);
-    }
-  }, [isOpen]);
+  } = usePanZoom();
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
@@ -81,13 +68,15 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     setIsLoaded(true);
   }, []);
 
-  // Escape to close, scroll lock, and focus handling while open.
+  /*
+   * Escape to close, scroll lock, and focus handling.
+   *
+   * Runs once, because the modal is mounted only while it is open — so
+   * "what had focus before" is a local rather than a ref that has to
+   * survive re-renders.
+   */
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    previouslyFocusedRef.current = document.activeElement;
+    const previouslyFocused = document.activeElement;
     closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -113,15 +102,11 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       // Send focus back to wherever the user left it.
-      if (previouslyFocusedRef.current instanceof HTMLElement) {
-        previouslyFocusedRef.current.focus();
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
       }
     };
-  }, [isOpen, handleClose]);
-
-  if (!isOpen) {
-    return null;
-  }
+  }, [handleClose]);
 
   const isZoomed = scale > 1;
   // Toolbar, close button and caption all arrive and leave together, behind

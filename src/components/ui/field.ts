@@ -40,3 +40,10 @@ export const TOUCH_LINK = "-my-3 inline-flex min-h-11 items-center py-3";
  */
 export const LINK =
   "text-accent underline underline-offset-4 transition-colors hover:text-accent-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent";
+
+/**
+ * The small-caps metadata treatment — photo counts, section labels, the
+ * exposure line. The single most repeated class run on the site.
+ */
+export const META =
+  "text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]";

@@ -45,7 +45,7 @@ interface PanZoomTransform {
  *   - Continuous changes (dragging) cause no render at all, so nothing can
  *     overwrite them, and they are coalesced to one write per frame with rAF.
  */
-export function usePanZoom(isOpen: boolean) {
+export function usePanZoom() {
   const [scale, setScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -112,16 +112,11 @@ export function usePanZoom(isOpen: boolean) {
     paint();
   }, [paint]);
 
-  // Reset whenever the viewer is (re)opened.
-  useEffect(() => {
-    if (isOpen) {
-      transformRef.current = { x: 0, y: 0, scale: 1 };
-      pointersRef.current.clear();
-      pinchRef.current = null;
-      setScale(1);
-      setIsDragging(false);
-    }
-  }, [isOpen]);
+  /*
+   * No reset effect. The modal that uses this is mounted only while it is
+   * open, so a fresh open is a fresh hook and every one of these values
+   * starts at its initial state without being told to.
+   */
 
   useEffect(
     () => () => {

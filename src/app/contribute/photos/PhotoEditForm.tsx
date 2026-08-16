@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react";
 import { useActionState, useCallback, useState } from "react";
 import { IDLE } from "@/app/form-state";
 import { ActionError } from "@/components/ui/ActionError";
-import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
+import { FIELD, LABEL, LABEL_HINT, META } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
@@ -116,9 +116,7 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
         them in: what everybody sees, then what only members do.
       */}
       <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] p-3.5">
-        <legend className="px-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-          Members only
-        </legend>
+        <legend className={`px-1 ${META}`}>Members only</legend>
 
         <div className="space-y-1.5">
           <label className={LABEL} htmlFor={`precise-${photo.id}`}>

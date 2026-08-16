@@ -4,8 +4,10 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ViewCount } from "@/components/gallery/ViewCount";
+import { META } from "@/components/ui/field";
 import { ShareButton } from "@/components/ui/ShareButton";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { exifLine } from "@/lib/photos/exif-line";
 import { MemberDetails } from "./MemberDetails";
 
 /**
@@ -16,22 +18,6 @@ import { MemberDetails } from "./MemberDetails";
  * work for credit, so the name stays legible while the exposure line sits a
  * step quieter behind it.
  */
-
-function exifLine(image: GalleryImage): string | null {
-  const { exif } = image;
-  if (!exif) {
-    return null;
-  }
-  const parts = [
-    exif.camera,
-    exif.lens,
-    exif.focal_length,
-    exif.aperture,
-    exif.shutter,
-    exif.iso === undefined ? undefined : `ISO ${exif.iso}`,
-  ].filter((part): part is string => part !== undefined);
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
 
 function AuthorLink({ author }: { author: GalleryAuthor }) {
   return (
@@ -51,7 +37,7 @@ function AuthorLink({ author }: { author: GalleryAuthor }) {
 
 export function PhotoCredit({ image }: { image: GalleryImage }) {
   const { author, location } = image;
-  const exif = exifLine(image);
+  const exif = exifLine(image.exif ?? null);
 
   /*
    * Whether the name links is a fact about where we are, not something the
@@ -72,7 +58,7 @@ export function PhotoCredit({ image }: { image: GalleryImage }) {
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 lg:items-end">
-      <p className="text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
+      <p className={META}>
         {linkAuthor ? (
           <AuthorLink author={author} />
         ) : (

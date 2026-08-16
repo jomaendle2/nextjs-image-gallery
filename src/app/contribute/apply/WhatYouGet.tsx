@@ -1,3 +1,4 @@
+import { META } from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 
 interface Offer {
@@ -54,9 +55,7 @@ const OFFERS: readonly Offer[] = [
 export function WhatYouGet() {
   return (
     <section className="mb-10">
-      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-        What you get
-      </h2>
+      <h2 className={`font-medium ${META}`}>What you get</h2>
 
       <ul className="mt-4 grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] sm:grid-cols-2">
         {OFFERS.map((offer) => (

@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { META } from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
 
@@ -75,9 +76,7 @@ function Row({
 export function WhatYouGet() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-        What you get
-      </h2>
+      <h2 className={`font-medium ${META}`}>What you get</h2>
       <ul className="mt-5 space-y-5">
         <Row
           heading="Where it was taken"
@@ -112,9 +111,7 @@ export function WhatYouGet() {
 export function BeforeYouPay() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-        Be aware
-      </h2>
+      <h2 className={`font-medium ${META}`}>Be aware</h2>
       <ul className="mt-5 space-y-5">
         <Row
           heading="Not every photograph has a location"
@@ -148,9 +145,7 @@ export function BeforeYouPay() {
 export function HowPaymentWorks() {
   return (
     <section>
-      <h2 className="font-medium text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-        The money
-      </h2>
+      <h2 className={`font-medium ${META}`}>The money</h2>
       <ul className="mt-5 space-y-5">
         <Row
           heading={`${MEMBERSHIP.price} a ${MEMBERSHIP.interval}, nothing else`}
