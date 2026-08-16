@@ -2,7 +2,7 @@
 
 import { ChevronDown, Pin } from "lucide-react";
 import Image from "next/image";
-import { type ChangeEvent, useCallback, useState } from "react";
+import { type ChangeEvent, memo, useCallback, useState } from "react";
 import type { PhotoExif } from "@/lib/photos/derive";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoEditForm } from "./PhotoEditForm";
@@ -60,7 +60,27 @@ function Status({ photo }: { photo: OwnPhotoRow }) {
   );
 }
 
-export function PhotoCard({
+/**
+ * One row, memoized.
+ *
+ * `PhotoList` stabilises every handler it passes down and its comment
+ * explains why: inline closures would be recreated on each keystroke in the
+ * search box and re-render the whole list. That reasoning was half a
+ * mechanism. A plain function component re-renders whenever its parent does
+ * regardless of prop identity, so the stable callbacks bought nothing and
+ * every keystroke still re-rendered every rendered row — each one a
+ * next/image thumbnail — which is precisely the stutter the callbacks were
+ * written to prevent.
+ *
+ * `memo` is the other half. All three props are stable: `photo` comes from
+ * the server-rendered array, `onSelect` is stabilised upstream, `selected`
+ * is a boolean. So a keystroke now re-renders the input and nothing else,
+ * and ticking one row re-renders one row.
+ *
+ * Safe with the edit form inside because its inputs are uncontrolled
+ * (`defaultValue`), so a skipped render cannot strand typed text.
+ */
+export const PhotoCard = memo(function PhotoCardRow({
   photo,
   selected,
   onSelect,
@@ -206,4 +226,4 @@ export function PhotoCard({
       </details>
     </li>
   );
-}
+});

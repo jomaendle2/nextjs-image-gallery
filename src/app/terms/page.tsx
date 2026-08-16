@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
+import { alternates } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Terms — the beauty of earth.",
   description: "What a membership is, what it costs, and how to end it.",
-  alternates: { canonical: "/terms" },
+  alternates: alternates("/terms"),
 };
 
 /**

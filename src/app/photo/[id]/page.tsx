@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { StructuredData } from "@/components/StructuredData";
 import { type GalleryImage, listGalleryImages } from "@/data/galleryData";
+import { alternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographSchema } from "@/lib/structured-data";
 
@@ -50,7 +51,7 @@ export async function generateMetadata({
   return {
     title: `${credit} — the beauty of earth.`,
     description: photo.description === "" ? credit : photo.description,
-    alternates: { canonical: `/photo/${photo.id}` },
+    alternates: alternates(`/photo/${photo.id}`),
     openGraph: {
       type: "article",
       title: credit,

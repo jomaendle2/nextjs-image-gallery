@@ -5,12 +5,14 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
+import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
+  alternates: alternates("/photographers"),
   title: "Photographers — the beauty of earth.",
   description: "The photographers contributing to the beauty of earth.",
 };

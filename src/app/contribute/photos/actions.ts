@@ -19,10 +19,27 @@ const MAX_DESCRIPTION = 300;
 const MAX_TECHNIQUE = 600;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-/** Both feeds a photo can appear in. */
+/**
+ * Every cached surface a photograph appears on.
+ *
+ * This used to be two paths, and the gap was the one that matters most:
+ * `/photo/[id]` is its own ISR entry with `revalidate = 3600` and nothing
+ * ever invalidated it. Unpublishing removed a photograph from the gallery
+ * and the contributor page while `/photo/<id>` went on serving it — title,
+ * description, OG card, HTTP 200 — for up to an hour, which is the exact URL
+ * somebody would have shared. After a delete, the same page rendered a
+ * broken image, because the blob was already gone.
+ *
+ * A dynamic route needs its pattern and a type; passing one concrete URL
+ * only clears that URL. `/photographers` is here for the same reason:
+ * publishing changes the counts and thumbnails on it, and only the admin
+ * actions were revalidating it.
+ */
 function revalidateFeeds(slug: string): void {
   revalidatePath("/");
   revalidatePath(`/by/${slug}`);
+  revalidatePath("/photo/[id]", "page");
+  revalidatePath("/photographers");
 }
 
 function text(formData: FormData, key: string, max: number): string {
@@ -129,7 +146,6 @@ export async function removePhoto(id: string): Promise<void> {
    * showing on the real author's page and in their feed for an hour.
    */
   revalidateFeeds(deleted.author_slug);
-  revalidatePath("/");
 }
 
 /**
@@ -233,6 +249,5 @@ export async function bulkRemovePhotos(
   for (const slug of slugs) {
     revalidateFeeds(slug);
   }
-  revalidatePath("/");
   return { deleted };
 }

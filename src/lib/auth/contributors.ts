@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { cache } from "react";
 import { sql } from "@/lib/database";
 import { normaliseEmail, pickFreeSlug, slugify } from "./slug";
 import type { Contributor, ContributorRole } from "./types";
@@ -22,7 +23,11 @@ function firstContributor(rows: Record<string, unknown>[]): Contributor | null {
   };
 }
 
-export async function getContributorBySlug(
+/**
+ * Cached per request: `generateMetadata` and the page body both need it, on
+ * both `/by/[slug]` and its slideshow. See the note on `listGalleryImages`.
+ */
+export const getContributorBySlug = cache(async function bySlug(
   slug: string,
 ): Promise<Contributor | null> {
   const rows = await sql.query(
@@ -31,7 +36,7 @@ export async function getContributorBySlug(
     [slug],
   );
   return firstContributor(rows as Record<string, unknown>[]);
-}
+});
 
 export async function listContributors(): Promise<
   (Contributor & {

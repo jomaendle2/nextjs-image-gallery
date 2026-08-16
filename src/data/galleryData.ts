@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { PhotoExif } from "@/lib/photos/derive";
 import { toGalleryImage } from "@/lib/photos/map";
 import { listPublishedPhotos } from "@/lib/photos/repository";
@@ -36,12 +37,23 @@ export interface GalleryImage {
  * Throws. Callers choose what a failure means, because it does not mean the
  * same thing everywhere — see `getGalleryImages` below.
  */
-export async function listGalleryImages(
-  authorSlug?: string,
-): Promise<GalleryImage[]> {
-  const rows = await listPublishedPhotos(authorSlug);
-  return rows.map(toGalleryImage);
-}
+/**
+ * Wrapped in `cache` because every page that has metadata asks twice.
+ *
+ * Next dedupes `fetch` across `generateMetadata` and the page body; this is
+ * a Neon query, so nothing deduped it. `/photo/[id]` reads the entire
+ * published feed — every row, every base64 blur placeholder — once to build
+ * the share card and again to render, so a crawl of N photographs cost 2N
+ * full-feed queries. `React.cache` is the documented answer when `fetch` is
+ * not involved, and it dedupes per request, which is exactly the scope of
+ * the duplication.
+ */
+export const listGalleryImages = cache(
+  async (authorSlug?: string): Promise<GalleryImage[]> => {
+    const rows = await listPublishedPhotos(authorSlug);
+    return rows.map(toGalleryImage);
+  },
+);
 
 /**
  * The same, but an empty gallery rather than an error page.

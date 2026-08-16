@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
 import { OPERATOR, PROCESSORS } from "@/lib/legal";
+import { alternates } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Privacy — the beauty of earth.",
   description:
     "What this site stores, who it is shared with, and how to get rid of it.",
-  alternates: { canonical: "/privacy" },
+  alternates: alternates("/privacy"),
 };
 
 /**

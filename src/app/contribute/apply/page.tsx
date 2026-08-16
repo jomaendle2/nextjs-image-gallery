@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { TextLink } from "@/components/ui/TextLink";
+import { alternates } from "@/lib/metadata";
 import { ContributeShell } from "../ContributeShell";
 import { ApplyForm } from "./ApplyForm";
 import { WhatYouGet } from "./WhatYouGet";
 
 export const metadata: Metadata = {
+  alternates: alternates("/contribute/apply"),
   title: "Apply to contribute — the beauty of earth.",
   description:
     "The gallery is open to invited photographers. Show us your work.",

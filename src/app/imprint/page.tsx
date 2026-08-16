@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
 import { OPERATOR } from "@/lib/legal";
+import { alternates } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Imprint — the beauty of earth.",
   description: "Who operates this site, as required by §5 DDG.",
-  alternates: { canonical: "/imprint" },
+  alternates: alternates("/imprint"),
 };
 
 /**

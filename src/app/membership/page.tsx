@@ -5,6 +5,7 @@ import { TOUCH_LINK } from "@/components/ui/field";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
 import { isActive } from "@/lib/members/status";
+import { alternates } from "@/lib/metadata";
 import { membershipConfigured } from "@/lib/stripe";
 import {
   BeforeYouPay,
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   title: "Membership — the beauty of earth.",
   description:
     "See exactly where each photograph was taken, and how it was made. €5 a month, cancel any time.",
-  alternates: { canonical: "/membership" },
+  alternates: alternates("/membership"),
 };
 
 /**

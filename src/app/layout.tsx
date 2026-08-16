@@ -31,13 +31,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
+  /*
+   * Feed autodiscovery, and deliberately no `canonical`.
+   *
+   * `alternates` is replaced rather than merged, so a canonical here is
+   * inherited whole by every page that does not set its own — which meant
+   * `/photographers` and `/contribute/apply` both told Google they were
+   * duplicates of the home page while sitting in the sitemap asking to be
+   * crawled. A default that is wrong for every page but one is a trap for
+   * whoever adds the next page. Pages state their own via `alternates()` in
+   * `src/lib/metadata.ts`, which keeps this feed link attached.
+   */
   alternates: {
-    canonical: "/",
-    /*
-     * Feed autodiscovery. This is the mechanism every reader uses to find a
-     * feed from a page URL, so without it the feed exists and nobody can
-     * subscribe to it by pasting the site address.
-     */
     types: {
       "application/rss+xml": [
         { url: "/feed.xml", title: "the beauty of earth." },

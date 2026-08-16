@@ -32,8 +32,6 @@ interface ImageCarouselProps {
    */
   contributor?: GalleryAuthor;
   initialIndex?: number;
-  currentIndex?: number;
-  onIndexChange?: (index: number) => void;
   onClose?: () => void;
 }
 
@@ -41,27 +39,15 @@ export function ImageCarousel({
   images,
   contributor,
   initialIndex = 0,
-  currentIndex: externalCurrentIndex,
-  onIndexChange,
   onClose,
 }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(
-    externalCurrentIndex ?? initialIndex,
-  );
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const updateCurrentIndex = useCallback(
-    (newIndex: number) => {
-      setCurrentIndex(newIndex);
-      onIndexChange?.(newIndex);
-    },
-    [onIndexChange],
-  );
 
   const { carouselRef, goToIndex, scrollToIndex } = useCarouselScroll({
     itemCount: images.length,
     currentIndex,
-    onIndexChange: updateCurrentIndex,
+    onIndexChange: setCurrentIndex,
     // Animate only as far as we actually keep images mounted. Past that the
     // journey is placeholders, so we cut instead.
     smoothScrollDistance: BUFFER_SIZE,
@@ -81,23 +67,18 @@ export function ImageCarousel({
     onClose,
   });
 
-  // Sync an externally controlled index back into the scroll position.
-  useEffect(() => {
-    if (
-      externalCurrentIndex !== undefined &&
-      externalCurrentIndex !== currentIndex
-    ) {
-      setCurrentIndex(externalCurrentIndex);
-      /*
-       * Instant, not smooth. A smooth scroll here does not run through
-       * `goToIndex`, so the free-scroll tracker stays armed and reports every
-       * intermediate frame back through `onIndexChange`, which re-enters this
-       * effect and schedules another scroll. Placing a controlled index is
-       * setup, the same as `initialIndex`.
-       */
-      scrollToIndex(externalCurrentIndex, "instant");
-    }
-  }, [externalCurrentIndex, currentIndex, scrollToIndex]);
+  /*
+   * There was a `currentIndex`/`onIndexChange` pair here, and an effect
+   * mirroring the incoming prop into local state — the state-sync shape,
+   * with a long comment about a scroll-feedback hazard. No caller ever
+   * passed either prop: the three mount sites give `images`, `contributor`
+   * and `initialIndex` only. So it was a controlled/uncontrolled hybrid
+   * maintained for nobody, and the hazard it warned about was unreachable.
+   *
+   * If external control is ever wanted, `key` on the carousel or an
+   * imperative `scrollToIndex` handle are the shapes that do not need a
+   * mirror.
+   */
 
   // Jump to the requested starting image on first paint.
   useEffect(() => {

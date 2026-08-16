@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { TextLink } from "@/components/ui/TextLink";
+import { alternates } from "@/lib/metadata";
 import { SubscribeForm } from "./SubscribeForm";
 
 export const metadata: Metadata = {
   title: "Follow the gallery — the beauty of earth.",
   description:
     "Hear when new photographs are published. Not often, and never for anything else.",
-  alternates: { canonical: "/subscribe" },
+  alternates: alternates("/subscribe"),
 };
 
 /**

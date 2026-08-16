@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import {
   sendSubscribeConfirmation,
   sendSubscribeWelcome,
@@ -60,38 +61,48 @@ export async function subscribe(
     return SENT;
   }
 
-  try {
-    /*
-     * Clear out addresses that were typed and never confirmed.
-     *
-     * `pruneUnconfirmed` existed and nothing called it, so every abandoned
-     * signup stayed forever — an address somebody entered and thought better
-     * of, held indefinitely with a hashed token beside it. Double opt-in is
-     * the promise that an unconfirmed address is not kept; keeping it anyway
-     * makes the promise a formality.
-     *
-     * Here rather than on a schedule, matching how login tokens are pruned:
-     * cheap housekeeping on a path that already waits for the network, and
-     * one that only runs when somebody is subscribing anyway.
-     */
-    await pruneUnconfirmed();
+  /*
+   * Everything below the response, for the reason `requestSignIn` does the
+   * same: both branches already returned identical wording, but only one of
+   * them awaited an HTTPS round trip to the mail provider. An address that
+   * is already confirmed skipped the send and came back measurably sooner,
+   * so a stopwatch on this form would answer the one question the neutral
+   * wording exists to refuse — whether a given person reads this gallery.
+   *
+   * Errors are logged rather than surfaced, again matching sign-in: a mail
+   * provider outage must not become a second way to tell a known address
+   * from an unknown one.
+   */
+  after(async () => {
+    try {
+      /*
+       * Clear out addresses that were typed and never confirmed.
+       *
+       * `pruneUnconfirmed` existed and nothing called it, so every abandoned
+       * signup stayed forever — an address somebody entered and thought
+       * better of, held indefinitely with a hashed token beside it. Double
+       * opt-in is the promise that an unconfirmed address is not kept;
+       * keeping it anyway makes the promise a formality.
+       *
+       * Here rather than on a schedule, matching how login tokens are
+       * pruned: cheap housekeeping that only runs when somebody is
+       * subscribing anyway.
+       */
+      await pruneUnconfirmed();
 
-    const pending = await requestSubscription(result.email);
-    // Null means the address is already confirmed. Nothing to send, and
-    // saying so would answer a question we do not answer.
-    if (pending !== null) {
-      await sendSubscribeConfirmation(
-        result.email,
-        `${siteOrigin()}/subscribe/confirm?token=${encodeURIComponent(pending.confirmSecret)}`,
-      );
+      const pending = await requestSubscription(result.email);
+      // Null means the address is already confirmed. Nothing to send, and
+      // saying so would answer a question we do not answer.
+      if (pending !== null) {
+        await sendSubscribeConfirmation(
+          result.email,
+          `${siteOrigin()}/subscribe/confirm?token=${encodeURIComponent(pending.confirmSecret)}`,
+        );
+      }
+    } catch (error) {
+      console.error("Subscription request failed:", error);
     }
-  } catch (error) {
-    console.error("Subscription request failed:", error);
-    return {
-      status: "error",
-      message: "Something went wrong. Please try again in a moment.",
-    };
-  }
+  });
 
   return SENT;
 }
