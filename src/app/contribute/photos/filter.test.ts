@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { OwnPhotoRow } from "@/lib/photos/types";
-import { countByStatus, matches, selectPhotos } from "./filter";
+import {
+  countByStatus,
+  matches,
+  selectionState,
+  selectPhotos,
+  toggleAll,
+} from "./filter";
 
 /**
  * The search and filter rules, tested without rendering anything.
@@ -104,5 +110,58 @@ describe("the status filter", () => {
     expect(selectPhotos(rows, "all", "   alps  ").map((r) => r.id)).toEqual([
       "c",
     ]);
+  });
+});
+
+describe("selecting everything the filter matches", () => {
+  const rows = [
+    photo({ id: "a", title: "Published one", published_at: "2026-01-01" }),
+    photo({ id: "b", title: "Draft one" }),
+    photo({ id: "c", title: "Draft two", location: "Alps" }),
+  ];
+  const drafts = selectPhotos(rows, "draft", "");
+
+  it("selects the whole filtered set from empty", () => {
+    expect([...toggleAll(new Set(), drafts)].sort()).toEqual(["b", "c"]);
+  });
+
+  it("clears them when they are all already selected", () => {
+    expect([...toggleAll(new Set(["b", "c"]), drafts)]).toEqual([]);
+  });
+
+  it("completes a partial selection rather than clearing it", () => {
+    expect([...toggleAll(new Set(["b"]), drafts)].sort()).toEqual(["b", "c"]);
+  });
+
+  /*
+   * The one that matters. Selecting "all" while a filter is on must not
+   * touch rows the filter excludes — otherwise switching to Drafts, pressing
+   * select-all and pressing Delete takes published work with it.
+   */
+  it("never touches rows outside the current filter", () => {
+    const next = toggleAll(new Set(["a"]), drafts);
+    expect(next.has("a")).toBe(true);
+    expect([...next].sort()).toEqual(["a", "b", "c"]);
+
+    const cleared = toggleAll(next, drafts);
+    expect([...cleared]).toEqual(["a"]);
+  });
+
+  it("reports none, some and all", () => {
+    expect(selectionState(new Set(), drafts)).toBe("none");
+    expect(selectionState(new Set(["b"]), drafts)).toBe("some");
+    expect(selectionState(new Set(["b", "c"]), drafts)).toBe("all");
+  });
+
+  it("reports none when nothing matches, so the control can hide", () => {
+    expect(selectionState(new Set(["b"]), [])).toBe("none");
+  });
+
+  /*
+   * A selection left over from a previous filter must not make the current
+   * set look fully selected.
+   */
+  it("is not 'all' just because some other row is selected", () => {
+    expect(selectionState(new Set(["a"]), drafts)).toBe("none");
   });
 });

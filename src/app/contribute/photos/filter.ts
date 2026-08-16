@@ -58,3 +58,50 @@ export function countByStatus(
     draft: photos.length - published,
   };
 }
+
+/**
+ * Ticking or clearing everything the filter currently matches.
+ *
+ * The set this acts on is the *filtered* one, not the rendered one. Those
+ * differ whenever the row cap is in play, and picking the wrong one is the
+ * classic version of this bug: a control labelled "select all" that quietly
+ * means "select the thirty you can see", so a bulk delete leaves a tail the
+ * person believed they had removed. The count in the label comes from the
+ * same array as the selection for exactly that reason.
+ *
+ * Rows matched by a *different* filter keep whatever state they had. Someone
+ * who selects three drafts, switches to published and clears has not
+ * silently lost their three.
+ */
+export function toggleAll(
+  selected: ReadonlySet<string>,
+  visible: OwnPhotoRow[],
+): Set<string> {
+  const next = new Set(selected);
+  const allChosen =
+    visible.length > 0 && visible.every((photo) => selected.has(photo.id));
+
+  for (const photo of visible) {
+    if (allChosen) {
+      next.delete(photo.id);
+    } else {
+      next.add(photo.id);
+    }
+  }
+  return next;
+}
+
+/** Whether the filtered rows are all, partly, or not selected. */
+export function selectionState(
+  selected: ReadonlySet<string>,
+  visible: OwnPhotoRow[],
+): "none" | "some" | "all" {
+  if (visible.length === 0) {
+    return "none";
+  }
+  const chosen = visible.filter((photo) => selected.has(photo.id)).length;
+  if (chosen === 0) {
+    return "none";
+  }
+  return chosen === visible.length ? "all" : "some";
+}

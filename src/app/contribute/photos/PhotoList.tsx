@@ -6,9 +6,16 @@ import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { bulkRemovePhotos, bulkSetPublished } from "./actions";
 import { BulkBar } from "./BulkBar";
-import { countByStatus, type PhotoFilter, selectPhotos } from "./filter";
+import {
+  countByStatus,
+  type PhotoFilter,
+  selectionState,
+  selectPhotos,
+  toggleAll,
+} from "./filter";
 import { PhotoCard } from "./PhotoCard";
 import { PhotoFilters } from "./PhotoFilters";
+import { SelectAll } from "./SelectAll";
 
 /**
  * Finding one photograph among many.
@@ -131,6 +138,14 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
     () => photos.filter((photo) => selected.has(photo.id)),
     [photos, selected],
   );
+  const allState = useMemo(
+    () => selectionState(selected, visible),
+    [selected, visible],
+  );
+
+  const toggleAllVisible = useCallback(() => {
+    setSelected((current) => toggleAll(current, visible));
+  }, [visible]);
 
   if (photos.length === 0) {
     return (
@@ -152,6 +167,14 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
           query={query}
         />
       ) : null}
+
+      {visible.length === 0 ? null : (
+        <SelectAll
+          matching={visible.length}
+          onToggle={toggleAllVisible}
+          state={allState}
+        />
+      )}
 
       {chosen.length === 0 ? null : (
         <BulkBar
