@@ -290,7 +290,9 @@ export function UploadForm() {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <h2 className="font-semibold text-lg tracking-[-0.03em]">Add photos</h2>
+      <h2 className="font-semibold text-lg tracking-[-0.03em]">
+        Add photographs
+      </h2>
       <p className="mt-1 mb-4 text-sm text-white/55">
         Drag them here, or choose them below. JPEG, PNG, WebP or AVIF, up to 25
         MB each. Upload the full-size originals — they are stored exactly as you

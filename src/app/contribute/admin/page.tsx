@@ -48,7 +48,7 @@ export default async function AdminPage() {
     <ContributeShell
       back={{ href: "/contribute/photos", label: "Your photographs" }}
       subtitle="Invite photographers, and moderate what appears in the gallery."
-      title="Contributors"
+      title="Photographers"
     >
       {applications.length === 0 ? null : (
         <section className="mb-8">
@@ -142,7 +142,7 @@ export default async function AdminPage() {
                     : ` · invited by ${row.invited_by_name}`}
                   {row.role === "owner"
                     ? null
-                    : ` · ${row.invites_remaining} invites left`}
+                    : ` · ${count(row.invites_remaining, "invitation")} left`}
                 </p>
               </div>
               <ContributorRowActions row={row} />

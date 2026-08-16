@@ -6,6 +6,7 @@ import { invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { listOwnPhotos } from "@/lib/photos/repository";
+import { count } from "@/lib/plural";
 import { signOut } from "../actions";
 import { ContributeShell } from "../ContributeShell";
 import { PhotoList } from "./PhotoList";
@@ -58,7 +59,7 @@ export default async function PhotosPage() {
         */}
         {invites > 0 ? (
           <TextLink href="/contribute/invite" standalone={true}>
-            Invite a photographer ({invites} left)
+            Invite a photographer ({count(invites, "invitation")} left)
           </TextLink>
         ) : null}
       </div>

@@ -23,5 +23,5 @@ export function describeAnnouncement(outcome: AnnounceOutcome): string {
   if (outcome.failed === 0) {
     return `Sent ${photographs} to ${people}.`;
   }
-  return `Sent ${photographs} to ${people}; ${outcome.failed} failed — see the server logs.`;
+  return `Sent ${photographs} to ${people}; ${outcome.failed} did not go out. They stay on the list, so the next announcement will reach them.`;
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TOUCH_LINK } from "@/components/ui/field";
-import { LEGAL_LINKS } from "@/lib/legal";
+import { LEGAL_LINKS, OPERATOR } from "@/lib/legal";
 import { membershipConfigured } from "@/lib/stripe";
 
 /**
@@ -34,7 +34,7 @@ export function SiteFooter({ className = "" }: { className?: string }) {
           rel="noopener noreferrer"
           target="_blank"
         >
-          Jo Mändle
+          {OPERATOR.name}
         </a>
       </span>
 

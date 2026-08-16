@@ -4,6 +4,7 @@ import { Notice } from "@/components/ui/Notice";
 import { TextLink } from "@/components/ui/TextLink";
 import { invitesRemaining, listInvitees } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
+import { OPERATOR } from "@/lib/legal";
 import { count } from "@/lib/plural";
 import { ContributeShell } from "../ContributeShell";
 import { InviteForm } from "../InviteForm";
@@ -55,7 +56,8 @@ export default async function InvitePage() {
           </p>
         ) : (
           <Notice tone="warning">
-            You have used all three. Ask Jo if you have somebody in mind.
+            You have used all three. Ask {OPERATOR.name} if you have somebody in
+            mind.
           </Notice>
         )}
       </div>

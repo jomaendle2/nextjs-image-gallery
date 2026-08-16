@@ -21,21 +21,11 @@ import {
   listInvitees,
 } from "../src/lib/auth/contributors.ts";
 import { sql } from "../src/lib/database.ts";
+import { check, finish } from "./harness.mts";
 
 const tag = `smoke-invite-${process.pid}`;
 const inviterId = `${tag}-inviter`;
 const inviterEmail = `${tag}@example.invalid`;
-
-let failures = 0;
-
-function check(name: string, ok: boolean, detail = ""): void {
-  if (!ok) {
-    failures += 1;
-  }
-  console.log(
-    `  ${ok ? "ok  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`,
-  );
-}
 
 async function seedInviter(
   id: string,
@@ -159,5 +149,4 @@ try {
   console.log(`\ncleaned up, ${(left[0] as { n: number }).n} rows left`);
 }
 
-console.log(failures === 0 ? "all checks passed" : `${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+finish();

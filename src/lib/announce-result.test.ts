@@ -35,8 +35,10 @@ describe("the sentence after the announcement is sent", () => {
       sent: 38,
       failed: 2,
     });
-    expect(message).toContain("2 failed");
-    expect(message).toContain("server logs");
+    expect(message).toContain("2 did not go out");
+    expect(message).toContain("did not go out");
+    // And says what happens to them, not just that something went wrong.
+    expect(message).toContain("next announcement");
   });
 
   it("keeps the singular readable at one of each", () => {

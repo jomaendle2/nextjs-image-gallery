@@ -49,14 +49,14 @@ export default async function PhotographersPage() {
             Photographers
           </h1>
           <p className="mt-1 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]">
-            {count(contributors.length, "contributor")}
+            {count(contributors.length, "photographer")}
           </p>
         </header>
 
         {/*
           The landmark covers the list and the invitation below it — the two
           things this page is for. The header above is identity, as on the
-          contributor pages.
+          photographer pages.
         */}
         <main>
           <ul className="mt-10 divide-y divide-white/[0.06] border-white/[0.06] border-y">

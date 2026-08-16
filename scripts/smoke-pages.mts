@@ -21,20 +21,10 @@
 import process from "node:process";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { check, finish } from "./harness.mts";
 
 const [, , originArg] = process.argv;
 const origin = originArg ?? "http://localhost:3000";
-
-let failures = 0;
-
-function check(name: string, ok: boolean, detail = ""): void {
-  if (!ok) {
-    failures += 1;
-  }
-  console.log(
-    `  ${ok ? "ok  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`,
-  );
-}
 
 async function renders(
   route: string,
@@ -104,5 +94,4 @@ try {
   await sql`DELETE FROM sessions WHERE id = ${hashSecret(secret)};`;
 }
 
-console.log(failures === 0 ? "\nall pages rendered" : `\n${failures} failed`);
-process.exit(failures === 0 ? 0 : 1);
+finish();
