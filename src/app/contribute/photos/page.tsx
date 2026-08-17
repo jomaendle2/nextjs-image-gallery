@@ -22,7 +22,14 @@ export const metadata: Metadata = {
 export default async function PhotosPage() {
   const contributor = await getCurrentContributor();
   if (!contributor) {
-    redirect("/contribute");
+    /*
+     * `error=ended` rather than a bare redirect, matching the other two
+     * contributor pages. A session that ran out used to turn the page a
+     * photographer was working on into a sign-in form with no explanation,
+     * which from the outside is indistinguishable from the site having
+     * forgotten them.
+     */
+    redirect("/contribute?error=ended");
   }
 
   const [photos, invites] = await Promise.all([

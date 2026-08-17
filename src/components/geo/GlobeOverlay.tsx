@@ -210,8 +210,18 @@ export function GlobeOverlay({
       </div>
 
       <Description className={BODY_SMALL}>
-        Drag to turn it. Scroll or pinch to zoom. Point at a mark to see what is
-        there.
+        {/*
+          Every gesture named here, and the keys as well.
+
+          It used to list three things a mouse or a thumb can do — drag,
+          scroll, pinch — and none of them is available to somebody on a
+          keyboard, while `+`, `-` and `0` are the only keyboard route to the
+          magnification and went unmentioned. Naming a control's affordances
+          and omitting the ones the reader actually has is worse than saying
+          nothing: it reads as a complete list. WCAG 3.3.2.
+        */}
+        Drag to turn it. Scroll or pinch to zoom, or press + and − — 0 puts it
+        back. Point at a mark to see what is there.
       </Description>
 
       <div className="absolute top-4 right-4 flex items-center gap-2">
