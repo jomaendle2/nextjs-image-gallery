@@ -42,6 +42,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     { url: `${origin}/membership`, changeFrequency: "monthly", priority: 0.8 },
     /*
+     * Worth crawling on its own: it is the gallery organised by geography,
+     * and every photograph with a marked place is reachable from it as a
+     * plain link with no JavaScript involved.
+     */
+    { url: `${origin}/globe`, changeFrequency: "weekly", priority: 0.8 },
+    /*
      * Low priority but present. Nobody searches for these, and they should
      * not compete with a photograph — but a legal notice that crawlers
      * cannot see is one a reader may not be able to find either, and being

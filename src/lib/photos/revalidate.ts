@@ -19,4 +19,12 @@ export function revalidateFeeds(slug: string): void {
   revalidatePath(`/by/${slug}`);
   revalidatePath("/photo/[id]", "page");
   revalidatePath("/photographers");
+  /*
+   * The globe is fed by `coarse_lat`/`coarse_lng`, which `publishPhoto`
+   * writes on the same save as the title — so a photographer marking a spot
+   * and finding the map unchanged for an hour would read as the feature not
+   * working. It belongs on this list for the same reason everything else
+   * here does: ad-hoc revalidation kept missing one.
+   */
+  revalidatePath("/globe");
 }

@@ -60,6 +60,20 @@ export function SiteFooter({ className = "" }: { className?: string }) {
         </Link>
       ) : null}
 
+      {/*
+        The gallery by place.
+
+        White rather than accent: `/membership` above is the one thing on
+        this footer being sold, and two coloured links in a row would make
+        neither of them mean anything. This is navigation.
+      */}
+      <Link
+        className={`${TOUCH_LINK} transition-colors hover:text-white/70`}
+        href="/globe"
+      >
+        Globe
+      </Link>
+
       {LEGAL_LINKS.map(({ href, label }) => (
         <Link
           className={`${TOUCH_LINK} transition-colors hover:text-white/70`}
