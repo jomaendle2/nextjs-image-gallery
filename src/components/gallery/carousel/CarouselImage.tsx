@@ -1,30 +1,52 @@
 import Image, { type StaticImageData } from "next/image";
-import { type Ref, useCallback, useState } from "react";
+import type { Ref } from "react";
 
 interface CarouselImageProps {
   src: StaticImageData;
   alt: string;
-  onLoad?: () => void;
   priority?: boolean;
   onClick?: () => void;
   ref?: Ref<HTMLImageElement>;
 }
 
+/**
+ * The photograph itself, and nothing between it and the reader.
+ *
+ * This used to hold the image at `opacity-0` until React's `onLoad` fired,
+ * with a spinner underneath. Three things were wrong with that, and they
+ * compounded:
+ *
+ * **It broke the no-JavaScript promise.** The opacity came from component
+ * state, so with scripting off the photograph never appeared at all — on the
+ * two routes that are most of the site. `/globe` and `/by/[slug]` degrade
+ * correctly; these did not.
+ *
+ * **It cost the LCP measurement outright.** An element at `opacity: 0` does
+ * not count as a largest contentful paint, so the metric was gated on parsing
+ * and running the page's JavaScript rather than on the image bytes — which
+ * meant the `priority` preload above was buying nothing for the number it
+ * exists to move.
+ *
+ * **The spinner was never visible anyway.** `placeholder="blur"` paints the
+ * blur data URL onto the image element from first paint, and the image sits
+ * at `z-20` above the spinner, so the spinner was covered by the thing it was
+ * supposedly standing in for.
+ *
+ * So the blur is the loading state now, which is what `PhotoCard` and
+ * `PhotoGrid` already do. It needs no state, no effect and no script: the
+ * browser shows the blur, then swaps in the photograph when it has it.
+ *
+ * `onLoad` went with it. The prop existed and the one call site never passed
+ * it, so the whole `imageLoaded` machine was in service of an opacity toggle
+ * that should not have been there.
+ */
 export function CarouselImage({
   src,
   alt,
-  onLoad,
   priority = false,
   onClick,
   ref,
 }: CarouselImageProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  const handleLoad = useCallback(() => {
-    setImageLoaded(true);
-    onLoad?.();
-  }, [onLoad]);
-
   return (
     <div className="relative w-full h-full flex items-center justify-center pt-6 pb-12">
       {/*
@@ -38,13 +60,6 @@ export function CarouselImage({
         onClick={onClick}
         type="button"
       >
-        {/* Loading placeholder that matches the image dimensions exactly */}
-        <div
-          className={`absolute max-w-full max-h-full w-full h-full flex items-center justify-center transition-opacity duration-500 ${imageLoaded ? "opacity-0" : "opacity-100"}`}
-        >
-          <div className="size-8 aspect-square border-2 border-white/30 border-t-white rounded-full animate-spin motion-reduce:animate-none" />
-        </div>
-
         <Image
           alt={alt}
           /*
@@ -55,10 +70,14 @@ export function CarouselImage({
            * soft shadow to lift the photo off the colour field, a tighter one
            * for contact, and an inset hairline so the edge stays defined where
            * the image itself is pale.
+           *
+           * `transition-transform` rather than `transition-all`: the only
+           * thing that animates here is the hover scale, and `all` would have
+           * animated the opacity swap next/image performs when the blur is
+           * replaced by the photograph.
            */
-          className={`max-w-full z-20 max-h-full w-auto object-contain rounded-2xl overflow-hidden ring-1 ring-inset ring-white/12 shadow-[0_30px_80px_-28px_oklch(0%_0_0_/_0.7),0_4px_14px_-6px_oklch(0%_0_0_/_0.45)] transition-all duration-500 group-hover:scale-[1.02] group-active:scale-[0.98] ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+          className="max-w-full z-20 max-h-full w-auto object-contain rounded-2xl overflow-hidden ring-1 ring-inset ring-white/12 shadow-[0_30px_80px_-28px_oklch(0%_0_0_/_0.7),0_4px_14px_-6px_oklch(0%_0_0_/_0.45)] transition-transform duration-500 group-hover:scale-[1.02] group-active:scale-[0.98] motion-reduce:transition-none"
           loading={priority ? "eager" : "lazy"}
-          onLoad={handleLoad}
           placeholder="blur"
           priority={priority}
           ref={ref}
