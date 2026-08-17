@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ViewCount } from "@/components/gallery/ViewCount";
 import { META } from "@/components/ui/field";
-import { ShareButton } from "@/components/ui/ShareButton";
 import { SheetContent } from "@/components/ui/Sheet";
 import type { GalleryImage } from "@/data/galleryData";
 import { exifLine } from "@/lib/photos/exif-line";
@@ -107,22 +106,14 @@ export function PhotoDetails({ image }: { image: GalleryImage }) {
         )}
       </dl>
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-white/[0.08] border-t pt-4">
+      {/*
+        The count again, in full rather than as the abbreviated glance
+        outside. No share button here: the one in the caption bar is the share
+        control, and a second instance would keep its own tick state, so the
+        same photograph would read as copied in one place and not the other.
+      */}
+      <div className="mt-auto border-white/[0.08] border-t pt-4">
         <ViewCount imageId={image.id} variant="modal" />
-        {/*
-          Keyed by the photograph so switching gives a fresh instance with
-          fresh state. An effect that reset on `image.id` is the thing React's
-          own docs call an anti-pattern, and it had already gone wrong here —
-          a ✓ from one photograph stayed lit over the next.
-        */}
-        <ShareButton
-          className="text-white/70 hover:text-white"
-          key={image.id}
-          label={image.title === "" ? "this photograph" : image.title}
-          path={`/photo/${image.id}`}
-          text={image.description}
-          title={`${image.title} by ${author.name}`}
-        />
       </div>
     </SheetContent>
   );
