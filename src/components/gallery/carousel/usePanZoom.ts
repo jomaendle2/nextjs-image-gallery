@@ -48,6 +48,42 @@ function scaleTo(transform: PanZoomTransform, next: number): void {
 }
 
 /**
+ * Holds the photograph against the edges of the screen it is being viewed on.
+ *
+ * Dragging used to be unbounded: at 5x on a 390x844 phone, four flicks put the
+ * transform at `translate(-1200px, -1200px)` and the image's rect entirely off
+ * the display — `bottom: -204`, nothing left to grab. The only way back was the
+ * Reset button, which the visitor has to know is a button and not a word.
+ *
+ * The bound is the overflow: half of however much the scaled image exceeds the
+ * viewport in each axis. So an image larger than the screen can be panned to
+ * either of its own edges and no further, and one smaller than the screen has
+ * an overflow of zero and stays centred. That second case is why this clamps
+ * rather than merely limiting: zooming back out shrinks the overflow, and the
+ * image is pulled back to centre as it goes, instead of being stranded.
+ *
+ * `offsetWidth`/`offsetHeight` rather than `getBoundingClientRect`, because the
+ * rect is the *transformed* box and reading it here would feed the scale back
+ * into itself. And `translate` is written before `scale` in the transform, so
+ * the offsets are already in screen pixels — no division by scale.
+ *
+ * Mutates, for the same reason `scaleTo` does: the transform is a ref the
+ * pointer handlers write to directly.
+ */
+function clampToBounds(transform: PanZoomTransform, node: HTMLElement): void {
+  const overflowX = Math.max(
+    0,
+    (node.offsetWidth * transform.scale - window.innerWidth) / 2,
+  );
+  const overflowY = Math.max(
+    0,
+    (node.offsetHeight * transform.scale - window.innerHeight) / 2,
+  );
+  transform.x = Math.min(Math.max(transform.x, -overflowX), overflowX);
+  transform.y = Math.min(Math.max(transform.y, -overflowY), overflowY);
+}
+
+/**
  * Zoom and pan for the full-screen viewer.
  *
  * The pan offset lives in a ref and is written straight to the element's
@@ -90,6 +126,14 @@ export function usePanZoom() {
     if (!node) {
       return;
     }
+    /*
+     * Every route to a new transform — drag, pinch, the zoom buttons, double
+     * click, the layout effect below — ends here, so this is the one place
+     * that can promise the photograph is still on screen. Clamping in the
+     * handlers instead would be the same rule written four times, and the
+     * fourth would be the one that got it wrong.
+     */
+    clampToBounds(transformRef.current, node);
     const { x, y, scale: currentScale } = transformRef.current;
     node.style.transform = `translate(${x}px, ${y}px) scale(${currentScale})`;
   }, []);

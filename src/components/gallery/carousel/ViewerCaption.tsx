@@ -13,6 +13,13 @@ import type { GalleryImage } from "@/data/galleryData";
  *
  * `chrome` carries the shared enter/exit animation class; see
  * `ViewerControls` for why the modal owns that rather than each piece.
+ *
+ * The outer element pads with `safe-b-4`/`safe-x-4` rather than offsetting
+ * with `bottom-4`, so on a phone the card clears the home indicator the same
+ * way `CaptionBar` does in the gallery behind it. It is transparent to
+ * pointers because it spans the full width while the card inside it is at
+ * most `max-w-md` — the empty ends belong to the backdrop, and a click there
+ * has to keep closing the viewer.
  */
 export function ViewerCaption({
   image,
@@ -22,8 +29,10 @@ export function ViewerCaption({
   chrome: string;
 }) {
   return (
-    <div className={`absolute right-4 bottom-4 left-4 z-10 ${chrome}`}>
-      <div className="glass-thick mx-auto max-w-md rounded-[20px] px-4 py-3.5">
+    <div
+      className={`pointer-events-none absolute inset-x-0 bottom-0 z-10 safe-x-4 safe-b-4 ${chrome}`}
+    >
+      <div className="glass-thick pointer-events-auto mx-auto max-w-md rounded-[20px] px-4 py-3.5">
         <h2 className="mb-1 font-semibold text-base text-white tracking-[-0.02em]">
           {image.title}
         </h2>

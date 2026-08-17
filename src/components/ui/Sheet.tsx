@@ -69,7 +69,15 @@ export function SheetContent({
       <Overlay className="fixed inset-0 z-[110] bg-black/10 data-[state=closed]:animate-[viewer-backdrop-out_180ms_var(--ease-glass)] data-[state=open]:animate-[viewer-fade-in_300ms_var(--ease-glass)_backwards]" />
       <Content
         className={cn(
-          "glass-thick fixed inset-y-0 right-0 z-[120] flex w-full flex-col gap-5 overflow-y-auto rounded-l-3xl p-6 sm:max-w-sm",
+          /*
+           * `safe-*-6` rather than `p-6`. The panel is `inset-y-0`, so on a
+           * phone it runs the whole height of a display that `viewport-fit:
+           * cover` has extended behind the notch and the home indicator —
+           * 24px of padding puts the title under one and the last field
+           * under the other. Each utility takes the larger of 24px and the
+           * device's inset, so on a desktop this is still exactly `p-6`.
+           */
+          "glass-thick fixed inset-y-0 right-0 z-[120] flex w-full flex-col gap-5 overflow-y-auto rounded-l-3xl safe-x-6 safe-t-6 safe-b-6 sm:max-w-sm",
           // Transform and opacity only — never a layout property.
           "data-[state=closed]:animate-[sheet-out_180ms_var(--ease-glass)] data-[state=open]:animate-[sheet-in_320ms_var(--ease-glass)_backwards]",
           className,
@@ -94,15 +102,24 @@ export function SheetContent({
           </Description>
         )}
 
-        <Close
-          aria-label="Close details"
-          className={glassControl(
-            "absolute top-5 right-5 flex size-11 items-center justify-center",
-            "round",
-          )}
-        >
-          <X aria-hidden="true" size={18} />
-        </Close>
+        {/*
+          The wrapper carries the inset, not the button. An absolutely
+          positioned element is placed against its ancestor's padding *box*,
+          whose top edge is the border edge — so the panel's own `safe-t-6`
+          does not move a `top-5` child down at all, and the close button
+          would sit under the notch while the title it overlaps did not.
+        */}
+        <div className="pointer-events-none absolute top-0 right-0 safe-x-5 safe-t-5">
+          <Close
+            aria-label="Close details"
+            className={glassControl(
+              "pointer-events-auto flex size-11 items-center justify-center",
+              "round",
+            )}
+          >
+            <X aria-hidden="true" size={18} />
+          </Close>
+        </div>
 
         {children}
       </Content>

@@ -8,6 +8,7 @@ import type { GalleryImage } from "@/data/galleryData";
 import { photoAltText } from "@/lib/photos/alt-text";
 import { trapTab } from "./focus-trap";
 import { usePanZoom } from "./usePanZoom";
+import { useSwipeDismiss } from "./useSwipeDismiss";
 import { ViewerCaption } from "./ViewerCaption";
 import { ViewerControls } from "./ViewerControls";
 
@@ -45,6 +46,13 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
   } = usePanZoom();
 
   const handleClose = useCallback(() => {
+    // A close already under way owns the exit. Without this, a swipe that
+    // dismisses and the click the browser synthesises after it would each
+    // start a timer, and the second would call `onClose` again after the
+    // modal had already gone.
+    if (closeTimerRef.current) {
+      return;
+    }
     setIsClosing(true);
     // Held in a ref so unmounting, or reopening before the exit animation
     // finishes, cannot land a stale `setIsClosing(false)` on the next modal.
@@ -67,6 +75,20 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
   }, []);
+
+  const isZoomed = scale > 1;
+  const swipe = useSwipeDismiss({
+    isZoomed,
+    onDismiss: handleClose,
+    surfaceRef: dialogRef,
+  });
+
+  const handleBackdropClick = useCallback(() => {
+    if (swipe.consumeSwipe()) {
+      return;
+    }
+    handleClose();
+  }, [handleClose, swipe.consumeSwipe]);
 
   /*
    * Escape to close, scroll lock, and focus handling.
@@ -108,7 +130,6 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
     };
   }, [handleClose]);
 
-  const isZoomed = scale > 1;
   // Toolbar, close button and caption all arrive and leave together, behind
   // the photograph.
   const chrome = isClosing ? "viewer-chrome-exit" : "viewer-chrome-enter";
@@ -119,8 +140,12 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
    * ~90vw bitmap: the image gets bigger but no sharper, which reads as the
    * zoom being broken. Capped at 300vw so we never request the 4K source
    * for a small step.
+   *
+   * 100 rather than 90 since the image lost its margin on small screens; the
+   * hint may overshoot the desktop layout by a tenth, which costs at most one
+   * srcset step and never the other way round.
    */
-  const zoomedSizes = `${Math.min(Math.round(90 * scale), 300)}vw`;
+  const zoomedSizes = `${Math.min(Math.round(100 * scale), 300)}vw`;
 
   return (
     <div
@@ -129,7 +154,19 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
       className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl ${
         isClosing ? "viewer-backdrop-exit" : "viewer-backdrop-enter"
       }`}
+      onPointerCancel={swipe.onPointerCancel}
+      onPointerDown={swipe.onPointerDown}
+      onPointerMove={swipe.onPointerMove}
+      onPointerUp={swipe.onPointerUp}
       style={{
+        /*
+         * Vertical drags have to reach the handlers above rather than being
+         * claimed by the browser, so `pan-y` cannot be on the list. What the
+         * browser keeps is `pinch-zoom`: the viewer's own zoom is a feature,
+         * not a replacement for the one a visitor uses because they need to.
+         * While zoomed the whole surface belongs to the pan gesture.
+         */
+        touchAction: isZoomed ? "none" : "pinch-zoom",
         /*
          * The gallery's colour, dimmed almost to black.
          *
@@ -156,27 +193,36 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
       <button
         aria-label="Close full screen view"
         className="absolute inset-0 cursor-default"
-        onClick={handleClose}
+        onClick={handleBackdropClick}
         tabIndex={-1}
         type="button"
       />
 
-      {/* Close button */}
-      <GlassButton
-        aria-label="Close full screen view"
-        /*
-          `size="icon"` rather than `p-2`. `cn` is twMerge, so a padding
-          utility in `className` overrides the variant's own — which made the
-          close button of the full-screen viewer 40px wide, under the 44px
-          floor this codebase documents and checks everywhere else.
-        */
-        className={`absolute top-4 right-4 z-10 ${chrome}`}
-        onClick={handleClose}
-        ref={closeButtonRef}
-        size="icon"
-      >
-        <X size={24} />
-      </GlassButton>
+      {/*
+        Close button.
+
+        The inset lives on this wrapper rather than on the button: `safe-t-4`
+        is padding, and padding on a `size="icon"` button is the thing that
+        makes it 44px. See `ViewerControls`, which pins its cluster to the
+        opposite corner the same way.
+      */}
+      <div className="pointer-events-none absolute top-0 right-0 z-10 safe-x-4 safe-t-4">
+        <GlassButton
+          aria-label="Close full screen view"
+          /*
+            `size="icon"` rather than `p-2`. `cn` is twMerge, so a padding
+            utility in `className` overrides the variant's own — which made
+            the close button of the full-screen viewer 40px wide, under the
+            44px floor this codebase documents and checks everywhere else.
+          */
+          className={`pointer-events-auto ${chrome}`}
+          onClick={handleClose}
+          ref={closeButtonRef}
+          size="icon"
+        >
+          <X size={24} />
+        </GlassButton>
+      </div>
 
       <ViewerControls
         chrome={chrome}
@@ -236,7 +282,21 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
         >
           <Image
             alt={photoAltText(image)}
-            className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain select-none"
+            /*
+             * `dvh`, not `vh`: on iOS Safari `vh` resolves against the
+             * *large* viewport, the one that exists only once the URL bar
+             * has scrolled away, so 90vh reaches under browser chrome that
+             * is still on screen. The dynamic unit is what the rest of the
+             * codebase uses.
+             *
+             * Full width below `sm`, 90% above it. The 10% margin is a
+             * desktop manner — it separates the photograph from the edge of
+             * a large screen. On a portrait phone it was buying nothing: the
+             * carousel behind renders this same photograph at 342px and the
+             * viewer at 351px, so "full screen" was a 2.6% enlargement that
+             * cost a fresh download. The margin is where the difference was.
+             */
+            className="max-w-[100vw] max-h-[90dvh] sm:max-w-[90vw] w-auto h-auto object-contain select-none"
             draggable={false}
             onLoad={handleLoad}
             placeholder="blur"
