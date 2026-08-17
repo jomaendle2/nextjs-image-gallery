@@ -15,12 +15,66 @@
  * It fails the build if the database is unreachable, deliberately. A deploy
  * blocked by an outage is recoverable; a deploy that succeeds and then
  * cannot read a column it selects is a broken site with a green checkmark.
+ *
+ * **It refuses to run outside production, and that is new.** Preview,
+ * development and production currently share one Neon database —
+ * `docs/next-version.md` §1 has this as the first thing to fix and it is a
+ * dashboard setting rather than a code change. Until it is fixed, "runs on
+ * every build" meant every *preview* build too: push a branch that adds a
+ * statement to `MIGRATIONS`, and it executes against live data the moment
+ * Vercel builds the preview — before review, before merge, and including the
+ * data-touching statements already in the list, which rewrite `exif` and
+ * backfill `display_pathname`.
+ *
+ * `preflight.mts` has gated on `VERCEL_ENV` since it was written. This
+ * script never did, and the difference was not deliberate.
+ *
+ * The trade this makes is worth stating plainly, because it is a trade. A
+ * preview branch that needs a new column now renders a broken preview
+ * instead of migrating production: a 500 on a URL nobody has bookmarked,
+ * against an unreviewed schema change on real rows. Set
+ * `ALLOW_PREVIEW_MIGRATIONS=1` on the branch to opt back in, once you have
+ * decided that is what you want. When preview gets its own branch database,
+ * this whole block should go.
  */
 import process from "node:process";
-import { sql } from "../src/lib/database.ts";
 import { MIGRATIONS } from "../src/lib/schema.ts";
 
+/**
+ * Whether this build is allowed to change the schema.
+ *
+ * Absent `VERCEL_ENV` means a local run — `npm run db:migrate` against a
+ * developer's own database, which is the command's original purpose and must
+ * keep working.
+ */
+function mayMigrate(): boolean {
+  const env = process.env["VERCEL_ENV"];
+  return (
+    env === undefined ||
+    env === "production" ||
+    process.env["ALLOW_PREVIEW_MIGRATIONS"] === "1"
+  );
+}
+
 async function main(): Promise<void> {
+  if (!mayMigrate()) {
+    console.log(
+      `migrate: ${process.env["VERCEL_ENV"]} build, skipping ${MIGRATIONS.length} statements.\n` +
+        "migrate: preview shares the production database — see the note in this file.\n" +
+        "migrate: set ALLOW_PREVIEW_MIGRATIONS=1 to run them anyway.",
+    );
+    return;
+  }
+
+  /*
+   * Imported here rather than at the top, so that a build which is not going
+   * to migrate never opens a connection — and never fails on a missing
+   * `DATABASE_URL` it was not going to use. `database.ts` throws at import
+   * time by design, which is right for every other caller and exactly wrong
+   * for the one that has just decided to do nothing.
+   */
+  const { sql } = await import("../src/lib/database.ts");
+
   for (const statement of MIGRATIONS) {
     await sql.query(statement);
     console.log(`ok: ${statement.slice(0, 62).replace(/\s+/g, " ")}...`);

@@ -23,6 +23,28 @@ row in the real `contributors` table.
 The contributor pages now warn on any non-production deployment, which stops
 the surprise being silent — but a warning is not isolation.
 
+**And it was worse than a warning could cover: preview builds were migrating
+the production schema.** `vercel-build` runs `scripts/migrate.mts` on every
+build, and that script had no environment gate — `preflight.mts` has had one
+since it was written, and the difference was not deliberate. So pushing a
+branch that added a statement to `MIGRATIONS` executed it against live data
+the moment Vercel built the preview: before review, before merge, and
+including the statements that rewrite `exif` and backfill
+`display_pathname`. There is also no migration ledger — the array is replayed
+in full every build — and no down-migrations, so correctness rests entirely
+on `schema.test.ts`'s idempotency assertion.
+
+`migrate.mts` now refuses outside production unless
+`ALLOW_PREVIEW_MIGRATIONS=1` is set. That is a mitigation, not the fix: a
+preview branch needing a new column now renders a broken preview instead of
+migrating production, which is the better of two bad outcomes and still a bad
+one. **The gate should be deleted the day preview gets its own branch
+database.**
+
+Worth confirming while you are in the dashboard: what the Neon
+point-in-time-recovery retention actually is. Nothing in this repo records a
+backup or restore story for either the database or the blobs.
+
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
 branch per preview is a dashboard setting, not code.
 
