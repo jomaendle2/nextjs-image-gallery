@@ -75,6 +75,12 @@ try {
   console.log("Public pages");
   await renders("/", "</html>");
   await renders("/photographers", "Photographers");
+  /*
+   * Checked against the *list*, not the canvas. The globe is an enhancement
+   * over a grouped list of links that renders on the server, and this
+   * asserts the half that has to work with no JavaScript at all.
+   */
+  await renders("/globe", "Where these were taken");
   await renders("/membership", "member");
   await renders("/subscribe", "email");
   await renders("/contribute", "Sign in");

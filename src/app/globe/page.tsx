@@ -6,9 +6,10 @@ import { LINK, META, TOUCH_LINK } from "@/components/ui/field";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { CELL_KM } from "@/lib/photos/coarsen";
-import { groupIntoCells, labelFor } from "@/lib/photos/globe";
+import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
+import { GlobeCanvas } from "./GlobeCanvas";
 
 export const revalidate = 3600;
 
@@ -96,6 +97,14 @@ export default async function GlobePage() {
                 middle of a square about {CELL_KM} kilometres across — so it
                 says roughly where somebody was and not where they stood.
               </p>
+
+              {/*
+                Beside the list, not instead of it. Everything the globe shows
+                is already below in a form that works with no JavaScript, no
+                canvas and no sight — which is why it can be `aria-hidden` and
+                why nothing here waits for it.
+              */}
+              <GlobeCanvas points={toGlobePoints(cells)} />
 
               <ul className="mt-10 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
                 {cells.map((cell) => (
