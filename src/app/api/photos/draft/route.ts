@@ -1,13 +1,12 @@
 import { del, put } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentContributor } from "@/lib/auth/session";
+import { isOurBlob } from "@/lib/blob-host";
 import { deriveFromBuffer } from "@/lib/photos/derive";
 import { blobIsClaimed, insertDraftPhoto } from "@/lib/photos/repository";
 
 /** Matches the token constraint in /api/uploads/token. */
 const MAX_BYTES = 25 * 1024 * 1024;
-
-const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
 
 const LEADING_SLASH = /^\//;
 
@@ -55,11 +54,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch {
     return NextResponse.json({ error: "Malformed blob url." }, { status: 400 });
   }
-  if (
-    parsed.protocol !== "https:" ||
-    !parsed.hostname.endsWith(BLOB_HOST_SUFFIX) ||
-    !parsed.pathname.startsWith("/photos/")
-  ) {
+  /*
+   * The exact store, not any store on the platform. This used to match on the
+   * hostname *suffix*, which every free Vercel Blob bucket shares — so a
+   * contributor could point a published row at a bucket they own and change
+   * what it serves after review. `isOurBlob` is the one definition; see
+   * `src/lib/blob-host.ts` for the argument.
+   */
+  if (!isOurBlob(blobUrl)) {
     return NextResponse.json(
       { error: "Unexpected blob url." },
       { status: 400 },

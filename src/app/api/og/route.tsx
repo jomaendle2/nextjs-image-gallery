@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
+import { isOurBlob } from "@/lib/blob-host";
 
 // Runs on the default Node.js runtime (Fluid Compute): same regions and
 // price as Edge, but with the full Node API surface available.
@@ -80,7 +81,20 @@ function PhotographStrip({ urls }: { urls: string[] }) {
   );
 }
 
-/** Absolute image URLs, bounded so a crafted query cannot stall the render. */
+/**
+ * Absolute image URLs, bounded so a crafted query cannot stall the render —
+ * and pinned to our own Blob store, which is the half that was missing.
+ *
+ * Satori fetches every one of these server-side while it renders the card, so
+ * whatever passes this filter is a URL our machine will request and composite
+ * into a PNG it then hands back to whoever asked. Accepting anything starting
+ * `https://` made this an unauthenticated image proxy: a stranger could
+ * request `/api/og?previews=https://somewhere-else/x.png` and get those bytes
+ * back rendered from our IP, on our egress, cached at the CDN for a day.
+ *
+ * `isOurBlob` is the same pin `next.config.ts` puts on the image optimizer,
+ * and for the same reason — see `src/lib/blob-host.ts`.
+ */
 function previewUrls(raw: string | null): string[] {
   if (raw === null || raw === "") {
     return [];
@@ -88,7 +102,7 @@ function previewUrls(raw: string | null): string[] {
   return raw
     .split(",")
     .map((url) => url.trim())
-    .filter((url) => url.startsWith("https://"))
+    .filter((url) => isOurBlob(url))
     .slice(0, PREVIEW_COUNT);
 }
 

@@ -84,6 +84,23 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  /*
+   * `exifr` is required at runtime rather than bundled.
+   *
+   * It reaches for `fs` and `zlib` through optional requires, and bundling it
+   * resolves those to nothing — which the build says out loud, twice, as
+   * "Couldn't load fs" and "Couldn't load zlib". The consequence is quiet
+   * rather than loud: compressed metadata segments simply return nothing, so
+   * a photograph whose EXIF sits in a zlib-compressed block loses its
+   * exposure line with no error anywhere.
+   *
+   * `sharp` never had this problem because Next externalises it by default.
+   * `exifr` is not on that list, and it is reached from exactly one place —
+   * `deriveFromBuffer`, on the upload path — so externalising it costs
+   * nothing and takes the parser out of that route's bundle as well.
+   */
+  serverExternalPackages: ["exifr"],
+
   experimental: {
     // Tree-shakes barrel-file imports so we ship only the icons we use.
     optimizePackageImports: ["lucide-react", "@number-flow/react"],
