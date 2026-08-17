@@ -2,8 +2,10 @@
 
 import { ChevronDown } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import { Notice } from "@/components/ui/Notice";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
+import { count } from "@/lib/plural";
 import { bulkRemovePhotos, bulkSetPublished } from "./actions";
 import { BulkBar } from "./BulkBar";
 import {
@@ -48,6 +50,35 @@ const INITIAL_ROWS = 30;
 /** Below this there is nothing to sift through, so the controls are noise. */
 const CONTROLS_APPEAR_AT = 4;
 
+/**
+ * What a bulk publish did, when it did not do all of it.
+ *
+ * The count of refusals comes from the server, which checks the same two
+ * fields `savePhoto` checks — so this sentence is the only place a
+ * photographer learns that "select all → Publish" published nine of ten. The
+ * bar cannot say it: publishing empties the selection, which unmounts the bar,
+ * so the report has to outlive it and sits where the bar was.
+ *
+ * `changed === 0` is worth its own sentence rather than "0 published": nothing
+ * happened, and a person who pressed a button needs to be told that plainly
+ * before they press it again.
+ */
+function BulkReport({
+  changed,
+  refused,
+}: {
+  changed: number;
+  refused: number;
+}) {
+  return (
+    <Notice className="mb-4" tone="warning">
+      {changed === 0
+        ? `Nothing was published. All ${count(refused, "photograph")} still need a title and a description.`
+        : `${count(changed, "photograph")} published. ${count(refused, "photograph")} still need a title and a description — open a row and fill both in.`}
+    </Notice>
+  );
+}
+
 export function PhotoList({
   photos,
   mapStyleUrl,
@@ -64,6 +95,11 @@ export function PhotoList({
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
+  /** What the last bulk publish refused, or null when it refused nothing. */
+  const [report, setReport] = useState<{
+    changed: number;
+    refused: number;
+  } | null>(null);
   const { pending, error, run } = useServerAction();
 
   const revealAll = useCallback(() => setShowAll(true), []);
@@ -102,6 +138,11 @@ export function PhotoList({
   const onSelection = useCallback(
     (action: (ids: string[]) => Promise<unknown>) => {
       run(async () => {
+        /*
+         * The previous run's report goes before this one starts. Left up, it
+         * would describe a batch that is no longer on screen.
+         */
+        setReport(null);
         await action([...selected]);
         clearSelection();
       });
@@ -110,7 +151,15 @@ export function PhotoList({
   );
 
   const publishSelected = useCallback(() => {
-    onSelection((ids) => bulkSetPublished(ids, true));
+    onSelection(async (ids) => {
+      const outcome = await bulkSetPublished(ids, true);
+      /*
+       * Only when something was refused. When everything went live the rows
+       * say so themselves — every one of them now reads "Published" — and a
+       * notice repeating that is a message about nothing.
+       */
+      setReport(outcome.refused === 0 ? null : outcome);
+    });
   }, [onSelection]);
 
   const unpublishSelected = useCallback(() => {
@@ -185,6 +234,10 @@ export function PhotoList({
           onToggle={toggleAllVisible}
           state={allState}
         />
+      )}
+
+      {report === null ? null : (
+        <BulkReport changed={report.changed} refused={report.refused} />
       )}
 
       {chosen.length === 0 ? null : (

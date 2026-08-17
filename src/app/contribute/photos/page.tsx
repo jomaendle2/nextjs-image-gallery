@@ -10,6 +10,7 @@ import { listOwnPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { signOut } from "../actions";
 import { ContributeShell } from "../ContributeShell";
+import { FirstRun } from "./FirstRun";
 import { PhotoList } from "./PhotoList";
 import { UploadForm } from "./UploadForm";
 
@@ -64,6 +65,14 @@ export default async function PhotosPage() {
           </TextLink>
         ) : null}
       </div>
+
+      {/*
+        Before the upload box rather than after it, and only until the first
+        photograph is live. It answers the questions somebody has while looking
+        at the file input, and the most important of them — that nobody reviews
+        any of this — was answered nowhere on the site.
+      */}
+      {published.length === 0 ? <FirstRun /> : null}
 
       <UploadForm />
 

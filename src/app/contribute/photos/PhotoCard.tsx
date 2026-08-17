@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Pin } from "lucide-react";
+import { ChevronDown, ExternalLink, Pin } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, memo, useCallback, useState } from "react";
 import { exifLine } from "@/lib/photos/exif-line";
@@ -213,6 +213,32 @@ export const PhotoCard = memo(function PhotoCardRow({
           </div>
         ) : null}
       </details>
+
+      {/*
+        The way to see the photograph as everybody else sees it.
+
+        Outside the `<details>` for the same reason the checkbox is: a link
+        inside `<summary>` inherits the summary's click, so opening the
+        photograph would also expand the row. And a plain anchor rather than
+        `TextLink`, because this one wants a new tab — a client-side navigation
+        away from the dashboard discards every half-typed caption on the page,
+        and `TextLink` reserves `target="_blank"` for external addresses.
+
+        Published rows only. There is nothing at `/photo/[id]` for a draft; the
+        route serves published photographs, so the link would be a 404 dressed
+        as a preview.
+      */}
+      {photo.published_at === null ? null : (
+        <a
+          aria-label={`Open ${untitled ? "this untitled photograph" : photo.title} on the site`}
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center px-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80"
+          href={`/photo/${photo.id}`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <ExternalLink aria-hidden="true" size={16} />
+        </a>
+      )}
     </li>
   );
 });

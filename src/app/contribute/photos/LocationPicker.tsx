@@ -245,12 +245,87 @@ function MapSurface({
   );
 }
 
+/**
+ * Which complaint about this field the input should point at, if either.
+ *
+ * The local one wins. If the text does not parse there is no pin to send, so a
+ * server complaint about the pin is necessarily about an earlier submission —
+ * and pointing at a message the person has already replaced is worse than
+ * pointing at nothing.
+ */
+function objection(
+  unreadable: boolean,
+  problemId: string,
+  invalid: boolean,
+  messageId: string | undefined,
+): string | undefined {
+  if (unreadable) {
+    return problemId;
+  }
+  return invalid ? messageId : undefined;
+}
+
+/**
+ * What marking it actually publishes, in both precisions, before the save
+ * rather than after it.
+ *
+ * This is the consent. A photographer agreeing to "a location" is not agreeing
+ * to anything they can check, and the two lines below are checkable.
+ *
+ * `exact` is null both when there is nothing typed and when the photographer
+ * chose to publish only the blurred dot — from here those are the same thing,
+ * which is the point: the panel shows what will be stored, and in both cases
+ * what will be stored is one point rather than two.
+ */
+function WhatGetsPublished({
+  exact,
+  coarse,
+}: {
+  exact: Pin | null;
+  coarse: Pin;
+}) {
+  return (
+    <dl className="space-y-2 rounded-2xl border border-white/[0.08] p-3">
+      {exact === null ? null : (
+        <div>
+          <dt className={META}>Exact — members only</dt>
+          <dd className="mt-0.5 text-[0.8125rem] text-white/85 tabular-nums">
+            {format(exact, 5)}
+          </dd>
+        </div>
+      )}
+      <div>
+        <dt className={META}>Public — everyone</dt>
+        <dd className="mt-0.5 text-[0.8125rem] text-white/85 tabular-nums">
+          {format(coarse, 1)}
+        </dd>
+        <dd className="mt-1 text-[0.75rem] text-white/55 leading-relaxed">
+          The middle of a square about {CELL_KM} km across, never more than{" "}
+          {MAX_ERROR_KM} km from where you stood. This is the dot the globe
+          draws, and anybody can see it.
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
 export function LocationPicker({
   photo,
   styleUrl,
+  invalid = false,
+  messageId,
 }: {
   photo: OwnPhotoRow;
   styleUrl: string | null;
+  /**
+   * Set when the last save was refused because of this field. The sentence
+   * itself is the form's, at `messageId` — the server's complaint and the
+   * browser's are two different objections and only one of them can be true
+   * at a time, so they are not merged into one string.
+   */
+  invalid?: boolean;
+  /** Where the form's own message is, for `aria-describedby`. */
+  messageId?: string;
 }) {
   const [text, setText] = useState(() => initialText(photo));
   const [publicOnly, setPublicOnly] = useState(
@@ -276,6 +351,18 @@ export function LocationPicker({
   }, []);
 
   const typedSomething = text.trim() !== "";
+  /*
+   * Two numbers were typed and they are not two numbers.
+   *
+   * This sentence used to sit beside the field with no relationship to it at
+   * all: no `aria-invalid`, no `aria-describedby`, nothing tying the warning
+   * to the input it is about. Somebody hearing the page was told a coordinate
+   * did not parse and left to work out which of eight fields that was. The
+   * two attributes below are the whole fix, and they are WCAG 3.3.1.
+   */
+  const unreadable = typedSomething && point === null;
+  const problemId = `pin-problem-${photo.id}`;
+  const describedBy = objection(unreadable, problemId, invalid, messageId);
 
   return (
     <div className="space-y-2.5">
@@ -302,6 +389,8 @@ export function LocationPicker({
       />
 
       <input
+        aria-describedby={describedBy}
+        aria-invalid={unreadable || invalid}
         className={FIELD}
         id={`pin-${photo.id}`}
         inputMode="decimal"
@@ -310,11 +399,13 @@ export function LocationPicker({
         value={text}
       />
 
-      {typedSomething && point === null ? (
-        <Notice tone="warning">
-          That does not read as a coordinate. Two numbers, latitude first — for
-          example <code>47.3769, 8.5417</code>.
-        </Notice>
+      {unreadable ? (
+        <div id={problemId}>
+          <Notice tone="warning">
+            That does not read as a coordinate. Two numbers, latitude first —
+            for example <code>47.3769, 8.5417</code>.
+          </Notice>
+        </div>
       ) : null}
 
       {styleUrl === null ? (
@@ -336,34 +427,8 @@ export function LocationPicker({
         </>
       )}
 
-      {/*
-        What marking it actually publishes, in both precisions, before the
-        save rather than after it. This is the consent — a photographer
-        agreeing to "a location" is not agreeing to anything they can check,
-        and the two lines below are checkable.
-      */}
       {coarse === null ? null : (
-        <dl className="space-y-2 rounded-2xl border border-white/[0.08] p-3">
-          {publicOnly || point === null ? null : (
-            <div>
-              <dt className={META}>Exact — members only</dt>
-              <dd className="mt-0.5 text-[0.8125rem] text-white/85 tabular-nums">
-                {format(point, 5)}
-              </dd>
-            </div>
-          )}
-          <div>
-            <dt className={META}>Public — everyone</dt>
-            <dd className="mt-0.5 text-[0.8125rem] text-white/85 tabular-nums">
-              {format(coarse, 1)}
-            </dd>
-            <dd className="mt-1 text-[0.75rem] text-white/55 leading-relaxed">
-              The middle of a square about {CELL_KM} km across, never more than{" "}
-              {MAX_ERROR_KM} km from where you stood. This is the dot the globe
-              draws, and anybody can see it.
-            </dd>
-          </div>
-        </dl>
+        <WhatGetsPublished coarse={coarse} exact={publicOnly ? null : point} />
       )}
 
       {/*

@@ -5,14 +5,44 @@ import { type FormState, failed, formText, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
 import {
   deletePhoto,
+  listOwnPhotos,
   publishPhoto,
   setPublished,
 } from "@/lib/photos/repository";
 import { revalidateFeeds } from "@/lib/photos/revalidate";
-import type { PublishInput } from "@/lib/photos/types";
+import type { OwnPhotoRow, PublishInput } from "@/lib/photos/types";
 
-/** One shape for every form on the site. See `@/app/form-state`. */
-export type PhotoFormState = FormState;
+/**
+ * Which field a refusal is about.
+ *
+ * The names are the `name` attributes the form submits, so the browser side
+ * can mark the offending input without a translation table between the two
+ * halves — a lookup that would be one more thing to keep in step, and the
+ * kind that fails silently by marking nothing.
+ */
+export type PhotoField = "title" | "description" | "bg_color" | "pin";
+
+/**
+ * One shape for every form on the site, plus the field the message is about.
+ *
+ * `FormState` carries a message and a tone, which is everything a form with
+ * one field needs. This form has eight, and a sentence in a live region after
+ * the submit button told somebody *that* a title was required without telling
+ * any assistive technology *which* control was wrong — WCAG 3.3.1 wants both.
+ * So the field travels with the message, and `PhotoEditForm` spends it on
+ * `aria-invalid`, `aria-describedby` and a focus move.
+ *
+ * Optional, because most of these messages are not about a field: "Published."
+ * and "That photograph could not be found." belong to the form as a whole.
+ */
+export interface PhotoFormState extends FormState {
+  field?: PhotoField;
+}
+
+/** A refusal that knows which control caused it. See `PhotoField`. */
+function invalid(field: PhotoField, message: string): PhotoFormState {
+  return { ...failed(message), field };
+}
 
 const MAX_TITLE = 120;
 const MAX_DESCRIPTION = 300;
@@ -99,6 +129,44 @@ function readPin(
   };
 }
 
+/**
+ * The two fields a photograph cannot be published without, and why.
+ *
+ * Both are required, and the reason is not administrative: the description is
+ * what `photoAltText` reads out in place of the photograph, so a published row
+ * without one hands somebody who cannot see it the literal string
+ * "Photograph". Saying which of the two is missing, and what it is for, is the
+ * difference between a rule and an obstacle.
+ *
+ * `null` when there is nothing to say, so the caller reads one branch rather
+ * than three. The combined sentence is kept for the case it was written for —
+ * a photographer pressing Publish on a freshly uploaded row, where both are
+ * empty and telling them about one is telling them half the news.
+ */
+function whatIsMissing(
+  title: string,
+  description: string,
+): PhotoFormState | null {
+  if (title === "" && description === "") {
+    return invalid(
+      "title",
+      "A title and a description are both required. The description is what " +
+        "a screen reader says in place of the photograph.",
+    );
+  }
+  if (title === "") {
+    return invalid("title", "A title is required — it names the photograph.");
+  }
+  if (description === "") {
+    return invalid(
+      "description",
+      "A description is required. It is what a screen reader says in place " +
+        "of the photograph, so without it there is nothing to say.",
+    );
+  }
+  return null;
+}
+
 export async function savePhoto(
   _previous: PhotoFormState,
   formData: FormData,
@@ -112,13 +180,14 @@ export async function savePhoto(
 
   const title = formText(formData, "title", MAX_TITLE);
   const description = formText(formData, "description", MAX_DESCRIPTION);
-  if (title === "" || description === "") {
-    return failed("A title and a description are both required.");
+  const missing = whatIsMissing(title, description);
+  if (missing !== null) {
+    return missing;
   }
 
   const bgColor = formText(formData, "bg_color", 7);
   if (!HEX_COLOR.test(bgColor)) {
-    return failed("The background colour must be a hex value.");
+    return invalid("bg_color", "The background colour must be a hex value.");
   }
 
   const location = formText(formData, "location", MAX_TITLE);
@@ -132,7 +201,7 @@ export async function savePhoto(
 
   const marked = readPin(formData);
   if ("problem" in marked) {
-    return failed(marked.problem);
+    return invalid("pin", marked.problem);
   }
 
   /*
@@ -184,6 +253,12 @@ export async function savePhoto(
 
   revalidateFeeds(saved.slug);
   if (publish) {
+    /*
+     * Short, because the form puts a link to the live photograph beside it.
+     * "Published." on its own was the end of the road: the one thing somebody
+     * wants after publishing is to look at the thing they published, and
+     * there was nowhere on this page to do that.
+     */
     return succeeded("Published.");
   }
   return succeeded(
@@ -250,6 +325,32 @@ export async function removePhoto(id: string): Promise<void> {
   revalidateFeeds(deleted.author_slug);
 }
 
+/** The rule `whatIsMissing` enforces one photograph at a time. */
+function isPublishable(photo: OwnPhotoRow): boolean {
+  return photo.title.trim() !== "" && photo.description.trim() !== "";
+}
+
+/**
+ * Which of the actor's own photographs may go live.
+ *
+ * A set of ids rather than a per-id check, because this is one query for a
+ * selection of any size. `listOwnPhotos` is the same read the dashboard did to
+ * draw the rows being ticked, so the answer is the one the photographer is
+ * looking at — and it is scoped to `actor.id`, so an id belonging to somebody
+ * else is simply absent from the set and refused, exactly as `setPublished`
+ * would have refused it.
+ *
+ * Read on the server rather than trusting the selection, even though the
+ * browser has the same two fields in hand. The point is not that the client
+ * would lie; it is that "a published photograph has a description" is a rule
+ * about the gallery, and a rule enforced only where it is convenient is a rule
+ * with one path around it.
+ */
+async function publishableIds(actorId: string): Promise<ReadonlySet<string>> {
+  const own = await listOwnPhotos(actorId);
+  return new Set(own.filter(isPublishable).map((photo) => photo.id));
+}
+
 /**
  * Publishes or unpublishes several photographs at once.
  *
@@ -267,21 +368,46 @@ export async function removePhoto(id: string): Promise<void> {
  * updates nothing rather than somebody else's photograph. The loop is
  * sequential because these are small writes and a partial failure should
  * stop rather than race.
+ *
+ * **Publishing here refuses what publishing one at a time refuses.** It did
+ * not, and that was the sharpest hole on this page: `savePhoto` will not put a
+ * photograph live without a title and a description, while "select all →
+ * Publish" walked straight past both checks. An untitled row published this
+ * way reaches the gallery, the globe, the RSS feed and the next subscriber
+ * announcement, where `photoAltText` has nothing to work with and degrades to
+ * the literal string "Photograph" — so the one route that skipped the rule was
+ * also the one that could break a dozen rows in a single click.
+ *
+ * Rows that do not qualify are left alone and counted, rather than failing the
+ * batch: publishing nine because the tenth has no caption would be a worse
+ * answer than publishing nine and saying so. `refused` is what the list turns
+ * into a sentence naming what is still needed.
  */
 export async function bulkSetPublished(
   ids: readonly string[],
   published: boolean,
-): Promise<{ changed: number }> {
+): Promise<{ changed: number; refused: number }> {
   const actor = await requireContributor();
+
+  /*
+   * Only when publishing. Unpublishing an untitled photograph is the fix for
+   * having published one, so a check there would trap the row on the site.
+   */
+  const allowed = published ? await publishableIds(actor.id) : null;
 
   const slugs = new Set<string>();
   let changed = 0;
+  let refused = 0;
   for (const id of ids) {
-    // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — small writes, and a partial failure should stop rather than race the rest
-    const slug = await setPublished(id, published, actor);
-    if (slug !== null) {
-      slugs.add(slug);
-      changed += 1;
+    if (allowed !== null && !allowed.has(id)) {
+      refused += 1;
+    } else {
+      // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — small writes, and a partial failure should stop rather than race the rest
+      const slug = await setPublished(id, published, actor);
+      if (slug !== null) {
+        slugs.add(slug);
+        changed += 1;
+      }
     }
   }
 
@@ -289,7 +415,7 @@ export async function bulkSetPublished(
   for (const slug of slugs) {
     revalidateFeeds(slug);
   }
-  return { changed };
+  return { changed, refused };
 }
 
 /**
