@@ -158,6 +158,67 @@ export async function memberForSession(): Promise<Member | null> {
   return (rows[0] as Member | undefined) ?? null;
 }
 
+/**
+ * Pushes the session's expiry back, if it is far enough through its life to be
+ * worth a write.
+ *
+ * The window was fixed: thirty days from the moment somebody signed in, never
+ * renewed, so an active photographer was logged out on a schedule for no
+ * reason and had to go through the email dance again. Sliding it means
+ * somebody who keeps using the site stays signed in, and somebody who stops
+ * still falls out after thirty days of not using it — which is what a session
+ * lifetime is meant to express.
+ *
+ * **Halfway, not every request.** Renewing on every read would mean an UPDATE
+ * and a `Set-Cookie` on every page a contributor loads, to move an expiry a
+ * few seconds. Waiting until the session is past its midpoint makes the write
+ * rare — at most once per fifteen days of steady use — while the reader never
+ * comes close to the edge.
+ *
+ * **Only callable from a route handler or a server action.** Next refuses
+ * `cookies().set()` during a Server Component render, and the read paths above
+ * are called from pages, so this cannot simply be folded into
+ * `getCurrentContributor`. `/api/me` calls it, which covers the case that
+ * matters most — a signed-in reader browsing the public gallery — and the
+ * upload and draft routes are the natural second home for it if a
+ * dashboard-only visitor ever turns out to be logged out mid-week.
+ */
+export async function renewSession(): Promise<void> {
+  const store = await cookies();
+  const secret = store.get(SESSION_COOKIE)?.value;
+  if (secret === undefined || secret === "") {
+    return;
+  }
+
+  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000).toISOString();
+
+  /*
+   * The database decides whether this is due, in the same statement that does
+   * it. The midpoint test lives in the WHERE, so a read-then-write race cannot
+   * double-renew or revive a session that has just been revoked, and
+   * `RETURNING` says whether a live row was actually moved.
+   */
+  const moved = await sql`
+    UPDATE sessions SET expires_at = ${expiresAt}
+    WHERE id = ${hashSecret(secret)}
+      AND expires_at > now()
+      AND expires_at < now() + make_interval(days => ${SESSION_DAYS / 2})
+    RETURNING id;
+  `;
+
+  if (moved.length === 0) {
+    return;
+  }
+
+  store.set(SESSION_COOKIE, secret, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env["NODE_ENV"] === "production",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+}
+
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   const secret = store.get(SESSION_COOKIE)?.value;

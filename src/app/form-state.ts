@@ -32,6 +32,20 @@ export function succeeded(message: string): FormState {
 }
 
 /**
+ * The terminal success: there is nothing left to fill in.
+ *
+ * Distinct from `succeeded` because the form does something different with
+ * it — a form that has been *answered* should be replaced by the answer,
+ * while one that merely reported something stays where it is. Three files
+ * were constructing `{ tone: "sent" }` by hand because this did not exist,
+ * and the sign-in form was using `succeeded` for an outcome that is plainly
+ * terminal, which is why it had no confirmation state at all.
+ */
+export function sent(message: string | null = null): FormState {
+  return { message, tone: "sent" };
+}
+
+/**
  * One field off a form: trimmed, bounded, and never `undefined`.
  *
  * The same five lines were written four times under four names — `text` in

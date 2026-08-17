@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { type FormState, failed, succeeded } from "@/app/form-state";
+import { type FormState, failed, sent } from "@/app/form-state";
 import { sendLoginEmail } from "@/lib/auth/email";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { looksLikeEmail, normaliseEmail } from "@/lib/auth/slug";
@@ -18,14 +18,19 @@ import { siteOrigin } from "@/lib/site-url";
 /** One shape for every form on the site. See `@/app/form-state`. */
 export type SignInState = FormState;
 
-/**
- * Always reports the same thing.
+/*
+ * `NEUTRAL` used to live here, holding the one sentence every branch returned.
  *
- * Unknown address, revoked contributor, rate-limited, provider outage — the
- * visitor sees "Check your inbox" in every case. Any branch that said
- * otherwise would turn this form into a test for who has been invited.
+ * The neutrality is unchanged and still the point: an unknown address, a
+ * revoked contributor and a provider outage all reach the same terminal state,
+ * because any branch that said otherwise would turn this form into a test for
+ * who has been invited. What moved is where the words live — the form now
+ * renders a confirmation panel rather than a line of grey text, so the
+ * hedged sentence belongs there with the rest of what a person needs to know.
+ *
+ * The one branch that no longer hides is the throttle, and that is argued
+ * where it happens.
  */
-const NEUTRAL = "If that address is on the list, a sign-in link is on its way.";
 
 export async function requestSignIn(
   _previous: SignInState,
@@ -40,12 +45,23 @@ export async function requestSignIn(
   const headerList = await headers();
   const ip = clientIp(headerList);
 
-  // Limited on both axes: per address so one inbox cannot be flooded, and
-  // per IP so one client cannot walk a list of addresses.
+  /*
+   * Limited on both axes: per address so one inbox cannot be flooded, and per
+   * IP so one client cannot walk a list of addresses.
+   *
+   * **Being throttled now says so.** It used to return `NEUTRAL` — the same
+   * "a link is on its way" as a success — while sending nothing, so somebody
+   * who pressed the button a few times in frustration was told several more
+   * times that a link was coming and then waited for mail that would never
+   * arrive. Anti-enumeration does not require lying about our own throttle:
+   * the limiter counts attempts whether or not the address exists, so saying
+   * "too many, wait" reveals the caller's own rate and nothing about the
+   * list. The peer-invite path has always worded it this way.
+   */
   if (
     !(signInLimiter.check(`ip:${ip}`) && signInLimiter.check(`em:${email}`))
   ) {
-    return succeeded(NEUTRAL);
+    return failed("Too many requests just now. Try again in a few minutes.");
   }
 
   /*
@@ -78,7 +94,12 @@ export async function requestSignIn(
     }
   });
 
-  return succeeded(NEUTRAL);
+  /*
+   * The address goes back to the form so the confirmation can name it, and
+   * so "send another" needs no retyping. It is the address the person just
+   * typed, so echoing it tells them nothing they did not supply.
+   */
+  return sent(email);
 }
 
 export async function signOut(): Promise<void> {

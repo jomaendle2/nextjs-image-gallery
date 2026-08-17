@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getCurrentContributor, memberForSession } from "@/lib/auth/session";
+import {
+  getCurrentContributor,
+  memberForSession,
+  renewSession,
+} from "@/lib/auth/session";
 import { isActive } from "@/lib/members/status";
 
 /**
@@ -40,6 +44,19 @@ export async function GET(): Promise<NextResponse> {
     getCurrentContributor(),
     memberForSession(),
   ]);
+
+  /*
+   * And while we are here, push the expiry back.
+   *
+   * This route is the one thing a signed-in reader reliably hits from the
+   * public site, and it is a route handler — which is what makes it the one
+   * place that *can* renew, since Next refuses to set a cookie during a page
+   * render. `renewSession` is a no-op until the session is past its midpoint,
+   * so this costs nothing on all but one visit in fifteen days.
+   */
+  if (contributor !== null || member !== null) {
+    await renewSession();
+  }
 
   return NextResponse.json(
     {
