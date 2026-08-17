@@ -10,6 +10,7 @@ import { SheetContent } from "@/components/ui/Sheet";
 import type { GalleryImage } from "@/data/galleryData";
 import { exifLine } from "@/lib/photos/exif-line";
 import { MemberDetails } from "./MemberDetails";
+import { WorldDot } from "./WorldDot";
 
 /**
  * Everything about one photograph that is not the photograph.
@@ -36,7 +37,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function PhotoDetails({ image }: { image: GalleryImage }) {
-  const { author, location, description } = image;
+  const { author, location, description, pin } = image;
   const exif = exifLine(image.exif ?? null);
 
   /*
@@ -82,7 +83,26 @@ export function PhotoDetails({ image }: { image: GalleryImage }) {
           )}
         </Field>
 
-        {location === null ? null : <Field label="Where">{location}</Field>}
+        {/*
+          The public half of "where", both in words and as a picture.
+
+          It lives in the sheet rather than under the photograph, and that is
+          not a layout preference. `CaptionBar` and `ImageInfo` reserve
+          `min-h-9` precisely because the bar is in flex flow below the
+          image, so anything added there subtracts height from the
+          photograph — three photographs in fourteen used to be 18px taller
+          and moved the whole dock when selected. There is no room under the
+          image and this must not make some.
+
+          Shown whenever either exists: a photographer may name a place
+          without marking one, or mark one without naming it.
+        */}
+        {location === null && pin === null ? null : (
+          <Field label="Where">
+            {location}
+            {pin === null ? null : <WorldDot pin={pin} />}
+          </Field>
+        )}
 
         {/*
           Where exactly, and how it was made — for members. Its own request,
