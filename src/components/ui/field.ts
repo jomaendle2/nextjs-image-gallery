@@ -47,3 +47,19 @@ export const LINK =
  */
 export const META =
   "text-[0.6875rem] text-white/55 uppercase tracking-[0.14em]";
+
+/**
+ * A section heading on a reading page.
+ *
+ * `META` had been standing in for this everywhere, which is how `/membership`
+ * ended up with an `h1` and then three sections all set at 11px uppercase:
+ * every heading below the title was the same size as the exposure line, so
+ * the page had a title and then a flat wall. `META` is a label — a caption
+ * for a number or a field — and a heading that introduces several paragraphs
+ * is not a label.
+ *
+ * One step, deliberately. Four `h2` scales had accumulated across the reading
+ * pages; a scale with more rungs than the pages need is how that happens.
+ */
+export const SECTION_HEADING =
+  "font-semibold text-white text-lg tracking-[-0.03em] sm:text-xl";

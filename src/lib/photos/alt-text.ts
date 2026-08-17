@@ -12,17 +12,24 @@ import type { GalleryImage } from "@/data/galleryData";
  *
  * The two are combined rather than swapped, because the place is worth
  * knowing too — it is simply not a description on its own. Where there is no
- * description the title carries it alone, which is no worse than before.
+ * description the place carries it alone, which is no worse than before.
+ *
+ * The place comes from `location`, and only falls back to the title. Titles
+ * used to be place names — every one of the first fourteen photographs was
+ * called something like "Uluwatu, Bali, Indonesia" — so reading the place off
+ * the title was right until the places moved into their own column and the
+ * titles became names. "Aerial view of pale waves — Tide Lines" tells a
+ * screen reader nothing it did not already have; the place does.
  */
 export function photoAltText(image: GalleryImage): string {
   const description = image.description.trim();
-  const title = image.title.trim();
+  const place = (image.location ?? "").trim() || image.title.trim();
 
   if (description === "") {
-    return title === "" ? "Photograph" : title;
+    return place === "" ? "Photograph" : place;
   }
-  if (title === "") {
+  if (place === "") {
     return description;
   }
-  return `${description} — ${title}`;
+  return `${description} — ${place}`;
 }

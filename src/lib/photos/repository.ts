@@ -75,7 +75,8 @@ export async function listOwnPhotos(
     SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
            p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.precise_location, p.technique, p.author_id,
+           p.is_opener, p.precise_location, p.technique, p.is_specimen,
+           p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
     FROM photos p
     JOIN contributors c ON c.id = p.author_id
@@ -91,7 +92,8 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
     SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
            p.width, p.height, p.blur_data_url, p.bg_color,
            p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.precise_location, p.technique, p.author_id,
+           p.is_opener, p.precise_location, p.technique, p.is_specimen,
+           p.author_id,
            c.display_name AS author_name, c.slug AS author_slug
     FROM photos p
     JOIN contributors c ON c.id = p.author_id
@@ -127,6 +129,68 @@ export async function getMemberDetails(id: string): Promise<{
     : {
         precise_location: (row["precise_location"] as string | null) ?? null,
         technique: (row["technique"] as string | null) ?? null,
+      };
+}
+
+/**
+ * One published photograph whose photographer filled in both member fields.
+ *
+ * For `/membership`, which sells those two fields and until now described
+ * them instead of showing one. A specimen is the only honest way to price
+ * this: the reader can see the actual sentences a photographer wrote, not a
+ * promise about the sentences they might write.
+ *
+ * This is the one place member-only columns are read for a public page, so
+ * the query is the whole gate. It takes no arguments, cannot be steered by
+ * request input, and returns exactly one row. The gated per-photograph route
+ * is untouched — a reader still cannot get these fields for any photograph
+ * they choose, only for the one the gallery chose to show them.
+ *
+ * Consent, not recency. An earlier version took the most recently annotated
+ * photograph, which would have made a photographer's writing public because
+ * of when they happened to type it. `is_specimen` is them saying yes, and
+ * without it this returns nothing at all.
+ *
+ * `null` when no photograph qualifies, which is currently every photograph:
+ * nobody has opted in and both columns are empty on all sixteen rows. The
+ * caller must have something to fall back to.
+ */
+export async function getSpecimenPhoto(): Promise<{
+  id: string;
+  title: string;
+  location: string | null;
+  precise_location: string;
+  technique: string;
+  display_url: string;
+  blur_data_url: string | null;
+  width: number;
+  height: number;
+} | null> {
+  const rows = await sql`
+    SELECT p.id, p.title, p.location, p.precise_location, p.technique,
+           p.display_url, p.blur_data_url, p.width, p.height
+    FROM photos p JOIN contributors c ON c.id = p.author_id
+    WHERE p.published_at IS NOT NULL
+      AND c.revoked_at IS NULL
+      AND p.is_specimen
+      AND btrim(coalesce(p.precise_location, '')) <> ''
+      AND btrim(coalesce(p.technique, '')) <> ''
+    ORDER BY p.published_at DESC
+    LIMIT 1;
+  `;
+  const [row] = rows;
+  return row === undefined
+    ? null
+    : {
+        id: row["id"] as string,
+        title: row["title"] as string,
+        location: (row["location"] as string | null) ?? null,
+        precise_location: row["precise_location"] as string,
+        technique: row["technique"] as string,
+        display_url: row["display_url"] as string,
+        blur_data_url: (row["blur_data_url"] as string | null) ?? null,
+        width: row["width"] as number,
+        height: row["height"] as number,
       };
 }
 
@@ -242,19 +306,42 @@ export async function publishPhoto(
   actor: Contributor,
   publish: boolean,
 ): Promise<SaveResult | null> {
+  /*
+   * Two updates in one statement, because "only one photograph is the public
+   * example" is a claim the editor makes to the photographer and therefore
+   * has to be true in the table rather than in the label.
+   *
+   * `cleared` runs only when this save is switching the flag on, and it
+   * excludes the row `updated` just touched. If `updated` matched nothing —
+   * a forged id, or somebody else's photograph — the subquery is NULL, the
+   * comparison is NULL, and no rows are cleared: an unauthorised save cannot
+   * knock the real example off the membership page.
+   *
+   * Last one wins, across the whole gallery rather than per photographer.
+   * The page shows one example for the site, so scoping the uniqueness to a
+   * contributor would let two of them both believe theirs was the one.
+   */
   const rows = await sql`
-    UPDATE photos p SET title = ${input.title},
-           description = ${input.description},
-           location = ${input.location},
-           precise_location = ${input.precise_location},
-           technique = ${input.technique},
-           bg_color = ${input.bg_color},
-           published_at = CASE WHEN ${publish}
-                               THEN COALESCE(p.published_at, now())
-                               ELSE p.published_at END
-    FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
-      AND (${isOwner(actor)} OR p.author_id = ${actor.id})
-    RETURNING c.slug, p.published_at IS NOT NULL AS live;`;
+    WITH updated AS (
+      UPDATE photos p SET title = ${input.title},
+             description = ${input.description},
+             location = ${input.location},
+             precise_location = ${input.precise_location},
+             technique = ${input.technique},
+             is_specimen = ${input.is_specimen},
+             bg_color = ${input.bg_color},
+             published_at = CASE WHEN ${publish}
+                                 THEN COALESCE(p.published_at, now())
+                                 ELSE p.published_at END
+      FROM contributors c WHERE c.id = p.author_id AND p.id = ${id}
+        AND (${isOwner(actor)} OR p.author_id = ${actor.id})
+      RETURNING p.id, c.slug, p.published_at
+    ), cleared AS (
+      UPDATE photos SET is_specimen = FALSE
+      WHERE ${input.is_specimen} AND is_specimen
+        AND id <> (SELECT id FROM updated)
+    )
+    SELECT slug, published_at IS NOT NULL AS live FROM updated;`;
 
   const row = rows[0] as Record<string, unknown> | undefined;
   if (row === undefined) {

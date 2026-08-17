@@ -24,30 +24,49 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
         neither — it does not even say that money is involved. This is also
         just honest: a button that hides its price is a button people click
         to find out, which is not consent.
+
+        The verb changed from "Become a member" to "Start my membership":
+        first person, and a thing you do rather than a state you enter. The
+        price and the recurrence stay exactly where the law wants them.
       */}
-      <GlassButton disabled={busy} onClick={go} variant="primary">
+      <GlassButton
+        className="w-full sm:w-auto"
+        disabled={busy}
+        onClick={go}
+        variant="primary"
+      >
         {busy
           ? "Opening checkout…"
-          : `Become a member — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
+          : `Start my membership — ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}`}
       </GlassButton>
-      <p className="mt-2 text-sm text-white/55">
-        Billed by Stripe, every {MEMBERSHIP.interval}, until you cancel. Cancel
-        any time in one click — no notice period.
-      </p>
-      {signedIn ? null : (
-        /*
-         * Said before paying, not after. A membership is tied to an address
-         * and unlocked by a link sent to it, so which address you type at
-         * Stripe is a decision rather than a detail — and finding that out
-         * on the receipt is too late to change it.
-         */
-        <p className="mt-3 text-sm text-white/55">
-          Use an address you can read: your membership is unlocked by a link
-          sent there, and it is how you will sign in afterwards.
+
+      {/*
+        One block of small print, not three paragraphs each hung off the
+        button with its own margin. They had accumulated `mt-2`, `mt-3` and
+        `mt-2` and read as three separate afterthoughts crowding the control
+        they belong to; `mt-5` puts real air under the button and `space-y-2`
+        makes the rest one group.
+      */}
+      <div className="mt-5 space-y-2 text-sm text-white/55">
+        <p>
+          Billed by Stripe, every {MEMBERSHIP.interval}, until you cancel.
+          Cancel any time in one click — no notice period.
         </p>
-      )}
+        {signedIn ? null : (
+          /*
+           * Said before paying, not after. A membership is tied to an address
+           * and unlocked by a link sent to it, so which address you type at
+           * Stripe is a decision rather than a detail — and finding that out
+           * on the receipt is too late to change it.
+           */
+          <p>
+            Use an address you can read: your membership is unlocked by a link
+            sent there, and it is how you will sign in afterwards.
+          </p>
+        )}
+      </div>
       {error === null ? null : (
-        <p className="mt-2 text-sm text-white/70" role="alert">
+        <p className="mt-3 text-sm text-white/70" role="alert">
           {error}
         </p>
       )}

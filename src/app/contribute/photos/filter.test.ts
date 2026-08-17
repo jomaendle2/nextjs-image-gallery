@@ -37,6 +37,7 @@ function photo(over: Partial<OwnPhotoRow>): OwnPhotoRow {
     is_opener: false,
     precise_location: null,
     technique: null,
+    is_specimen: false,
     author_id: "c1",
     author_name: "A Photographer",
     author_slug: "a-photographer",

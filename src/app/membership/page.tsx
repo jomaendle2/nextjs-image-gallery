@@ -7,7 +7,9 @@ import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
 import { isActive } from "@/lib/members/status";
 import { alternates } from "@/lib/metadata";
+import { getSpecimenPhoto } from "@/lib/photos/repository";
 import { membershipConfigured } from "@/lib/stripe";
+import { MembershipSpecimen } from "./MembershipSpecimen";
 import {
   BeforeYouPay,
   HowPaymentWorks,
@@ -29,6 +31,87 @@ export const metadata: Metadata = {
  * not be on the gallery, which is why the member gate on a photograph is a
  * separate request rather than a prop threaded through a cached page.
  */
+
+/**
+ * Which of five readers this is, and what each needs told.
+ *
+ * Extracted because the page component was branching across all of them
+ * inline and biome's complexity rule was right to object: the states are
+ * mutually exclusive and the ordering between them is load-bearing, which is
+ * exactly the kind of thing that should be readable in one place rather than
+ * threaded between a specimen and a subscribe button.
+ */
+function MembershipStatus({
+  member,
+  justPaid,
+  lapsed,
+  email,
+}: {
+  member: boolean;
+  justPaid: boolean;
+  lapsed: boolean;
+  email: string | null;
+}) {
+  if (member) {
+    return (
+      <p className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70">
+        You are a member. The location and the notes appear under every
+        photograph. <TextLink href="/">Go and look</TextLink>.
+      </p>
+    );
+  }
+
+  if (justPaid) {
+    return (
+      <div
+        aria-live="polite"
+        className="glass-hairline space-y-3 rounded-2xl px-4 py-3 text-sm text-white/70"
+      >
+        <p>
+          Payment received — Stripe is confirming it now, which usually takes a
+          few seconds. You have not been charged twice.
+        </p>
+        {email === null ? (
+          /*
+           * A new member, still anonymous: the payment is done and they have
+           * no session, so reloading would show them nothing. The next step
+           * is signing in with the address they just paid with, and this is
+           * the only place they will be told.
+           */
+          <p>
+            One step left:{" "}
+            <TextLink href="/contribute">
+              sign in with the address you paid with
+            </TextLink>{" "}
+            to unlock it. We will email you a link — there is no password to
+            choose.
+          </p>
+        ) : (
+          <p>
+            Reload this page in a moment and the locations will be there.
+            Nothing more is needed from you.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (lapsed) {
+    return (
+      <div className="glass-hairline space-y-3 rounded-2xl px-4 py-3 text-sm text-white/70">
+        <p>
+          Your membership is not active at the moment — usually a card that has
+          expired or a payment the bank declined. Nothing has been lost:
+          updating the card puts the locations straight back.
+        </p>
+        <ManageButton />
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default async function MembershipPage({
   searchParams,
 }: {
@@ -49,6 +132,14 @@ export default async function MembershipPage({
   ]);
 
   /*
+   * The photograph the page sells with. Fetched unconditionally and in
+   * parallel with the rest: it is a single indexed row, and branching on the
+   * session first would put it on the critical path for exactly the readers
+   * who most need the page to be fast — the ones who have not paid yet.
+   */
+  const specimen = await getSpecimenPhoto();
+
+  /*
    * Entitlement is a predicate over that row, not a second question for the
    * database. This page used to ask four times — the session, then
    * `getCurrentMember` (which re-read the session and then the member), then
@@ -67,6 +158,21 @@ export default async function MembershipPage({
    * payment failed — and quite possibly pay again.
    */
   const justPaid = welcome === "1" && member === null;
+
+  /*
+   * Paid once, not paying now — `past_due`, `unpaid`, or cancelled.
+   *
+   * This state had no UI at all. It fell through to the non-member page, so
+   * a member whose card had expired was shown the full pitch for a thing
+   * they had already bought, and pressing the button returned a 409 telling
+   * them the address already had a membership. The one thing they needed —
+   * the portal, to fix the card — was a text link below the pitch.
+   *
+   * `justPaid` wins over this: somebody back from checkout whose webhook has
+   * not landed also has no entitlement, and telling them their payment
+   * failed would be both wrong and alarming.
+   */
+  const lapsed = billing !== null && member === null && !justPaid;
 
   if (!membershipConfigured()) {
     return (
@@ -100,64 +206,53 @@ export default async function MembershipPage({
       subtitle={`See exactly where each photograph was taken, and how it was made. ${MEMBERSHIP.price} a ${MEMBERSHIP.interval}.`}
       title="Membership"
     >
-      <div className="max-w-prose space-y-8">
-        {member === null ? null : (
-          <p className="glass-hairline rounded-2xl px-4 py-3 text-sm text-white/70">
-            You are a member. The location and the notes appear under every
-            photograph. <TextLink href="/">Go and look</TextLink>.
-          </p>
+      {/*
+        The column runs the full width of the shell rather than stopping at
+        `max-w-prose`. That cap is right for prose and was wrong for this
+        page: it left roughly a third of the shell empty while the specimen
+        underneath it had to stack instead of sitting side by side. The
+        paragraphs that are actually prose keep their own cap.
+      */}
+      <div className="space-y-8">
+        <MembershipStatus
+          email={email}
+          justPaid={justPaid}
+          lapsed={lapsed}
+          member={member !== null}
+        />
+
+        {/*
+          Show the thing, do not describe it. `WhatYouGet` is the fallback for
+          a gallery where no photographer has filled in either field yet —
+          which is every photograph today.
+        */}
+        {specimen === null ? (
+          <WhatYouGet />
+        ) : (
+          <MembershipSpecimen photo={specimen} />
         )}
 
-        {justPaid ? (
-          <div
-            aria-live="polite"
-            className="glass-hairline space-y-3 rounded-2xl px-4 py-3 text-sm text-white/70"
-          >
-            <p>
-              Payment received — Stripe is confirming it now, which usually
-              takes a few seconds. You have not been charged twice.
-            </p>
-            {email === null ? (
-              /*
-               * A new member, still anonymous: the payment is done and they
-               * have no session, so reloading would show them nothing. The
-               * next step is signing in with the address they just paid
-               * with, and this is the only place they will be told.
-               */
-              <p>
-                One step left:{" "}
-                <TextLink href="/contribute">
-                  sign in with the address you paid with
-                </TextLink>{" "}
-                to unlock it. We will email you a link — there is no password to
-                choose.
-              </p>
-            ) : (
-              <p>
-                Reload this page in a moment and the locations will be there.
-                Nothing more is needed from you.
-              </p>
-            )}
-          </div>
-        ) : null}
-
-        <WhatYouGet />
-
-        {member === null && !justPaid ? (
+        {member === null && !justPaid && !lapsed ? (
           <SubscribeSection signedIn={email !== null} />
         ) : null}
 
-        {billing === null ? null : <ManageButton />}
+        {member === null || billing === null ? null : <ManageButton />}
 
         {/*
           The limits and the money come after the button, not instead of it:
           somebody scrolling to decide reads them, and somebody who has
           already decided is not made to wade through them first.
-        */}
-        {member === null ? <BeforeYouPay /> : null}
-        <HowPaymentWorks />
 
-        <p className="text-sm text-white/55">
+          Both are collapsed now. Every word is still here and still in this
+          order — see `Disclosure` — but eight rows of equal weight had made
+          the caveats three quarters of the page.
+        */}
+        <div className="space-y-3">
+          {member === null ? <BeforeYouPay /> : null}
+          <HowPaymentWorks />
+        </div>
+
+        <p className="max-w-prose text-sm text-white/55">
           The gallery, the feeds and the photographs stay free and always will.
           A membership buys the things only the photographer can tell you.{" "}
           {/*
@@ -184,7 +279,7 @@ function SubscribeSection({ signedIn }: { signedIn: boolean }) {
          * is only the way back to a membership you already have, and saying
          * otherwise would send new members down a route that refuses them.
          */
-        <p className="mt-3 text-sm text-white/55">
+        <p className="mt-5 border-white/[0.08] border-t pt-4 text-sm text-white/55">
           Already a member? <TextLink href="/contribute">Sign in</TextLink>{" "}
           instead — it takes one email.
         </p>

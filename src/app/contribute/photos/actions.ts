@@ -56,6 +56,12 @@ export async function savePhoto(
   const technique = text(formData, "technique", MAX_TECHNIQUE);
 
   /*
+   * An unchecked box sends no field at all, which is why this is a presence
+   * test rather than a comparison against "on" or "true".
+   */
+  const isSpecimen = formData.get("is_specimen") !== null;
+
+  /*
    * Which button was pressed. Saving and publishing are separate actions on
    * one form, so a photographer can write a title without the photograph
    * going live — and the message afterwards says which of the two happened
@@ -73,6 +79,12 @@ export async function savePhoto(
       location: location === "" ? null : location,
       precise_location: preciseLocation === "" ? null : preciseLocation,
       technique: technique === "" ? null : technique,
+      /*
+       * Offering a photograph as the public example only means something if
+       * there is something to show, so an empty pair cannot be offered — the
+       * membership page would render a frame with two blanks in it.
+       */
+      is_specimen: isSpecimen && (preciseLocation !== "" || technique !== ""),
       bg_color: bgColor,
     },
     actor,

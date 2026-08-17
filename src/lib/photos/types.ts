@@ -40,6 +40,8 @@ export interface OwnPhotoRow {
   is_opener: boolean;
   precise_location: string | null;
   technique: string | null;
+  /** Offered as the public example on `/membership`. */
+  is_specimen: boolean;
   author_id: string;
   author_name: string;
   author_slug: string;
@@ -67,4 +69,9 @@ export interface PublishInput {
   precise_location: string | null;
   /** Member-only. How the photograph was made. */
   technique: string | null;
+  /**
+   * Consent for the two fields above to be shown publicly on `/membership`.
+   * At most one photograph holds this; setting it clears the others.
+   */
+  is_specimen: boolean;
 }

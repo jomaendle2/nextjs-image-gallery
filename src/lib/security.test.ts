@@ -123,6 +123,26 @@ describe("I6 — paid content is never in a cacheable payload", () => {
       // and forgot src/components — a partial-domain mistake made while
       // writing a test about partial-domain mistakes.
       join("/components", "gallery", "carousel", "MemberDetails.tsx"),
+      /*
+       * The specimen on `/membership`, which is the one place paid columns
+       * are deliberately public.
+       *
+       * `getSpecimenPhoto` takes no arguments and returns exactly one row,
+       * chosen by the query. That is the whole gate: a reader cannot steer
+       * it toward a photograph they want, only see the one the gallery
+       * decided to give away. Every other photograph still goes through the
+       * gated route above, and this widening does not touch it.
+       *
+       * It exists because a page selling two sentences per photograph had
+       * described them instead of showing one, which asks a stranger to buy
+       * something they have to imagine first.
+       *
+       * The page itself is deliberately not on this list: it calls
+       * `getSpecimenPhoto()` and hands the row to a component, so it never
+       * names either column. Only the query and the thing that prints them
+       * do, which is the smallest surface this feature can have.
+       */
+      join("/app", "membership", "MembershipSpecimen.tsx"),
       // Shapes and migrations.
       join("/lib", "photos", "types.ts"),
       join("/lib", "schema.ts"),

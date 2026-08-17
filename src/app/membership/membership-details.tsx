@@ -1,5 +1,6 @@
 import {
   Ban,
+  ChevronDown,
   CreditCard,
   DoorOpen,
   Info,
@@ -9,7 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { META } from "@/components/ui/field";
+import { META, SECTION_HEADING } from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
 
@@ -72,11 +73,20 @@ function Row({
   );
 }
 
-/** The two things a membership actually buys. */
+/**
+ * The two things a membership actually buys, described.
+ *
+ * The fallback. `/membership` shows a real photograph with a real
+ * photographer's two sentences on it whenever one exists — see
+ * `MembershipSpecimen`. This runs when none does, which today is always:
+ * both columns are empty on every row in the database. Describing the fields
+ * is much weaker than showing them, and it is the only honest option when
+ * there is nothing to show.
+ */
 export function WhatYouGet() {
   return (
     <section>
-      <h2 className={`font-medium ${META}`}>What you get</h2>
+      <h2 className={SECTION_HEADING}>What you get</h2>
       <ul className="mt-5 space-y-5">
         <Row
           heading="Where it was taken"
@@ -101,6 +111,47 @@ export function WhatYouGet() {
 }
 
 /**
+ * A section the reader can open, shut by default.
+ *
+ * Nothing here is hidden in the sense that matters — every word of the
+ * limits and the money is still on the page, in the same order, one press
+ * away, and `<details>` is findable by in-page search and read out by screen
+ * readers whether or not it is open.
+ *
+ * What changed is the proportion. Two rows said what a membership gives and
+ * six said what it does not, all at identical weight, which is not honesty —
+ * honesty is saying the awkward things clearly, and this still does. It was
+ * an editing failure: the caveats were three quarters of the page, so the
+ * page read as a warning with a button in it.
+ */
+function Disclosure({
+  summary,
+  count,
+  children,
+}: {
+  summary: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <details className="glass-hairline group rounded-2xl px-5">
+      <summary className="-mx-5 flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 rounded-2xl font-medium text-white/85 text-sm marker:content-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80">
+        {summary}
+        <span className="flex items-center gap-2 text-white/50">
+          <span className={META}>{`${count} things`}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="transition-transform duration-200 group-open:rotate-180"
+            size={16}
+          />
+        </span>
+      </summary>
+      <div className="pb-5">{children}</div>
+    </details>
+  );
+}
+
+/**
  * The limits, before the button rather than after it.
  *
  * This section costs conversions and is the reason the page can be trusted.
@@ -110,9 +161,8 @@ export function WhatYouGet() {
  */
 export function BeforeYouPay() {
   return (
-    <section>
-      <h2 className={`font-medium ${META}`}>Be aware</h2>
-      <ul className="mt-5 space-y-5">
+    <Disclosure count={3} summary="What this is not">
+      <ul className="space-y-5">
         <Row
           heading="Not every photograph has a location"
           icon={<Info size={15} />}
@@ -137,16 +187,15 @@ export function BeforeYouPay() {
           photographer — they are all reachable from their page.
         </Row>
       </ul>
-    </section>
+    </Disclosure>
   );
 }
 
 /** How the money works, in the plainest words available. */
 export function HowPaymentWorks() {
   return (
-    <section>
-      <h2 className={`font-medium ${META}`}>The money</h2>
-      <ul className="mt-5 space-y-5">
+    <Disclosure count={3} summary="How the money works">
+      <ul className="space-y-5">
         <Row
           heading={`${MEMBERSHIP.price} a ${MEMBERSHIP.interval}, nothing else`}
           icon={<CreditCard size={15} />}
@@ -176,6 +225,6 @@ export function HowPaymentWorks() {
         <TextLink href="/privacy">privacy policy</TextLink>, both of which are
         short.
       </p>
-    </section>
+    </Disclosure>
   );
 }

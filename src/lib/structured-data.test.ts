@@ -18,10 +18,10 @@ function photo(overrides: Partial<GalleryImage> = {}): GalleryImage {
       height: 3000,
       blurDataURL: "",
     },
-    title: "Lofoten, Norway",
+    title: "Low Sun",
     description: "Low winter sun over the fjord.",
     bgColor: "#123456",
-    location: "Reine",
+    location: "Reine, Lofoten, Norway",
     publishedAt: "2026-04-11T08:32:10.000Z",
     exif: null,
     author: {
@@ -67,8 +67,14 @@ describe("photographSchema", () => {
 
   it("uses the same description a screen reader gets", () => {
     const schema = photographSchema(photo(), ORIGIN);
+    /*
+     * The place comes from `location`, not the title. Photographs used to be
+     * titled with their location and this fixture was written that way; the
+     * fourteen published ones were renamed once `location` existed to hold
+     * the place, and `photoAltText` followed.
+     */
     expect(schema["description"]).toBe(
-      "Low winter sun over the fjord. — Lofoten, Norway",
+      "Low winter sun over the fjord. — Reine, Lofoten, Norway",
     );
   });
 });

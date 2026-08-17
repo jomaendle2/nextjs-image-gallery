@@ -149,6 +149,42 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
             rows={2}
           />
         </div>
+
+        {/*
+          Consent to be the public example, asked here rather than assumed.
+
+          `/membership` shows one photograph's member fields to everybody, so
+          somebody deciding whether five euros is worth it can read the actual
+          writing instead of a promise about it. Which photograph that is has
+          to be the photographer's choice: picking it by query would publish
+          their words because of when they typed them.
+
+          Unchecked by default, and the box says plainly what saying yes
+          means — this text becomes readable by anyone, including people who
+          have not paid.
+        */}
+        <label
+          className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.08] p-3"
+          htmlFor={`specimen-${photo.id}`}
+        >
+          <input
+            className="mt-0.5 size-4 flex-shrink-0 accent-white"
+            defaultChecked={photo.is_specimen}
+            id={`specimen-${photo.id}`}
+            name="is_specimen"
+            type="checkbox"
+          />
+          <span className="space-y-1">
+            <span className="block font-medium text-sm text-white/85">
+              Use this one as the public example
+            </span>
+            <span className="block text-[0.75rem] text-white/55 leading-relaxed">
+              The two fields above will be shown in full on the membership page,
+              to everyone, including people who have not paid. Only one
+              photograph is used at a time.
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       <div className="flex flex-wrap gap-3">
