@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -54,13 +49,14 @@ const fetchAllViewCounts = async (): Promise<ViewCountRow[]> => {
 const sameId = (a: string | number, b: string | number) =>
   String(a) === String(b);
 
-export function prefetchAllViewCounts(queryClient: QueryClient) {
-  return queryClient.prefetchQuery({
-    queryKey: VIEW_COUNTS,
-    queryFn: fetchAllViewCounts,
-    staleTime: STALE_TIME_MS,
-  });
-}
+/*
+ * `prefetchAllViewCounts` used to live here, called once from
+ * `QueryProvider`'s mount effect. It is gone because it never did anything:
+ * `ViewCount` renders on first paint and `useQuery` below declares the same
+ * `queryKey`, `queryFn` and `staleTime`, so React Query recognised the two
+ * as one query and threw away the second. A prefetch is only worth having
+ * for data that is *not* about to be asked for.
+ */
 
 export function useViewCount(imageId: string): UseViewCountReturn {
   const queryClient = useQueryClient();

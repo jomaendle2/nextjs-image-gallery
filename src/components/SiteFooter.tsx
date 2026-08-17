@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { LEGAL_LINKS, OPERATOR } from "@/lib/legal";
-import { membershipConfigured } from "@/lib/stripe";
+import { membershipConfigured } from "@/lib/members/offer";
 
 /**
  * The credit and the three legal notices, on every page that scrolls.

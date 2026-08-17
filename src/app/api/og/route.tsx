@@ -214,8 +214,27 @@ export function GET(request: NextRequest) {
          * A share card is the same picture for everyone who asks, and it is
          * asked for by crawlers rather than people. Without this every
          * social preview re-rendered it and re-fetched its photographs.
+         *
+         * `s-maxage` and `stale-while-revalidate` are the two that matter,
+         * and both were missing. `max-age` alone is a private-browser
+         * instruction: the shared cache in front of this route fell back to
+         * its default, so the day the entry expired the next crawler to ask
+         * paid for a full Satori render plus three blob fetches while it
+         * waited. With these, the CDN holds the card for a day and then
+         * keeps serving the stale one for a week while it fetches a fresh
+         * copy behind the reader's back — nobody ever waits for the render.
+         *
+         * `immutable` is gone, and deliberately. It promised the bytes at
+         * this URL would never change, which is false: the card is built
+         * from a photographer's display name and their three most recent
+         * photographs, and the query string does not change when those do.
+         * A week of stale-while-revalidate is the honest version of the same
+         * bargain.
          */
-        headers: { "Cache-Control": "public, max-age=86400, immutable" },
+        headers: {
+          "Cache-Control":
+            "public, s-maxage=86400, stale-while-revalidate=604800, max-age=86400",
+        },
       },
     );
   } catch (error) {

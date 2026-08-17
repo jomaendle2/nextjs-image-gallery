@@ -1,11 +1,23 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { prefetchAllViewCounts } from "@/hooks/useViewCount";
+import { useState } from "react";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
+/**
+ * The React Query client, mounted by the two layouts that carry the
+ * carousel — `src/app/(gallery)/layout.tsx` and the slideshow's — and by
+ * nothing else. It is not in the root layout, and the note in the first of
+ * those explains at length why not.
+ *
+ * There was an effect here that prefetched the whole view-count table on
+ * mount, described as warming the cache without blocking first paint. It was
+ * not a warm-up, it was a duplicate: `ViewCount` renders on first paint and
+ * its `useQuery` declares the same `queryKey`, the same `queryFn` and the
+ * same `staleTime`, so React Query deduped the two and discarded one of
+ * them. Removing it removes a request that was never sent.
+ */
 export default function QueryProvider({
   children,
 }: {
@@ -22,15 +34,6 @@ export default function QueryProvider({
         },
       }),
   );
-
-  // Warm the view-count cache without blocking the first paint. The effect
-  // already runs after paint, so the extra setTimeout hop it used to make
-  // only delayed the request by a further macrotask.
-  useEffect(() => {
-    prefetchAllViewCounts(queryClient).catch((error: unknown) => {
-      console.error("Failed to prefetch view counts:", error);
-    });
-  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

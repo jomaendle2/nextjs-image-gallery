@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import "./globals.css";
-import QueryProvider from "@/components/QueryProvider";
 import { siteOrigin } from "@/lib/site-url";
 
 const geistSans = Geist({
@@ -123,10 +122,18 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} antialiased`}>
         <PlausibleProvider domain="thebeautyof.earth">
-          <QueryProvider>
-            {children}
-            <SpeedInsights />
-          </QueryProvider>
+          {children}
+          {/*
+            Deliberately a sibling of `children` and nothing else.
+
+            It used to be a child of `QueryProvider`, which has since moved
+            down to the two layouts that actually mount the carousel — and
+            web-vitals reporting has to stay on every page, including the
+            ones that no longer have a query client. Nesting is what decided
+            where this ended up last time, so it is worth saying plainly:
+            this component wants no context at all, only to be mounted.
+          */}
+          <SpeedInsights />
         </PlausibleProvider>
       </body>
     </html>

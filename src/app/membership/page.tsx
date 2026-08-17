@@ -5,10 +5,10 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
+import { membershipConfigured } from "@/lib/members/offer";
 import { isActive } from "@/lib/members/status";
 import { alternates } from "@/lib/metadata";
 import { getSpecimenPhoto } from "@/lib/photos/repository";
-import { membershipConfigured } from "@/lib/stripe";
 import { MembershipSpecimen } from "./MembershipSpecimen";
 import {
   BeforeYouPay,
@@ -117,7 +117,7 @@ export default async function MembershipPage({
 }: {
   searchParams: Promise<{ welcome?: string }>;
 }) {
-  const [{ welcome }, email, billing] = await Promise.all([
+  const [{ welcome }, email, billing, specimen] = await Promise.all([
     searchParams,
     getSessionEmail(),
     /*
@@ -129,15 +129,20 @@ export default async function MembershipPage({
      * out of it.
      */
     memberForSession(),
+    /*
+     * The photograph the page sells with. Fetched unconditionally and in
+     * parallel with the rest: it is a single indexed row, and branching on
+     * the session first would put it on the critical path for exactly the
+     * readers who most need the page to be fast — the ones who have not paid
+     * yet.
+     *
+     * It sat on its own `await` below this block for a while, under a
+     * comment already claiming it ran in parallel. It did not: the session
+     * lookups had to settle first, so the page cost three serial round trips
+     * where it now costs the slowest of four.
+     */
+    getSpecimenPhoto(),
   ]);
-
-  /*
-   * The photograph the page sells with. Fetched unconditionally and in
-   * parallel with the rest: it is a single indexed row, and branching on the
-   * session first would put it on the critical path for exactly the readers
-   * who most need the page to be fast — the ones who have not paid yet.
-   */
-  const specimen = await getSpecimenPhoto();
 
   /*
    * Entitlement is a predicate over that row, not a second question for the

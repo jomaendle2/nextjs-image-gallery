@@ -53,13 +53,14 @@ export function membershipPriceId(): string {
   return id;
 }
 
-/** Whether membership is configured at all, for hiding the UI when it is not. */
-export function membershipConfigured(): boolean {
-  return Boolean(
-    process.env["STRIPE_SECRET_KEY"] &&
-      process.env["STRIPE_MEMBERSHIP_PRICE_ID"],
-  );
-}
+/*
+ * `membershipConfigured` used to be here and is now in
+ * `src/lib/members/offer.ts`. It reads the same two environment variables
+ * this file does, but its callers — the site footer and the membership
+ * page — want nothing else from Stripe, and importing it from here handed
+ * them the whole SDK to deploy. Anything else that only asks *whether*
+ * payments are configured belongs there rather than here.
+ */
 
 /**
  * Stripe reports period ends as Unix seconds; Postgres wants a timestamp.

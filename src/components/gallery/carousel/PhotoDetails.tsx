@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpRight } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,7 +11,43 @@ import { SheetContent } from "@/components/ui/Sheet";
 import type { GalleryImage } from "@/data/galleryData";
 import { exifLine } from "@/lib/photos/exif-line";
 import { MemberDetails } from "./MemberDetails";
-import { WorldDot } from "./WorldDot";
+
+/**
+ * The flat world map, fetched when a sheet that has a pin in it is opened,
+ * and never otherwise.
+ *
+ * `WorldDot` is thirty lines of SVG on top of `WORLD_PATH`, a single string
+ * holding every coastline in the world — around eight kilobytes gzipped, and
+ * the largest thing the gallery's JavaScript contained. It bought a map about
+ * three hundred pixels wide, inside a panel that is closed until somebody
+ * presses a button, on the subset of photographs whose author marked a place.
+ * Static, it was paid for by every visitor to every gallery page on first
+ * load; loaded here, it is paid for by the people who look at it.
+ *
+ * The same bargain `GlobeCanvas` makes with `world-fine.ts`, and it works for
+ * the same reason: nothing in the static graph names `WorldDot` any more, so
+ * the coastline is a chunk of its own.
+ */
+const WorldDot = dynamic(
+  () => import("./WorldDot").then((module) => module.WorldDot),
+  {
+    /*
+     * The map's own box, empty, so nothing below it moves when the coastline
+     * arrives. Without this the "Where" field grows by the height of a map
+     * mid-read and shunts the member panel and the exposure line down it.
+     *
+     * The ratio is `WORLD_VIEW_BOX` — 360 units wide by 130 tall, the band
+     * the flat map is cropped to — reduced. It is duplicated here rather than
+     * imported because importing it would pull the module this whole
+     * arrangement exists to keep out of the page. If the crop ever changes,
+     * `world.test.ts` pins the box to `WORLD_NORTH`/`WORLD_SOUTH` and this
+     * number is the third place to follow.
+     */
+    loading: () => (
+      <div className="mt-3 aspect-[36/13] rounded-xl border border-white/[0.07] bg-white/[0.02]" />
+    ),
+  },
+);
 
 /**
  * Everything about one photograph that is not the photograph.

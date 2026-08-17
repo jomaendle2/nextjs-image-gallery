@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { WORLD_LAND } from "@/lib/geo/world";
 import type { GlobePoint } from "@/lib/photos/globe";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
 import {
@@ -85,6 +84,32 @@ function loadFineLand(): Promise<Detailed> {
 }
 
 /**
+ * The everyday coastline, fetched the same way and for the same reason.
+ *
+ * This one used to be a static import, and it was the single largest thing
+ * on `/globe` — roughly twenty-eight kilobytes gzipped, about a seventh of
+ * the page's JavaScript, spent on a canvas that is `aria-hidden` and sits
+ * beside a complete list of links to the same photographs. Somebody who
+ * cannot run the canvas, or will not, gets exactly the page they got before;
+ * somebody who can gets the sphere a moment later than the text.
+ *
+ * That order is the right one and is worth stating, because it looks like a
+ * regression from "instant" to "nearly instant". The globe is the decoration
+ * and the list is the content: the coastline should never have been ahead of
+ * the page in the queue.
+ *
+ * Module-scoped promise, like the fine set above, so a second globe on a
+ * page joins the first one's request instead of making its own.
+ */
+let coarsePromise: Promise<Land> | null = null;
+function loadCoarseLand(): Promise<Land> {
+  coarsePromise ??= import("@/lib/geo/world").then(
+    (module) => module.WORLD_LAND,
+  );
+  return coarsePromise;
+}
+
+/**
  * One whole sphere, in the order the layers have to go down: body, then
  * everything that lives on the surface, then the rim.
  *
@@ -96,7 +121,11 @@ function paintSphere(
   context: CanvasRenderingContext2D,
   view: View,
   ink: string,
-  content: { detailed: Detailed | null; points: readonly GlobePoint[] },
+  content: {
+    detailed: Detailed | null;
+    coarse: Land | null;
+    points: readonly GlobePoint[];
+  },
 ): void {
   drawBody(context, view.radius, ink);
 
@@ -111,7 +140,16 @@ function paintSphere(
   context.clip();
 
   drawGraticule(context, view);
-  drawLand(context, view, content.detailed?.land ?? WORLD_LAND);
+  /*
+   * Neither set has arrived on the first frame or two, and a globe with a
+   * body, a graticule and a rim but no coastline is a perfectly good globe to
+   * hold for a moment. The alternative — waiting for land before painting
+   * anything — would replace a sphere gaining detail with a blank square.
+   */
+  const land = content.detailed?.land ?? content.coarse;
+  if (land !== null) {
+    drawLand(context, view, land);
+  }
   if (content.detailed !== null) {
     drawBorders(context, view, content.detailed.borders);
   }
@@ -154,6 +192,29 @@ export function GlobeCanvas({
   latest.current = points;
   const dragged = useRef(0);
 
+  /*
+   * The everyday coastline, on mount and unconditionally — every globe draws
+   * it, and the `detail === "fine"` ones draw it until their own set lands.
+   */
+  const [coarse, setCoarse] = useState<Land | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadCoarseLand()
+      .then((land) => {
+        if (live) {
+          setCoarse(land);
+        }
+      })
+      .catch((cause: unknown) => {
+        // A globe with no coastline is a worse globe, not a broken page: the
+        // list of links beside it is the content and is already rendered.
+        console.error("Could not load the coastline:", cause);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const [detailed, setDetailed] = useState<Detailed | null>(null);
   useEffect(() => {
     if (detail !== "fine") {
@@ -178,6 +239,8 @@ export function GlobeCanvas({
 
   const drawn = useRef(detailed);
   drawn.current = detailed;
+  const drawnCoarse = useRef(coarse);
+  drawnCoarse.current = coarse;
 
   /*
    * The rings arrive after the first frame, and a globe holding still has
@@ -242,6 +305,7 @@ export function GlobeCanvas({
 
       paintSphere(context, view, ink, {
         detailed: drawn.current,
+        coarse: drawnCoarse.current,
         points: latest.current,
       });
 
@@ -318,10 +382,16 @@ export function GlobeCanvas({
     };
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; `detailed` arriving is the only reason to
+  /*
+   * Both coastlines land after the first frame, and a globe holding still —
+   * or one that has finished its reduced-motion single frame — has stopped
+   * rendering by then. Either arriving has to ask for one more frame, which
+   * is why both are listed.
+   */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; a coastline arriving is the only reason to
   useEffect(() => {
     repaint.current?.();
-  }, [detailed]);
+  }, [detailed, coarse]);
 
   return (
     /*

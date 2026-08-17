@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { put } from "@vercel/blob";
 import { sql } from "../src/lib/database.ts";
-import { deriveFromBuffer, exifParam } from "../src/lib/photos/derive.ts";
+import { deriveFromBuffer } from "../src/lib/photos/derive.ts";
+import { exifParam } from "../src/lib/photos/types.ts";
 
 /**
  * Moves the original gallery out of `src/assets` and into Blob + Postgres.
