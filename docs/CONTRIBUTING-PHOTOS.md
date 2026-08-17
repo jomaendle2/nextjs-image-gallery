@@ -52,11 +52,36 @@ their own. That rule is enforced in the SQL, not in the interface.
 Read and shown: camera, lens, focal length, aperture, shutter speed, ISO and
 the capture time.
 
-**Discarded, always: GPS coordinates.** The parser is never asked for the GPS
-block — nor for XMP, IPTC or the embedded thumbnail, all of which can also
-carry coordinates — and separately, only the eight fields listed above are
-ever copied into the database. Two independent layers, both covered by tests.
-If a contributor wants a place named, they type it into the location field.
+**Never read, always: GPS coordinates.** The parser is never asked for the
+GPS block — nor for XMP, IPTC or the embedded thumbnail, all of which can
+also carry coordinates — and separately, only the eight fields listed above
+are ever copied into the database. Two independent layers, both covered by
+tests.
+
+A photographer can still say where they were, and there are three ways, all
+optional and all blank by default:
+
+| | who sees it |
+| --- | --- |
+| `location`, a public place name | everybody |
+| `precise_location`, a sentence | members |
+| a marked point on a map | members see the exact point; **everybody** sees a dot blurred to a ~100 km cell |
+
+The distinction that matters is not how precise these are, it is where they
+came from: every one of them is something a person decided to write down
+after the fact, and can clear again. Nothing is extracted from a file.
+
+### A note on sensitive subjects
+
+If the photograph is of a nest, a den, a rare plant, or anywhere people
+live, the established norm in wildlife and landscape photography is not to
+publish coordinates at all — a marked point outlives the season, and a
+member-only coordinate is still a coordinate handed to strangers.
+
+The picker has a **"publish the blurred dot only"** option for exactly this.
+It writes the ~100 km point and discards the exact one, so the photograph
+appears on `/globe` and there is nothing behind the paywall to leak. When in
+doubt, use it, or leave the map alone entirely and write a sentence instead.
 
 Capture times are stored as the camera's wall clock (`2026-04-11 08:32:10`).
 EXIF carries no timezone, so converting to UTC would invent an offset from

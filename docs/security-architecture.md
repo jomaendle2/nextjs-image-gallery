@@ -135,13 +135,28 @@ to retry an attacker's event for three days.
 
 *Held. The load-bearing decision of the membership.*
 
-`precise_location` and `technique` are absent from `FEED_COLUMNS`, so they
-are not in any page's payload and cannot leak by being rendered
-conditionally. They are reachable only through one authenticated route which
-sets `private, no-store`.
+`precise_location`, `technique` and the exact pin (`precise_lat`,
+`precise_lng`) are absent from `FEED_COLUMNS`, so they are not in any page's
+payload and cannot leak by being rendered conditionally. They are reachable
+only through one authenticated route which sets `private, no-store` and is
+rate limited.
 
 The test of this design: deleting the client component that displays them
 would not expose anything.
+
+**Why the pin is stored twice.** A public globe and a member-only coordinate
+are otherwise incompatible, because the gate here *is* the select list — a
+coarse point derived at read time would mean naming `precise_lat` in exactly
+the query that must never name it. So `coarsen()` runs once at write time
+and both precisions are stored: `coarse_lat`/`coarse_lng` are public and in
+`FEED_COLUMNS`, the exact pair is not. Stored rather than derived also makes
+a published dot stable, instead of something that moves when somebody tunes
+the arithmetic.
+
+The exact point is guarded *harder* than the prose, not the same. Prose is
+vague and deniable; a coordinate is machine-actionable, republishable in
+bulk, and names a private place precisely — which is why I11 now covers this
+route as well.
 
 ### I7 — A guard must check the value an attacker can actually obtain
 
@@ -223,6 +238,50 @@ oracle for the list it exists to protect.
 **Rule:** identical words are not enough; the observable work must be
 comparable. Move the send off the request path.
 
+### I14 — The map library never reaches a public page
+
+*Held by construction, and pinned by a test.*
+
+MapTiler is the sixth processor in `PROCESSORS`, and the only one a *visitor*
+never reaches. The location picker lives on `/contribute/photos`, behind a
+session; nothing on a public page contacts MapTiler, no cookie is set, and no
+consent banner is triggered. That claim is what `/privacy` says, so it has to
+be enforced rather than remembered.
+
+Four checks in `src/lib/security-location.test.ts`: exactly one file in the
+codebase mentions the map library and it is `LocationPicker.tsx`; nothing
+under `src/components/gallery` mentions it; no `route.ts` matches
+`/maptiler|\btiles?\b/i`; and no file names a `NEXT_PUBLIC_*MAP*` variable.
+
+**No tile proxy**, deliberately, recorded as the third of those checks. A
+`/api/tiles` route would be a public endpoint spending metered third-party
+money — the exact thing I11 exists to stop — and would multiply function
+invocations by every tile of every pan, to buy no privacy at all: the page is
+behind a session, so the only addresses MapTiler would stop seeing belong to
+the handful of photographers already signed in.
+
+`MAPTILER_KEY` is read on the server and passed to the picker as a prop.
+`NEXT_PUBLIC_MAPTILER_KEY` would have been one word shorter and would have
+compiled the key into every client bundle on the site.
+
+### I15 — A public payload carries only coarsened points
+
+*Held by construction, and pinned by a test.*
+
+`coarsen()` is called from exactly two files: `photos/repository.ts`, which
+stores the public point at publish time, and `LocationPicker.tsx`, which
+shows a photographer what will be stored before they agree to it. A third
+caller is how the stored dot and the drawn one would come to disagree, and a
+component recomputing at render time would need the exact point in its
+payload to do it.
+
+`publishPhoto` *derives* the coarse pair rather than accepting one — a
+browser that sent both could otherwise put the public dot anywhere it liked
+while keeping a real exact point behind the paywall.
+
+`photos/map.ts`, the one crossing point between rows and payloads, names no
+`precise_` column at all.
+
 ---
 
 ## 4. What follows from all this
@@ -292,11 +351,14 @@ Tracked against the invariants above. Status is updated as each lands.
 | 11 | `/photo/[id]` serialises the whole gallery | — | open — inherent to a shared link opening a browsable viewer; fine at this size, revisit past ~200 photographs |
 | 12 | Sitemap counts drafts | — | **done** — separate `published_count` |
 | 13 | No session pruning | — | **done** — pruned alongside login tokens |
+| 14 | `/api/photo/[id]/details` unlimited | I11 | **done** — `memberDetailsLimiter`, 120 per 15 min, keyed by member. Tolerable while the response was prose; a coordinate set is worth collecting |
+| 15 | No index behind the globe query | — | open — `photos_globe_idx` when the table justifies it; see `next-version.md` |
 
 ## 6. How these are enforced
 
-`src/lib/security.test.ts` asserts the invariants against the source, in the
-same spirit as `schema.test.ts` — properties about *shape* ("this column is
+`src/lib/security.test.ts`, `src/lib/security-interface.test.ts` and
+`src/lib/security-location.test.ts` assert the invariants against the source,
+in the same spirit as `schema.test.ts` — properties about *shape* ("this column is
 never selected here", "this handler is not a GET") that a behavioural test
 could not check without a database, a Stripe account and a mail provider.
 

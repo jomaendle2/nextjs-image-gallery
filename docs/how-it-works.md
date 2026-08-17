@@ -154,8 +154,16 @@ deliberate, and it is the thing to keep an eye on as the gallery grows.
 ### Publish a photograph
 
 `/contribute/photos` → upload → open a row → fill in the fields → publish.
-Two of those fields are members-only: `precise_location` and `technique`.
-Both are optional and empty by default; nothing is read from the file.
+Three of those are members-only: `precise_location`, `technique`, and the
+exact point if the photographer marks one on the map. All are optional and
+empty by default, and nothing is read from the file — a marked point is a
+decision somebody makes afterwards, exactly like typing a sentence.
+
+Marking a point stores it twice: the exact position, which only members see,
+and the centre of a cell about 100 km across, which is public and is what
+`/globe` draws. The picker shows both before the save. A photographer whose
+subject should not be findable can publish the blurred dot only, which
+discards the exact point rather than storing it.
 
 Each photograph is a row that opens into its form, so the list stays
 readable as it grows. Past four photographs a search box and a status filter

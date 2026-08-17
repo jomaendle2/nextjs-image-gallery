@@ -31,6 +31,20 @@ grep, and asserted by the smoke test, which posts a forged event and then
 confirms nothing was written. This is the answer to attack (1): the redirect
 target `/membership?welcome=1` is guessable, and guessing it grants nothing.
 
+> **Since this review (17 August 2026):** photographers can mark a point on a
+> map, which adds `precise_lat`/`precise_lng` to the paid set and
+> `coarse_lat`/`coarse_lng` to the public one. Both paragraphs below still
+> hold as written — the exact pair is absent from `FEED_COLUMNS` exactly as
+> the prose is — with two changes worth naming here. First,
+> `/api/photo/[id]/details` is now rate limited (`memberDetailsLimiter`, 120
+> per 15 minutes, keyed by member): unlimited was tolerable while the
+> response was prose, and is not once it is a coordinate somebody could
+> collect the whole set of. Second, the sentence further down that "nothing
+> on the site reveals a location" is now narrower than the truth: a ~100 km
+> dot is public wherever a photographer marked one, deliberately, and
+> `/privacy` says so. What is unchanged is that nothing is ever read out of
+> a file. See I14 and I15 in `security-architecture.md`.
+
 **Paid content is never sent to a non-member.** `precise_location` and
 `technique` are absent from `FEED_COLUMNS`, so they are not in the payload of
 any page — there is nothing to reveal by opening view-source or disabling

@@ -27,8 +27,8 @@ actually here rather than in what a photo gallery usually does.
 ### The read
 
 The scarce asset is curation and trust — a small invited set, real credit,
-and a privacy stance most galleries cannot claim (GPS is never read, and
-there are tests that prove it). Those are the things worth compounding.
+and a privacy stance most galleries cannot claim (the GPS block is never
+read, and there are tests that prove it). Those are the things worth compounding.
 
 The current bottleneck is **not** revenue. It is two photographers and
 sixteen photographs. Building a paid tier now would optimise a funnel with
@@ -113,6 +113,10 @@ publishing here feel worse is expensive however well it converts.
   supply, and it fits the privacy stance rather than contradicting it: EXIF
   still never leaks a coordinate; the photographer *chooses* to say where
   they stood.
+  *(Built, 17 August 2026 — as a map picker storing two precisions, with the
+  blunt one public so `/globe` can exist. The prediction held; the wording
+  did not, and the copy that said "never records a coordinate" had to be
+  rewritten. What survives is "never read from the file".)*
 - **How the photograph was made.** The exposure line is already shown; the
   approach is not — time of day, what they waited for, what they would do
   differently. It costs a photographer a paragraph they usually enjoy

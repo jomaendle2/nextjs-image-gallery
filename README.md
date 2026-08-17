@@ -18,6 +18,7 @@ record — what was found, what was decided, and what is deliberately not done.
 | `/photographers` | Everyone contributing, and the way in for anyone who wants to |
 | `/by/<slug>` | A photographer's work as a contact sheet |
 | `/by/<slug>/slideshow` | The same work in the viewer |
+| `/globe` | The gallery by place, for photographs whose photographer marked one. A grouped list of links that works with no JavaScript, with a canvas globe over it |
 | `/feed.xml` | The whole gallery, as a subscription |
 | `/by/<slug>/feed.xml` | One photographer, as a subscription |
 | `/contribute` | Sign in, for invited photographers |

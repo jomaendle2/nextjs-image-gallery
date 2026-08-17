@@ -69,6 +69,23 @@ whose job is to show one photograph.
 each lands near 676 KB, which is less than one of the photographs on the
 page.
 
+**`/globe` must stay text-only, and this is the reason.** It renders a
+grouped list of every photograph with a marked place, and the obvious next
+idea is to put a thumbnail beside each one — which reproduces exactly the
+cost above, on a second page, at the same 5.4 KB per photograph. The page is
+affordable because it costs per *place* rather than per photograph:
+`coarsen` collapses everything within about a hundred kilometres onto one
+point, so 300 photographs are roughly 120 cells, and the canvas is handed
+three numbers a cell rather than the photograph lists. If a picture is
+wanted there, it is one picture per cell chosen server-side, not one per row.
+
+**And the index behind it.** `listGlobePoints` has no index; it is a
+sequential scan over the same table the feed already scans, which at 14 rows
+and at 300 is free. `photos_globe_idx` — partial, on `coarse_lat` where it
+is not null — is the eventual answer, and it lands with the same
+300-photograph trigger as the windowing above rather than before it. An
+index added early is an index nobody can measure.
+
 ### 3. Turning the membership on
 
 Deliberately off: `STRIPE_MEMBERSHIP_PRICE_ID` is unset in production, so
