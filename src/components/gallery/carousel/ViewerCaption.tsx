@@ -34,7 +34,6 @@ export function ViewerCaption({
           <ViewCount
             className="text-white/80"
             imageId={image.id}
-            shouldIncrement={false}
             variant="modal"
           />
         </div>

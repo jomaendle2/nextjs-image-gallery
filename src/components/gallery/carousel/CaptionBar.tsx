@@ -8,6 +8,8 @@ interface CaptionBarProps {
   images: readonly GalleryImage[];
   currentIndex: number;
   onImageSelect: (index: number) => void;
+  /** Arrow keys page the carousel; they must not while a panel is open. */
+  onDetailsOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -32,6 +34,7 @@ export function CaptionBar({
   images,
   currentIndex,
   onImageSelect,
+  onDetailsOpenChange,
 }: CaptionBarProps) {
   return (
     <div className="relative z-10 mx-auto w-full max-w-[1536px] flex-shrink-0 safe-x-4 safe-b-6 sm:safe-x-8 sm:safe-b-7">
@@ -71,7 +74,7 @@ export function CaptionBar({
         </div>
 
         <div className="order-2 min-w-0 lg:order-3">
-          <PhotoCredit image={image} />
+          <PhotoCredit image={image} onOpenChange={onDetailsOpenChange} />
         </div>
       </div>
     </div>

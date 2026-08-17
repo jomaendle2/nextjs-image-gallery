@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 interface UseCarouselKeyboardProps {
   onNext: () => void;
   onPrevious: () => void;
-  onClose?: () => void;
 }
 
 /** Elements that act on Space themselves and must keep it. */
@@ -20,7 +19,6 @@ const isInteractive = (target: EventTarget | null) =>
 export function useCarouselKeyboard({
   onNext,
   onPrevious,
-  onClose,
 }: UseCarouselKeyboardProps) {
   const [isDisabledState, setIsDisabledState] = useState(false);
 
@@ -54,10 +52,6 @@ export function useCarouselKeyboard({
           event.preventDefault();
           onPrevious();
           break;
-        case "Escape":
-          event.preventDefault();
-          onClose?.();
-          break;
         default:
           break;
       }
@@ -67,7 +61,7 @@ export function useCarouselKeyboard({
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onNext, onPrevious, onClose, isDisabledState]);
+  }, [onNext, onPrevious, isDisabledState]);
 
   return {
     setIsDisabled: setIsDisabledState,

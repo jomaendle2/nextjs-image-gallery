@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { META } from "@/components/ui/field";
+import { glassControl } from "@/components/ui/glass-button";
 
 interface Details {
   member: boolean;
@@ -84,7 +85,7 @@ export function MemberDetails({ photoId }: { photoId: string }) {
 
   const shown = whatToShow(data, isPlaceholderData);
 
-  return <Line>{body(shown)}</Line>;
+  return body(shown);
 }
 
 /**
@@ -123,22 +124,6 @@ function whatToShow(
   return sessionIsMember === false ? { member: false } : undefined;
 }
 
-/**
- * Holds the line whether or not there is anything to put on it.
- *
- * Rendering nothing and then something is movement, and because the lookup is
- * per photograph it happened on every image change. `flex` rather than a
- * block removes the line-box strut, so the child's 44px target is pulled back
- * to exactly the reserved 20px and empty matches full to the pixel.
- */
-function Line({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-5 items-center justify-center lg:justify-end">
-      {children}
-    </div>
-  );
-}
-
 function body(data: Details | undefined): ReactNode {
   if (data === undefined) {
     return null;
@@ -146,12 +131,21 @@ function body(data: Details | undefined): ReactNode {
 
   if (!data.member) {
     return (
-      <Link
-        className="-my-3 inline-flex min-h-11 items-center rounded-full py-3 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em] transition-colors hover:text-white/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
-        href="/membership"
-      >
-        Members see where this was taken
-      </Link>
+      <div>
+        <p className={META}>Where exactly, and how</p>
+        <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
+          The photographer wrote down the spot and how the picture was made.
+          Members can read it.
+        </p>
+        <Link
+          className={glassControl(
+            "mt-3 inline-flex min-h-11 items-center px-4 py-2 text-sm text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
+          )}
+          href="/membership"
+        >
+          See what a membership shows
+        </Link>
+      </div>
     );
   }
 
@@ -161,19 +155,32 @@ function body(data: Details | undefined): ReactNode {
   // A member is entitled to know there is nothing to know.
   if (location === "" && technique === "") {
     return (
-      <p className="text-[0.6875rem] text-white/50 uppercase tracking-[0.14em]">
-        No location given
-      </p>
+      <div>
+        <p className={META}>Where exactly, and how</p>
+        <p className="mt-1.5 text-[0.9375rem] text-white/50 leading-relaxed">
+          The photographer has not written anything for this one.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="max-w-prose space-y-1 text-left lg:text-right">
-      {location === "" ? null : <p className={META}>{location}</p>}
+    <div className="space-y-4">
+      {location === "" ? null : (
+        <div>
+          <p className={META}>Where exactly</p>
+          <p className="mt-1.5 text-[0.9375rem] text-white/85 leading-relaxed">
+            {location}
+          </p>
+        </div>
+      )}
       {technique === "" ? null : (
-        <p className="text-pretty text-[0.75rem] text-white/55 leading-relaxed">
-          {technique}
-        </p>
+        <div>
+          <p className={META}>How it was made</p>
+          <p className="mt-1.5 text-pretty text-[0.9375rem] text-white/85 leading-relaxed">
+            {technique}
+          </p>
+        </div>
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
+import { useRecordView } from "@/hooks/useViewCount";
 import { photoGround } from "@/lib/photo-ground";
 import { photoAltText } from "@/lib/photos/alt-text";
 import { ContributorHeader } from "./ContributorHeader";
@@ -9,7 +10,6 @@ import { AmbientBackdrop } from "./carousel/AmbientBackdrop";
 import { CaptionBar } from "./carousel/CaptionBar";
 import { CarouselImage } from "./carousel/CarouselImage";
 import { CarouselNavigation } from "./carousel/CarouselNavigation";
-import { CarouselTopBar } from "./carousel/CarouselTopBar";
 import { GalleryTopBar } from "./carousel/GalleryTopBar";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
@@ -32,14 +32,12 @@ interface ImageCarouselProps {
    */
   contributor?: GalleryAuthor;
   initialIndex?: number;
-  onClose?: () => void;
 }
 
 export function ImageCarousel({
   images,
   contributor,
   initialIndex = 0,
-  onClose,
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,7 +62,6 @@ export function ImageCarousel({
   const { setIsDisabled } = useCarouselKeyboard({
     onNext: goToNext,
     onPrevious: goToPrevious,
-    onClose,
   });
 
   // Jump to the requested starting image on first paint.
@@ -111,6 +108,18 @@ export function ImageCarousel({
     setIsDisabled(false);
   }, [setIsDisabled]);
 
+  /*
+   * The details panel takes the keyboard the same way the modal does. Without
+   * this, arrow keys inside an open panel would page the photograph behind
+   * it, and the panel would then be describing a different picture.
+   */
+  const handleDetailsOpenChange = useCallback(
+    (open: boolean) => {
+      setIsDisabled(open);
+    },
+    [setIsDisabled],
+  );
+
   // Derived during render: the background is a pure function of the index,
   // so computing it in an effect only bought an extra commit per navigation.
   /*
@@ -120,6 +129,19 @@ export function ImageCarousel({
    * away. The server page renders <EmptyGallery /> instead of reaching here.
    */
   const currentImage = images[currentIndex] ?? images[0];
+
+  /*
+   * Counting a view is a fact about the photograph being looked at, so it
+   * belongs here rather than inside whatever happens to be displaying the
+   * number. It used to live inside `ViewCount`; when the count moved into the
+   * details panel the write would have gone with it, and the counter would
+   * have started measuring panel opens.
+   *
+   * Called before the empty-gallery bail below, because a hook cannot sit
+   * after a conditional return. An empty string is a no-op inside the hook.
+   */
+  useRecordView(currentImage?.id ?? "");
+
   if (!currentImage) {
     return null;
   }
@@ -148,8 +170,6 @@ export function ImageCarousel({
         }}
       >
         <AmbientBackdrop bgColor={currentImage.bgColor} />
-
-        <CarouselTopBar onClose={onClose} />
 
         {contributor === undefined ? <GalleryTopBar /> : null}
 
@@ -211,6 +231,7 @@ export function ImageCarousel({
           currentIndex={currentIndex}
           image={currentImage}
           images={images}
+          onDetailsOpenChange={handleDetailsOpenChange}
           onImageSelect={goToIndex}
         />
       </main>

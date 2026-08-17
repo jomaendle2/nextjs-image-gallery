@@ -2,49 +2,26 @@
 
 import NumberFlow from "@number-flow/react";
 import { Eye } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { useViewCount } from "@/hooks/useViewCount";
 
 interface ViewCountProps {
   imageId: string;
   variant?: "gallery" | "modal";
   className?: string;
-  shouldIncrement?: boolean;
 }
 
+/**
+ * Displays a count. It does not record one — `useRecordView` does that, from
+ * wherever the photograph is actually being looked at. The two were one
+ * component until the count moved into the details panel, at which point
+ * "shown" and "counted" stopped being the same event.
+ */
 export function ViewCount({
   imageId,
   variant = "gallery",
   className = "",
-  shouldIncrement = true,
 }: ViewCountProps) {
-  const { viewCount, incrementView } = useViewCount(imageId);
-
-  // This component is reused across images rather than remounted per image,
-  // so the guard has to be per image id, not per mount.
-  const incrementedIds = useRef(new Set<string>());
-  // Held in a ref so the effect can call the latest version without listing
-  // it as a dependency and re-firing on every render.
-  const incrementViewRef = useRef(incrementView);
-  incrementViewRef.current = incrementView;
-  const shouldIncrementRef = useRef(shouldIncrement);
-  shouldIncrementRef.current = shouldIncrement;
-
-  useEffect(() => {
-    if (!(imageId && shouldIncrementRef.current)) {
-      return;
-    }
-    if (incrementedIds.current.has(imageId)) {
-      return;
-    }
-
-    incrementedIds.current.add(imageId);
-    incrementViewRef.current().catch((error: unknown) => {
-      // Allow a later visit to retry.
-      incrementedIds.current.delete(imageId);
-      console.error("Failed to increment view count:", error);
-    });
-  }, [imageId]);
+  const { viewCount } = useViewCount(imageId);
 
   const isModal = variant === "modal";
 

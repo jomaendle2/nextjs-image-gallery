@@ -105,6 +105,27 @@ describe("the accent is used through the system, not around it", () => {
       join("/app", "membership", "membership-details.tsx"),
     ]);
   });
+
+  /*
+   * DESIGN.md: "the only colour in the viewer comes from the photograph."
+   *
+   * The rule most likely to be broken by accident, because the accent is
+   * legal three directories away on every reading page and a component moved
+   * into the viewer brings its classes with it. The details panel was exactly
+   * that move — six pieces of chrome went from the caption bar into a Sheet,
+   * and a Sheet is the sort of thing that arrives from a component library
+   * already coloured.
+   */
+  it("the viewer introduces no colour of its own", () => {
+    const offenders = allSourceFiles()
+      .filter((file) => file.includes(join(SRC, "components", "gallery")))
+      .filter((file) =>
+        /\b(?:text|bg|border|outline)-accent/.test(readFileSync(file, "utf8")),
+      )
+      .map((file) => file.replace(SRC, ""));
+
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe("text stays readable on the ground", () => {

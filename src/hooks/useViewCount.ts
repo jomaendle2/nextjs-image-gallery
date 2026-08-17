@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -109,4 +109,39 @@ export function useViewCount(imageId: string): UseViewCountReturn {
   }, [mutateAsync]);
 
   return { viewCount, incrementView };
+}
+
+/**
+ * Records that a photograph was looked at. Renders nothing, shows nothing.
+ *
+ * This used to live inside `ViewCount`, which was fine while the count was
+ * displayed under the photograph it counted. It stopped being fine when the
+ * count moved into the details panel: the write would then only have happened
+ * when somebody opened the panel, so the number would have measured panel
+ * opens and called them views.
+ *
+ * The guard is keyed by image id rather than by mount, because the carousel
+ * reuses one instance across every photograph — a per-mount flag would count
+ * the first photograph and nothing after it.
+ */
+export function useRecordView(imageId: string): void {
+  const { incrementView } = useViewCount(imageId);
+
+  const recorded = useRef(new Set<string>());
+  // Held in a ref so the effect can call the current version without listing
+  // it as a dependency and re-firing on every render.
+  const incrementRef = useRef(incrementView);
+  incrementRef.current = incrementView;
+
+  useEffect(() => {
+    if (!imageId || recorded.current.has(imageId)) {
+      return;
+    }
+    recorded.current.add(imageId);
+    incrementRef.current().catch((error: unknown) => {
+      // Allow a later visit to retry.
+      recorded.current.delete(imageId);
+      console.error("Failed to increment view count:", error);
+    });
+  }, [imageId]);
 }
