@@ -219,6 +219,25 @@ export async function renewSession(): Promise<void> {
   });
 }
 
+/**
+ * Drops a session cookie that no longer resolves to anything.
+ *
+ * Distinct from `destroySession`, which is somebody choosing to leave: this is
+ * housekeeping for a cookie whose row has expired or been revoked, so there is
+ * nothing to delete and nowhere to redirect. The browser would otherwise keep
+ * sending a secret that authenticates nothing until it expired on its own.
+ *
+ * Route handlers only, for the same reason as `renewSession` — a page render
+ * may not set or delete a cookie, which is why the `/contribute/*` pages can
+ * only redirect and cannot tidy up after themselves.
+ */
+export async function forgetStaleSession(): Promise<void> {
+  const store = await cookies();
+  if (store.get(SESSION_COOKIE)?.value) {
+    store.delete(SESSION_COOKIE);
+  }
+}
+
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   const secret = store.get(SESSION_COOKIE)?.value;

@@ -30,7 +30,13 @@ export const metadata: Metadata = {
 export default async function InvitePage() {
   const contributor = await getCurrentContributor();
   if (!contributor) {
-    redirect("/contribute");
+    /*
+     * `error=ended` rather than a bare redirect. A session that ran out used
+     * to bounce the reader to a sign-in form with no explanation, so the page
+     * they were using simply reappeared as a login screen — which from the
+     * outside is indistinguishable from the site having forgotten them.
+     */
+    redirect("/contribute?error=ended");
   }
 
   const [remaining, invitees] = await Promise.all([

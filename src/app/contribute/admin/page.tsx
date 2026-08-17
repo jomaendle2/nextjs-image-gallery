@@ -26,7 +26,13 @@ export const metadata: Metadata = {
 export default async function AdminPage() {
   const actor = await getCurrentContributor();
   if (!actor) {
-    redirect("/contribute");
+    /*
+     * `error=ended` rather than a bare redirect. A session that ran out used
+     * to bounce the reader to a sign-in form with no explanation, so the page
+     * they were using simply reappeared as a login screen — which from the
+     * outside is indistinguishable from the site having forgotten them.
+     */
+    redirect("/contribute?error=ended");
   }
   /*
    * 404 rather than 403 for a signed-in non-owner: there is no reason to

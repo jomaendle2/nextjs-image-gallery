@@ -33,10 +33,16 @@ export default async function VerifyPage({
   /*
    * No token at all is not a failed sign-in, it is somebody who arrived
    * here by hand. Send them to the form rather than showing a button that
-   * cannot work.
+   * cannot work — and say the true thing when they get there.
+   *
+   * This used to send `error=expired`, so a person who typed the URL out of
+   * curiosity, or followed a link with the query string stripped by a mail
+   * client, was told that a link they never had has expired. The two states
+   * look identical from here and are not: one person needs to ask for a
+   * link, the other needs to know the one they had is spent.
    */
   if (token === undefined || token === "") {
-    redirect("/contribute?error=expired");
+    redirect("/contribute?error=nolink");
   }
 
   return (

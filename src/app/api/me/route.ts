@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  forgetStaleSession,
   getCurrentContributor,
   memberForSession,
   renewSession,
@@ -54,7 +55,19 @@ export async function GET(): Promise<NextResponse> {
    * render. `renewSession` is a no-op until the session is past its midpoint,
    * so this costs nothing on all but one visit in fifteen days.
    */
-  if (contributor !== null || member !== null) {
+  if (contributor === null && member === null) {
+    /*
+     * Nobody, but possibly a cookie: a session that has expired or been
+     * revoked leaves the browser holding a secret that no longer resolves to
+     * anything, and it is re-sent on every request until the browser drops it
+     * of its own accord. Clearing it here is the only place we can — Next
+     * refuses `cookies().delete()` during a page render, which is why the
+     * `/contribute/*` pages can only redirect and not tidy up.
+     *
+     * It authenticates nothing either way; this is hygiene, not a gate.
+     */
+    await forgetStaleSession();
+  } else {
     await renewSession();
   }
 
