@@ -4,7 +4,7 @@
  * There are seven templates and they are the only part of the product that
  * reaches somebody outside the browser, which makes them the part where a
  * mistake is least recoverable: a broken link in an announcement goes to the
- * whole list at once and cannot be edited afterwards. This walks all six so
+ * whole list at once and cannot be edited afterwards. This walks all seven so
  * they can be read in a real client, on a real phone, before that happens.
  *
  * With `RESEND_API_KEY` and `EMAIL_FROM` set it really sends, to an address
@@ -34,6 +34,7 @@ import {
 import { sql } from "../src/lib/database.ts";
 import { toGalleryImage } from "../src/lib/photos/map.ts";
 import { siteOrigin } from "../src/lib/site-url.ts";
+import { check, finish } from "./harness.mts";
 
 const [, , to] = process.argv;
 if (to === undefined) {
@@ -49,7 +50,7 @@ const live =
 
 console.log(
   live
-    ? `Sending six messages to ${to} through Resend.\n`
+    ? `Sending seven messages to ${to} through Resend.\n`
     : "No RESEND_API_KEY / EMAIL_FROM — printing instead of sending.\n" +
         "This is the same fallback the dev server uses.\n",
 );
@@ -67,20 +68,19 @@ const photos = (await sql`
   ORDER BY p.published_at DESC LIMIT 2;
 `) as never[];
 
-let failures = 0;
-
 /*
- * Sequential on purpose: six messages arriving in a guaranteed order are far
- * easier to check off against this list than six racing into an inbox.
+ * Sequential on purpose: seven messages arriving in a guaranteed order are far
+ * easier to check off against this list than seven racing into an inbox.
+ *
+ * A send has no boolean to assert on — it either returns or throws — so this
+ * turns the throw into the harness's `check`.
  */
 async function step(label: string, run: () => Promise<void>): Promise<void> {
   try {
     await run();
-    console.log(`  ok   ${label}`);
+    check(label, true);
   } catch (error) {
-    console.log(`  FAIL ${label}`);
-    console.log(`       ${error instanceof Error ? error.message : error}`);
-    failures += 1;
+    check(label, false, error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -117,9 +117,4 @@ await step("weekly reminder to the owner", () =>
   sendAnnouncementReminder(to, photos.length),
 );
 
-console.log(
-  failures === 0
-    ? `\nall seven ${live ? "sent" : "rendered"}`
-    : `\n${failures} FAILED`,
-);
-process.exit(failures === 0 ? 0 : 1);
+finish();

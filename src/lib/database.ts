@@ -10,36 +10,6 @@ if (!connectionString) {
 export const sql = neon(connectionString);
 
 /**
- * Memoized so the `CREATE TABLE IF NOT EXISTS` round trip happens once per
- * warm instance instead of once per request. Under Fluid Compute a single
- * instance serves many requests, so this removes a database round trip from
- * the critical path of nearly every call.
- */
-let initPromise: Promise<void> | null = null;
-
-export function initDatabase(): Promise<void> {
-  initPromise ??= (async () => {
-    try {
-      await sql`
-        CREATE TABLE IF NOT EXISTS image_views (
-          id SERIAL PRIMARY KEY,
-          image_id VARCHAR(255) UNIQUE NOT NULL,
-          view_count INTEGER DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-    } catch (error) {
-      // Allow a later request to retry rather than caching the failure.
-      initPromise = null;
-      console.error("Error initializing database:", error);
-    }
-  })();
-
-  return initPromise;
-}
-
-/**
  * Counts a view, but only for a photograph that exists.
  *
  * The `WHERE EXISTS` is the whole point. This is written from an endpoint

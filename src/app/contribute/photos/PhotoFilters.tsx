@@ -1,8 +1,7 @@
 "use client";
 
-import { Search, X } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { FIELD } from "@/components/ui/field";
+import { SearchField } from "@/components/ui/SearchField";
 import type { PhotoFilter } from "./filter";
 import { FILTERS } from "./filter";
 
@@ -32,31 +31,14 @@ export function PhotoFilters({
 }) {
   return (
     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="relative flex-1">
-        <Search
-          aria-hidden="true"
-          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/50"
-          size={15}
-        />
-        <input
-          aria-label="Search your photographs by title or location"
-          className={`${FIELD} pl-10`}
-          onChange={onQueryChange}
-          placeholder="Search by title or location"
-          type="search"
-          value={query}
-        />
-        {query === "" ? null : (
-          <button
-            aria-label="Clear search"
-            className="-translate-y-1/2 absolute top-1/2 -mr-1 right-2 flex size-11 items-center justify-center rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
-            onClick={onClearQuery}
-            type="button"
-          >
-            <X aria-hidden="true" size={14} />
-          </button>
-        )}
-      </div>
+      <SearchField
+        className="flex-1"
+        label="Search your photographs by title or location"
+        onChange={onQueryChange}
+        onClear={onClearQuery}
+        placeholder="Search by title or location"
+        value={query}
+      />
 
       {/*
         A radio group rather than buttons: these are three states of one

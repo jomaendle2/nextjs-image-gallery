@@ -1,9 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  getAllViewCounts,
-  incrementViewCount,
-  initDatabase,
-} from "@/lib/database";
+import { getAllViewCounts, incrementViewCount } from "@/lib/database";
 import { clientIp, createLimiter } from "@/lib/rate-limit";
 
 /**
@@ -44,8 +40,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid image id." }, { status: 400 });
     }
 
-    await initDatabase();
-
     /*
      * Zero comes back for an id that matches no photograph — and also for a
      * database error, which `incrementViewCount` swallows by design. Since
@@ -67,8 +61,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /** Every count the gallery can display. Cached at the edge; see below. */
 export async function GET(): Promise<NextResponse> {
   try {
-    await initDatabase();
-
     const data = await getAllViewCounts();
 
     return NextResponse.json(

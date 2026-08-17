@@ -17,6 +17,7 @@ import { del, put } from "@vercel/blob";
 import sharp from "sharp";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { check, finish } from "./harness.mts";
 
 const [, , originArg] = process.argv;
 const origin = originArg ?? "http://localhost:3000";
@@ -73,14 +74,6 @@ const response = await fetch(`${origin}/api/photos/draft`, {
 const body = (await response.json()) as Record<string, unknown>;
 console.log(`draft route: ${response.status}`);
 console.log(JSON.stringify(body, null, 2).slice(0, 500));
-
-let failures = 0;
-function check(label: string, ok: boolean): void {
-  console.log(`  ${ok ? "ok  " : "FAIL"} ${label}`);
-  if (!ok) {
-    failures += 1;
-  }
-}
 
 const id = body["id"];
 check("returned a draft id", typeof id === "string");
@@ -181,5 +174,4 @@ await del(blob.url).catch(() => undefined);
  */
 await sql`DELETE FROM sessions WHERE id = ${hashSecret(cookie)};`;
 
-console.log(failures === 0 ? "\nall checks passed" : `\n${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+finish();

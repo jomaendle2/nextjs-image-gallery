@@ -19,6 +19,7 @@
 import { createHmac } from "node:crypto";
 import process from "node:process";
 import { sql } from "../src/lib/database.ts";
+import { check, finish } from "./harness.mts";
 
 /*
  * A client address unique to this run.
@@ -45,14 +46,6 @@ if (!webhookSecret) {
 const origin = originArg ?? "http://localhost:3000";
 const address = `member-smoke-${Date.now()}@example.test`;
 const customerId = `cus_smoke_${Date.now()}`;
-
-let failures = 0;
-function check(label: string, ok: boolean): void {
-  console.log(`  ${ok ? "ok  " : "FAIL"} ${label}`);
-  if (!ok) {
-    failures += 1;
-  }
-}
 
 /** Signs a payload the way Stripe does, so `constructEvent` accepts it. */
 function post(body: unknown, opts: { sign: boolean }): Promise<Response> {
@@ -388,5 +381,4 @@ check(
 );
 
 await sql`DELETE FROM members WHERE email = ${address};`;
-console.log(failures === 0 ? "\nall checks passed" : `\n${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+finish();

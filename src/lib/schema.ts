@@ -9,6 +9,23 @@
  * statement per round trip.
  */
 export const MIGRATIONS: readonly string[] = [
+  /*
+   * View counts, which predate the contributor feature.
+   *
+   * This lived in `database.ts` as a memoized `CREATE TABLE IF NOT EXISTS`
+   * that both `/api/views` handlers had to remember to await — schema DDL in
+   * the request path, and the memo existed only to make that affordable. The
+   * data needed no migration, which was never a reason for the table
+   * definition to live somewhere else. Column types are exactly as they were.
+   */
+  `CREATE TABLE IF NOT EXISTS image_views (
+     id         SERIAL PRIMARY KEY,
+     image_id   VARCHAR(255) UNIQUE NOT NULL,
+     view_count INTEGER DEFAULT 0,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );`,
+
   `CREATE TABLE IF NOT EXISTS contributors (
      id           TEXT PRIMARY KEY,
      email        TEXT NOT NULL UNIQUE,
@@ -219,6 +236,21 @@ export const MIGRATIONS: readonly string[] = [
    */
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_location TEXT;",
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS technique TEXT;",
+
+  /*
+   * Consent to be the example on `/membership`.
+   *
+   * The membership page sells two fields by showing one photograph's, in
+   * full, to anybody who visits. Choosing that photograph by query — most
+   * recently annotated, say — would mean a photographer's writing became
+   * public because of when they typed it, which is not consent. This column
+   * is the photographer saying yes.
+   *
+   * Defaults to false, so the page shows nothing until somebody offers one.
+   * That is the right default even though it means the feature lies dormant
+   * until a photographer opts in: silence has to mean no.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS is_specimen BOOLEAN NOT NULL DEFAULT FALSE;",
 
   /*
    * What members looked at, aggregated per photograph per day.

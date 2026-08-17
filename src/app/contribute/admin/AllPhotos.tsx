@@ -1,9 +1,8 @@
 "use client";
 
-import { Search, X } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
-import { FIELD } from "@/components/ui/field";
+import { SearchField } from "@/components/ui/SearchField";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoRowActions } from "./PhotoRowActions";
 
@@ -55,31 +54,14 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
 
       {/* Only worth the space once the list stops fitting on a screen. */}
       {photos.length > 8 ? (
-        <div className="relative mb-4">
-          <Search
-            aria-hidden="true"
-            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-white/50"
-            size={15}
-          />
-          <input
-            aria-label="Search every photograph by title, location or photographer"
-            className={`${FIELD} pl-10`}
-            onChange={onChange}
-            placeholder="Search by title, location or photographer"
-            type="search"
-            value={query}
-          />
-          {query === "" ? null : (
-            <button
-              aria-label="Clear search"
-              className="-translate-y-1/2 absolute top-1/2 -mr-1 right-2 flex size-11 items-center justify-center rounded-full text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white/80"
-              onClick={clear}
-              type="button"
-            >
-              <X aria-hidden="true" size={14} />
-            </button>
-          )}
-        </div>
+        <SearchField
+          className="mb-4"
+          label="Search every photograph by title, location or photographer"
+          onChange={onChange}
+          onClear={clear}
+          placeholder="Search by title, location or photographer"
+          value={query}
+        />
       ) : null}
 
       {visible.length === 0 ? (
