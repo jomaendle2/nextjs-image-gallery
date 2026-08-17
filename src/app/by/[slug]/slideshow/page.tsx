@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import {
   getContributorBySlug,
   listPublicContributorSlugs,
@@ -88,10 +88,15 @@ export default async function ContributorSlideshow({ params }: PageProps) {
    * fetched before `notFound()` can fire. That is the right trade at this
    * ratio — every real visit saves a full round trip — and an unknown slug
    * is not something `generateStaticParams` builds.
+   *
+   * The photographs throw rather than arriving empty, for the reason the
+   * grid states: a failed query rendered as `EmptyGallery` is a successful
+   * render, and the hourly `revalidate` then caches "they have published
+   * nothing" on the URL the photographer shares.
    */
   const [contributor, images] = await Promise.all([
     getContributorBySlug(slug),
-    getGalleryImages(slug),
+    listGalleryImages(slug),
   ]);
   if (!contributor) {
     notFound();

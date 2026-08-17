@@ -50,10 +50,29 @@ export interface GalleryImage {
  * The gallery feed: the pinned opener first, then newest published first.
  * Pass a contributor slug to narrow it to one photographer.
  *
- * Throws. Callers choose what a failure means, because it does not mean the
- * same thing everywhere — see `getGalleryImages` below.
- */
-/**
+ * Throws, and every caller lets it. There used to be a second, swallowing
+ * variant for the pages that *display* a gallery, on the reasoning that a
+ * photo site showing nothing beats one showing a stack trace. That reasoning
+ * was wrong in a way nobody could see: every consumer is cached for an hour,
+ * and returning `[]` makes the failure look like a *successful* render of an
+ * empty gallery. Next then caches "there is nothing here" and serves it to
+ * everyone until the hour is out — one Neon hiccup during revalidation, and
+ * the front page is blank until 3 a.m. The site does not look broken, it
+ * looks empty, so nothing alerts and nobody reports it.
+ *
+ * A throw is strictly better because Next does not cache it: "if an error is
+ * thrown while attempting to revalidate data, the last successfully
+ * generated data will continue to be served from the cache", and the next
+ * request retries — so the visible result of a transient failure is the
+ * previous good page, and the failure is confined to a first render, where
+ * `error.tsx` offers a retry. The same property is why the sitemap, the
+ * feeds and `/photo/[id]` were converted first: an empty sitemap reads as
+ * deletion, and a missing row as a 404, both cached for the hour.
+ *
+ * `EmptyGallery` stays, and now means what it says. A gallery with no
+ * published photographs is a real state; a query that did not answer is not
+ * that state.
+ *
  * Wrapped in `cache` because every page that has metadata asks twice.
  *
  * Next dedupes `fetch` across `generateMetadata` and the page body; this is
@@ -70,28 +89,3 @@ export const listGalleryImages = cache(
     return rows.map(toGalleryImage);
   },
 );
-
-/**
- * The same, but an empty gallery rather than an error page.
- *
- * Correct for the pages that *display* a gallery: a photo site showing
- * nothing is bad, one showing a stack trace is worse.
- *
- * Emphatically not correct anywhere the result is used to decide whether
- * something exists. Every consumer here is cached for an hour, so a single
- * failed query during revalidation used to be baked in for that hour: a
- * valid `/photo/<id>` became `notFound()` and was cached as a 404, the feed
- * published a channel with no items, and the sitemap dropped every
- * photograph — which a crawler reads as deletion. An exception is retried
- * and never cached, which is precisely why those callers now let it through.
- */
-export async function getGalleryImages(
-  authorSlug?: string,
-): Promise<GalleryImage[]> {
-  try {
-    return await listGalleryImages(authorSlug);
-  } catch (error) {
-    console.error("Failed to load gallery images:", error);
-    return [];
-  }
-}

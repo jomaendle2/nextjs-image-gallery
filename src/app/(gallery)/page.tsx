@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { StructuredData } from "@/components/StructuredData";
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import { alternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { gallerySchema } from "@/lib/structured-data";
@@ -29,7 +29,18 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function Home() {
-  const images = await getGalleryImages();
+  /*
+   * The throwing variant, deliberately — "empty because there is nothing" and
+   * "empty because the query did not answer" are different states, and this
+   * page used to render both as `EmptyGallery`.
+   *
+   * Under the `revalidate` above that was the worst possible reading of a
+   * transient failure: rendering the empty state *succeeds*, so Next cached
+   * the blank front page and served it to everyone for the rest of the hour.
+   * Letting the error through means the last good page keeps being served
+   * during revalidation and the next request retries. See `galleryData.ts`.
+   */
+  const images = await listGalleryImages();
 
   if (images.length === 0) {
     return <EmptyGallery />;

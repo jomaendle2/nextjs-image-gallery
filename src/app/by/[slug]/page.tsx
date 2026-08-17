@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { PhotoGrid } from "@/components/gallery/PhotoGrid";
 import { StructuredData } from "@/components/StructuredData";
-import { getGalleryImages } from "@/data/galleryData";
+import { listGalleryImages } from "@/data/galleryData";
 import {
   getContributorBySlug,
   listPublicContributorSlugs,
@@ -55,7 +55,7 @@ export async function generateMetadata({
    */
   const [contributor, images] = await Promise.all([
     getContributorBySlug(slug),
-    getGalleryImages(slug),
+    listGalleryImages(slug),
   ]);
   if (!contributor) {
     return { title: "Not found" };
@@ -114,10 +114,17 @@ export default async function ContributorGallery({ params }: PageProps) {
    * ratio — every real visit saves a full round trip, and the query returns
    * nothing quickly — and it is bounded, because an unknown slug is not
    * something `generateStaticParams` builds.
+   *
+   * Both throw rather than degrading. A photographer whose page silently
+   * fell back to `EmptyGallery` on a failed query was told, in their own
+   * name, that they had not published anything — and because that render
+   * succeeded it was cached under the hourly `revalidate` and shown to
+   * everyone they had sent the link to. `EmptyGallery` below now means only
+   * what it says.
    */
   const [contributor, images] = await Promise.all([
     getContributorBySlug(slug),
-    getGalleryImages(slug),
+    listGalleryImages(slug),
   ]);
   if (!contributor) {
     notFound();
