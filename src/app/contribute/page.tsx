@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Notice } from "@/components/ui/Notice";
 import { getCurrentContributor, memberForSession } from "@/lib/auth/session";
 import { ContributeCard } from "./ContributeShell";
+import { TextLink } from "@/components/ui/TextLink";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ const ERRORS: Record<string, string> = {
    * failure they did not have.
    */
   nolink:
-    "That link had nothing in it. Ask for a fresh one below and it will arrive in a moment.",
+    "That link had nothing in it. Ask for a fresh one below.",
   /*
    * A session that ran out. `/contribute/*` used to redirect here silently, so
    * the page simply reappeared as if the site had forgotten them — which,
@@ -82,6 +83,21 @@ export default async function ContributePage({ searchParams }: PageProps) {
         </Notice>
       )}
       <SignInForm />
+
+      {/*
+        The way in for somebody who is not on the list yet.
+
+        `/contribute/apply` was linked from exactly one place on the entire
+        site — a line most of the way down `/photographers` — while this page,
+        which is what anybody guesses after hearing the word "contribute",
+        offered a form that silently does nothing for them and no other route.
+        A photographer who arrived here uninvited met a door with no handle.
+      */}
+      <p className="mt-6 text-[0.8125rem] text-white/55 leading-relaxed">
+        Not invited yet?{" "}
+        <TextLink href="/contribute/apply">Apply to contribute</TextLink> — it
+        is a short form and a look at your work.
+      </p>
     </ContributeCard>
   );
 }

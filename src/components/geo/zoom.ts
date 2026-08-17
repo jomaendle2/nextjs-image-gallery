@@ -17,8 +17,17 @@
  * carries a vertex every 0.07 degrees, which on the largest display anyone
  * is likely to use lands about three device pixels apart at 2.5x. Past that
  * the globe would magnify a polygon rather than a coast.
+ *
+ * **Three stops, not two, and the middle one is not decoration.** With only
+ * 1 and 2.5, one press of `+` took the whole sphere to maximum magnification
+ * — and since zoom magnifies whatever happens to sit at the centre, and the
+ * centre is usually open ocean, the result was a featureless near-black disc
+ * with every mark and most of the graticule off frame. The most discoverable
+ * control on the overlay made the page look broken in one click. A step to
+ * 1.6 keeps a recognisable amount of coastline on screen, so each press reads
+ * as getting closer to something rather than as a fault.
  */
-export const ZOOM_STOPS = [1, 2.5] as const;
+export const ZOOM_STOPS = [1, 1.6, 2.5] as const;
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 2.5;
 

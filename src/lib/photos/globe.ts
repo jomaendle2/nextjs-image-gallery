@@ -167,5 +167,59 @@ export function labelFor(cell: GlobeCell): string {
   if (second === undefined || cell.labels.length > 2) {
     return `Near ${first}`;
   }
-  return `Near ${first} and ${second}`;
+  return `Near ${joinPlaces(first, second)}`;
+}
+
+/**
+ * Two place names, without saying the shared part twice.
+ *
+ * Photographers write "Bali, Indonesia" and "Uluwatu, Bali, Indonesia", and
+ * naively joining them produced the first heading on `/globe`: *"Near Bali,
+ * Indonesia and Uluwatu, Bali, Indonesia"* — a line that reads as a data bug
+ * on the page whose whole subject is places, and wraps to two lines on a
+ * phone.
+ *
+ * The rule is only about the tail. Place names in this data run
+ * narrowest-first, so a shared suffix is the country or the region both
+ * photographs sit in — it is said once, at the end, where it belongs. Nothing
+ * is dropped from the middle, and two names sharing nothing are joined
+ * exactly as before.
+ */
+function joinPlaces(first: string, second: string): string {
+  const a = first.split(",").map((part) => part.trim());
+  const b = second.split(",").map((part) => part.trim());
+
+  let shared = 0;
+  while (
+    shared < a.length - 1 &&
+    shared < b.length - 1 &&
+    a.at(-1 - shared) === b.at(-1 - shared)
+  ) {
+    shared += 1;
+  }
+
+  if (shared === 0) {
+    return `${first} and ${second}`;
+  }
+
+  const tail = a.slice(a.length - shared);
+  const headA = a.slice(0, a.length - shared);
+  let headB = b.slice(0, b.length - shared);
+
+  /*
+   * One name may sit inside the other. "Bali, Indonesia" and "Uluwatu, Bali,
+   * Indonesia" share the country, and once that is pulled out the second is
+   * still "Uluwatu, Bali" against a first of "Bali" — so the shorter name
+   * appears twice in one heading, which is the thing that looked like a bug.
+   * Where the remainder ends with the whole of the other, say it once.
+   */
+  if (
+    headA.length > 0 &&
+    headB.length > headA.length &&
+    headB.slice(headB.length - headA.length).join(",") === headA.join(",")
+  ) {
+    headB = headB.slice(0, headB.length - headA.length);
+  }
+
+  return `${headA.join(", ")} and ${[...headB, ...tail].join(", ")}`;
 }

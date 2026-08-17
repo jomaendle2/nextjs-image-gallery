@@ -52,6 +52,8 @@ const FINE_FROM_DEVICE_PX = 900;
 /** The card, in CSS pixels: wide enough for a place name on one or two lines. */
 const CARD_WIDTH = 216;
 const CARD_GAP = 18;
+/** Roughly the tallest the card gets, for deciding which side of a mark it takes. */
+const CARD_MAX_HEIGHT = 260;
 const THUMB = 96;
 
 const ROUND =
@@ -65,6 +67,8 @@ export function GlobeOverlay({
   places: Map<string, GlobePlace> | null;
 }) {
   const [zoom, setZoom] = useState(1);
+  /** Bumped to ask the canvas to face the way it did when it opened. */
+  const [resetCount, setResetCount] = useState(0);
   const [wide, setWide] = useState(false);
   const [chosen, setChosen] = useState<{
     index: number;
@@ -136,6 +140,26 @@ export function GlobeOverlay({
     step(previousZoomStop(zoom));
   }, [step, zoom]);
 
+  /**
+   * Puts the globe back — the magnification *and* the way it is facing.
+   *
+   * The description told the reader "0 puts it back" while `0` reset the zoom
+   * alone, so somebody who had turned the sphere halfway round and tilted it
+   * pressed the key they had been told about, watched nothing move, and had no
+   * way to recover an orientation short of closing the overlay. Naming a
+   * control and overstating what it does is worse than not mentioning it,
+   * which is an argument this file already makes about a different omission.
+   *
+   * The orientation lives in refs inside `GlobeCanvas`, because the frame loop
+   * reads it sixty times a second and React state would restart the loop. So
+   * the reset travels as a counter rather than a value: the canvas watches it
+   * change and puts its own refs back, which keeps the ownership where it was.
+   */
+  const reset = useCallback(() => {
+    step(1);
+    setResetCount((count) => count + 1);
+  }, [step]);
+
   /*
    * `+`, `-` and `0` on the dialog itself, so the magnification is reachable
    * without finding the buttons — and so a keyboard has the same three states
@@ -151,7 +175,7 @@ export function GlobeOverlay({
       } else if (event.key === "-" || event.key === "_") {
         stepOut();
       } else if (event.key === "0") {
-        step(1);
+        reset();
       }
     };
     globalThis.addEventListener("keydown", onKey);
@@ -201,6 +225,7 @@ export function GlobeOverlay({
           onHover={setChosen}
           onZoomChange={handleZoom}
           points={points}
+          resetCount={resetCount}
           zoom={zoom}
         />
 
@@ -277,6 +302,14 @@ function PlaceCard({
   at: { x: number; y: number };
   place: GlobePlace;
 }) {
+  /*
+   * How tall the card can get: a thumbnail, two lines of label, a count and up
+   * to four links. Measured rather than computed, because computing it would
+   * mean rendering it twice — and the only decision it feeds is which side of
+   * the mark to sit on, where being roughly right is entirely sufficient.
+   */
+  const below = at.y < CARD_MAX_HEIGHT + CARD_GAP;
+
   return (
     /*
      * Clamped to the stage on both axes, so a mark near an edge does not push
@@ -295,8 +328,22 @@ function PlaceCard({
       className="glass-thick pointer-events-auto absolute z-10 rounded-xl p-3"
       style={{
         left: `clamp(${CARD_WIDTH / 2}px, ${at.x}px, calc(100% - ${CARD_WIDTH / 2}px))`,
-        top: `clamp(${CARD_GAP}px, ${at.y - CARD_GAP}px, 100%)`,
-        transform: "translate(-50%, -100%)",
+        /*
+         * Above the mark where there is room, below it where there is not.
+         *
+         * It was always above, and the clamp only stopped the card's *top*
+         * edge from going past the stage — which does nothing when the card is
+         * then translated up by its own full height. A mark in the upper third
+         * of the sphere put the card at a negative offset with its thumbnail
+         * cut off by the window, measured at y = −22 for the first mark
+         * anybody is likely to point at.
+         *
+         * Flipping is better than shrinking or scrolling: the card is a fixed
+         * size and the sphere has plenty of room underneath, so the only thing
+         * that changes is which side of the dot it sits on.
+         */
+        top: below ? `${at.y + CARD_GAP}px` : `${at.y - CARD_GAP}px`,
+        transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
         width: CARD_WIDTH,
       }}
     >

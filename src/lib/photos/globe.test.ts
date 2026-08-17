@@ -134,6 +134,38 @@ describe("what a cell is called", () => {
       row({ id: "b", location: "Bali" }),
     ]);
     expect(labelFor(two[0] as GlobeCell)).toBe("Near Uluwatu and Bali");
+  });
+
+  it("says a shared country once", () => {
+    /*
+     * The first heading on `/globe` used to read "Near Bali, Indonesia and
+     * Uluwatu, Bali, Indonesia" — a line that reads as a data bug on the page
+     * whose whole subject is places, and wraps to two lines on a phone.
+     * Photographers write the names they write; the joining is ours.
+     */
+    const cell = {
+      key: "k",
+      lat: 0,
+      lng: 0,
+      labels: ["Bali, Indonesia", "Uluwatu, Bali, Indonesia"],
+      photos: [],
+    };
+    expect(labelFor(cell as GlobeCell)).toBe(
+      "Near Bali and Uluwatu, Indonesia",
+    );
+  });
+
+  it("keeps two unrelated places whole", () => {
+    const cell = {
+      key: "k",
+      lat: 0,
+      lng: 0,
+      labels: ["Zurich, Switzerland", "Lisbon, Portugal"],
+      photos: [],
+    };
+    expect(labelFor(cell as GlobeCell)).toBe(
+      "Near Zurich, Switzerland and Lisbon, Portugal",
+    );
 
     const three = groupIntoCells([
       row({ id: "a", location: "Uluwatu" }),

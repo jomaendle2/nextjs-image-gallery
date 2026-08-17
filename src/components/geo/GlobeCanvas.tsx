@@ -148,6 +148,16 @@ interface GlobeCanvasProps {
     refs: GestureRefs,
   ) => () => void;
   /**
+   * Bumped by the caller to put the globe back the way it opened.
+   *
+   * A counter rather than a pair of angles, because the angles live in refs
+   * here — the frame loop reads them sixty times a second, and holding them in
+   * React state would restart the loop on every drag. A number that only ever
+   * changes is the smallest thing that can cross the boundary without moving
+   * the ownership.
+   */
+  resetCount?: number;
+  /**
    * `"fine"` swaps in a coastline several times finer and adds country
    * borders, fetched on mount rather than bundled.
    *
@@ -168,6 +178,7 @@ export function GlobeCanvas({
   onZoomChange,
   onHover,
   attach,
+  resetCount = 0,
 }: GlobeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   /*
@@ -434,6 +445,29 @@ export function GlobeCanvas({
   useEffect(() => {
     repaint.current?.();
   }, [detailed, coarse, zoom]);
+
+  /*
+   * Face the way it did when it opened.
+   *
+   * Skipped on mount — `resetCount` starts at zero and the globe is already
+   * where it should be, so running this then would only cost a frame. After
+   * that, each bump puts the two angles back and asks for one repaint.
+   *
+   * `settled` is deliberately left alone: somebody who has taken hold of the
+   * globe and pressed reset wants it facing forward again, not spinning away
+   * from them.
+   */
+  const resetsSeen = useRef(resetCount);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the counter is the whole trigger; the refs it writes are not reactive
+  useEffect(() => {
+    if (resetsSeen.current === resetCount) {
+      return;
+    }
+    resetsSeen.current = resetCount;
+    dragged.current = 0;
+    tilted.current = DEFAULT_TILT;
+    repaint.current?.();
+  }, [resetCount]);
 
   return (
     /*
