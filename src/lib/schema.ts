@@ -337,4 +337,41 @@ export const MIGRATIONS: readonly string[] = [
    * photographers against each other if it were shown.
    */
   "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS invited_by TEXT REFERENCES contributors(id);",
+
+  /*
+   * Where a photographer marked the spot, at two precisions.
+   *
+   * The promise this gallery makes is that it never *reads* a coordinate out
+   * of a file, and that is untouched — `derive.ts` still never opens the GPS
+   * block. Somebody dropping a pin on a map is the same act as typing
+   * `precise_location` in the row above: a deliberate decision to say where
+   * they stood, made after the fact and revocable.
+   *
+   * Two precisions rather than one, because a public globe and a member-only
+   * coordinate are otherwise incompatible. The member gate here works by the
+   * public query never *selecting* the paid columns, so a coarse point
+   * derived at read time would mean naming `precise_lat` in exactly the
+   * query that must not name it. The coarse pair is therefore computed once
+   * at publish time by `coarsen()` and stored — which also makes a published
+   * dot stable, rather than something that moves when the arithmetic is
+   * tuned.
+   *
+   * `DOUBLE PRECISION`, not `NUMERIC`. The Neon driver returns numeric as a
+   * *string*, and these rows are cast `as PhotoRow` with no runtime parsing —
+   * so a numeric column would put `"47.3769"` behind a field typed `number`,
+   * typecheck cleanly, and break every projection silently.
+   *
+   * No `CHECK` constraint: Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so
+   * one here would fail the idempotency test above and error on the second
+   * deploy. Range validation lives in the server action, where a bad value
+   * can be turned into a sentence a person reads.
+   *
+   * No index yet. At fourteen rows and at three hundred the globe query is a
+   * sequential scan over a table the feed already scans; `docs/next-version.md`
+   * records `photos_globe_idx` beside the existing 300-photograph trigger.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_lat DOUBLE PRECISION;",
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_lng DOUBLE PRECISION;",
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS coarse_lat DOUBLE PRECISION;",
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS coarse_lng DOUBLE PRECISION;",
 ];

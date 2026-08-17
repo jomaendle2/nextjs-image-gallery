@@ -3,6 +3,20 @@ import type { PhotoExif } from "@/lib/photos/derive";
 import { toGalleryImage } from "@/lib/photos/map";
 import { listPublishedPhotos } from "@/lib/photos/repository";
 
+/**
+ * The public half of a photographer's pin, if they marked one.
+ *
+ * The centre of a cell about 100 km across — `coarsen.ts` explains why the
+ * cells are equal-ground-width rather than rounded degrees. Roughly forty
+ * bytes per photograph against a measured 5.4 KB, which is what makes it
+ * affordable in the payload of every gallery page rather than behind a
+ * request of its own.
+ */
+export interface GalleryPin {
+  lat: number;
+  lng: number;
+}
+
 export interface GalleryAuthor {
   slug: string;
   name: string;
@@ -25,6 +39,8 @@ export interface GalleryImage {
   bgColor: string;
   location: string | null;
   exif: PhotoExif | null;
+  /** Where the photographer marked, blurred to a ~100 km cell. */
+  pin: GalleryPin | null;
   /** ISO timestamp of publication. What the feed orders and dates by. */
   publishedAt: string;
   author: GalleryAuthor;

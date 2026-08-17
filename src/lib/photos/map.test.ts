@@ -12,6 +12,9 @@ const row: PhotoRow = {
   title: "Bali, Indonesia",
   description: "Aerial view of tale waves",
   location: "Nusa Penida",
+  // What `coarsen(-8.7277, 115.5444)` returns: the cell, not the island.
+  coarse_lat: -8.7028,
+  coarse_lng: 115.1637,
   published_at: "2026-04-11T08:32:10.000Z",
   exif: { camera: "SONY ILCE-7M4", iso: 100 },
   author_slug: "anna-weber",
@@ -47,6 +50,30 @@ describe("toGalleryImage", () => {
     const image = toGalleryImage(row);
     expect(image.bgColor).toBe("#2a6b7c");
     expect(Object.keys(image)).not.toContain("bg_color");
+  });
+
+  /*
+   * The pin is folded into one object here rather than left as two nullable
+   * numbers, so no component can render half a coordinate. The exact pair is
+   * not on `PhotoRow` at all, which is the gate — there is nothing for this
+   * function to leak even if somebody rewrote it carelessly.
+   */
+  it("folds the coarse pair into a single pin", () => {
+    expect(toGalleryImage(row).pin).toEqual({ lat: -8.7028, lng: 115.1637 });
+  });
+
+  it("has no pin at all when the photographer marked nothing", () => {
+    const unmarked = toGalleryImage({
+      ...row,
+      coarse_lat: null,
+      coarse_lng: null,
+    });
+    expect(unmarked.pin).toBeNull();
+  });
+
+  it("refuses half a pin rather than passing a bare number through", () => {
+    expect(toGalleryImage({ ...row, coarse_lng: null }).pin).toBeNull();
+    expect(toGalleryImage({ ...row, coarse_lat: null }).pin).toBeNull();
   });
 
   it("passes a missing site link through as null rather than dropping it", () => {

@@ -21,6 +21,20 @@ export function toGalleryImage(row: PhotoRow): GalleryImage {
     bgColor: row.bg_color,
     location: row.location,
     exif: row.exif,
+    /*
+     * The coarse pair only, folded into one object so a component can ask
+     * "is there a pin?" rather than checking that two numbers agree about
+     * existing.
+     *
+     * The exact pair is not in `PhotoRow` at all, so there is nothing here
+     * to pass through by accident — the gate is the shape of the type rather
+     * than a rule about this function. A test asserts this file names no
+     * exact column, which is the version of that a rename cannot break.
+     */
+    pin:
+      row.coarse_lat === null || row.coarse_lng === null
+        ? null
+        : { lat: row.coarse_lat, lng: row.coarse_lng },
     publishedAt: row.published_at,
     author: {
       slug: row.author_slug,

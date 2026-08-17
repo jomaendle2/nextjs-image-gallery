@@ -16,6 +16,7 @@ function photo(
     publishedAt: "2026-04-11T08:32:10.000Z",
     location,
     exif: null,
+    pin: null,
     author: { slug: "a", name: "A", siteUrl: null },
   };
 }

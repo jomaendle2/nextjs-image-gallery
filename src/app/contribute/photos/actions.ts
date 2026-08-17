@@ -86,6 +86,8 @@ export async function savePhoto(
        */
       is_specimen: isSpecimen && (preciseLocation !== "" || technique !== ""),
       bg_color: bgColor,
+      // No control writes one yet; the picker and its parsing arrive next.
+      pin: null,
     },
     actor,
     publish,

@@ -24,6 +24,7 @@ function photo(overrides: Partial<GalleryImage> = {}): GalleryImage {
     location: "Reine, Lofoten, Norway",
     publishedAt: "2026-04-11T08:32:10.000Z",
     exif: null,
+    pin: null,
     author: {
       slug: "mara-lindqvist",
       name: "Mara Lindqvist",

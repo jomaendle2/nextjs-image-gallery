@@ -2,23 +2,58 @@ import { nanoid } from "nanoid";
 import type { Contributor } from "@/lib/auth/types";
 import { isOwner } from "@/lib/auth/types";
 import { sql } from "@/lib/database";
+import { coarsen } from "./coarsen";
 import { exifParam } from "./derive";
 import type {
   DraftPhotoInput,
+  GlobePointRow,
   OwnPhotoRow,
   PhotoRow,
+  Pin,
   PublishInput,
 } from "./types";
 
 /** Length chosen so ids stay short in URLs while collisions stay negligible. */
 const ID_LENGTH = 12;
 
+/*
+ * What a public page's payload may carry.
+ *
+ * `coarse_lat`/`coarse_lng` are here and the exact pair is not, for the same
+ * reason `precise_location` is not: this list *is* the member gate. A column
+ * absent from it cannot leak by being rendered conditionally, because it was
+ * never sent. `security.test.ts` asserts both halves of that sentence.
+ */
 const FEED_COLUMNS = `
   p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
+  p.coarse_lat, p.coarse_lng,
   c.slug AS author_slug, c.display_name AS author_name,
   c.site_url AS author_site_url
+`;
+
+/*
+ * What a photographer sees of their own work, and what the owner sees of
+ * everybody's.
+ *
+ * The two queries below were byte-identical select lists maintained by hand,
+ * which is precisely the arrangement in which one of them grows a column and
+ * the other does not. Adding four at once was the moment to stop, following
+ * the `FEED_COLUMNS` precedent that already existed two lines up.
+ *
+ * Unlike `FEED_COLUMNS` this one selects everything, exact pin included.
+ * That is not a gap in the gate: both callers are behind a session, and one
+ * of them is the person who marked the point.
+ */
+const OWN_COLUMNS = `
+  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.width, p.height, p.blur_data_url, p.bg_color,
+  p.title, p.description, p.location, p.exif, p.published_at,
+  p.is_opener, p.precise_location, p.technique, p.is_specimen,
+  p.precise_lat, p.precise_lng, p.coarse_lat, p.coarse_lng,
+  p.author_id,
+  c.display_name AS author_name, c.slug AS author_slug
 `;
 
 /*
@@ -71,65 +106,95 @@ export async function countUnannouncedPhotos(): Promise<number> {
 export async function listOwnPhotos(
   contributorId: string,
 ): Promise<OwnPhotoRow[]> {
-  const rows = await sql`
-    SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
-           p.width, p.height, p.blur_data_url, p.bg_color,
-           p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.precise_location, p.technique, p.is_specimen,
-           p.author_id,
-           c.display_name AS author_name, c.slug AS author_slug
-    FROM photos p
-    JOIN contributors c ON c.id = p.author_id
-    WHERE p.author_id = ${contributorId}
-    ORDER BY p.created_at DESC;
-  `;
+  const rows = await sql.query(
+    `SELECT ${OWN_COLUMNS}
+     FROM photos p
+     JOIN contributors c ON c.id = p.author_id
+     WHERE p.author_id = $1
+     ORDER BY p.created_at DESC`,
+    [contributorId],
+  );
   return rows as OwnPhotoRow[];
 }
 
 /** Every photo on the site, for the owner's moderation view. */
 export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
-  const rows = await sql`
-    SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
-           p.width, p.height, p.blur_data_url, p.bg_color,
-           p.title, p.description, p.location, p.exif, p.published_at,
-           p.is_opener, p.precise_location, p.technique, p.is_specimen,
-           p.author_id,
-           c.display_name AS author_name, c.slug AS author_slug
-    FROM photos p
-    JOIN contributors c ON c.id = p.author_id
-    ORDER BY p.created_at DESC;
-  `;
+  const rows = await sql.query(
+    `SELECT ${OWN_COLUMNS}
+     FROM photos p
+     JOIN contributors c ON c.id = p.author_id
+     ORDER BY p.created_at DESC`,
+  );
   return rows as OwnPhotoRow[];
 }
 
 /**
- * The two fields a membership pays for.
+ * What a membership pays for: two sentences and a point.
  *
- * Deliberately absent from `FEED_COLUMNS`, so they are not in the payload of
- * any page and cannot leak by being rendered conditionally. The only caller
- * is the route that checks for an active membership first.
+ * All three are deliberately absent from `FEED_COLUMNS`, so they are not in
+ * the payload of any page and cannot leak by being rendered conditionally.
+ * The only caller is the route that checks for an active membership first.
+ *
+ * The pin is the newest of them and the most dangerous. Prose is vague and
+ * deniable; an exact coordinate is machine-actionable and republishable in
+ * bulk, which is why the route that reads this is rate limited and why the
+ * public globe is fed from a separate, coarsened column instead.
  *
  * Returns nulls rather than nothing for a photograph whose photographer has
- * filled in neither: a member is entitled to know there is nothing to know,
- * which is different from being told they cannot see it.
+ * filled in none of them: a member is entitled to know there is nothing to
+ * know, which is different from being told they cannot see it.
  */
 export async function getMemberDetails(id: string): Promise<{
   precise_location: string | null;
   technique: string | null;
+  pin: Pin | null;
 } | null> {
   const rows = await sql`
-    SELECT p.precise_location, p.technique
+    SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
     FROM photos p JOIN contributors c ON c.id = p.author_id
     WHERE p.id = ${id} AND p.published_at IS NOT NULL
       AND c.revoked_at IS NULL;
   `;
   const [row] = rows;
-  return row === undefined
-    ? null
-    : {
-        precise_location: (row["precise_location"] as string | null) ?? null,
-        technique: (row["technique"] as string | null) ?? null,
-      };
+  if (row === undefined) {
+    return null;
+  }
+  /*
+   * Both or neither. A photographer who chose the public dot only has a
+   * coarse pair and no exact one, and half a coordinate is not a location —
+   * so the shape handed to the route is a pin or nothing, rather than two
+   * numbers a caller has to remember to check together.
+   */
+  const lat = row["precise_lat"] as number | null;
+  const lng = row["precise_lng"] as number | null;
+  return {
+    precise_location: (row["precise_location"] as string | null) ?? null,
+    technique: (row["technique"] as string | null) ?? null,
+    pin: lat === null || lng === null ? null : { lat, lng },
+  };
+}
+
+/**
+ * Every published cell with something in it, for `/globe`.
+ *
+ * Deliberately not `FEED_COLUMNS`, which would drag a base64 blur
+ * placeholder per photograph into a page that draws dots. Five small fields,
+ * and the grouping happens in `globe.ts` on the way out.
+ *
+ * `location` is the photographer's own public string, which is what labels a
+ * cell. No reverse geocoding: it would need a sixth processor and would be
+ * worse than the words the person who was there chose.
+ */
+export async function listGlobePoints(): Promise<GlobePointRow[]> {
+  const rows = await sql`
+    SELECT p.id, p.title, p.location, p.coarse_lat, p.coarse_lng,
+           c.slug AS author_slug
+    FROM photos p JOIN contributors c ON c.id = p.author_id
+    WHERE p.published_at IS NOT NULL AND c.revoked_at IS NULL
+      AND p.coarse_lat IS NOT NULL AND p.coarse_lng IS NOT NULL
+    ORDER BY p.published_at DESC;
+  `;
+  return rows as GlobePointRow[];
 }
 
 /**
@@ -321,6 +386,28 @@ export async function publishPhoto(
    * The page shows one example for the site, so scoping the uniqueness to a
    * contributor would let two of them both believe theirs was the one.
    */
+  /*
+   * The only place `coarsen` is called, which is what makes the two stored
+   * precisions impossible to disagree. A caller submits one point; this
+   * derives the public one from it. `security.test.ts` pins the "only place"
+   * part, because a second caller is how the exact point and the dot on the
+   * globe would drift apart without anybody noticing.
+   *
+   * Clearing the pin writes four NULLs rather than leaving the old dot
+   * behind — a photographer removing a location must actually remove it.
+   *
+   * `publicOnly` writes the coarse pair and leaves the exact pair null: the
+   * globe gains a dot and there is nothing behind the paywall at all. That
+   * is the option for somebody whose subject is a nest or a rare plant, and
+   * it costs one branch rather than a column.
+   */
+  const coarse =
+    input.pin === null
+      ? null
+      : coarsen(input.pin.point.lat, input.pin.point.lng);
+  const exact =
+    input.pin === null || input.pin.publicOnly ? null : input.pin.point;
+
   const rows = await sql`
     WITH updated AS (
       UPDATE photos p SET title = ${input.title},
@@ -330,6 +417,10 @@ export async function publishPhoto(
              technique = ${input.technique},
              is_specimen = ${input.is_specimen},
              bg_color = ${input.bg_color},
+             precise_lat = ${exact?.lat ?? null},
+             precise_lng = ${exact?.lng ?? null},
+             coarse_lat = ${coarse?.lat ?? null},
+             coarse_lng = ${coarse?.lng ?? null},
              published_at = CASE WHEN ${publish}
                                  THEN COALESCE(p.published_at, now())
                                  ELSE p.published_at END

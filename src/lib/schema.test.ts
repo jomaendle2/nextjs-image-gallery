@@ -108,6 +108,38 @@ describe("MIGRATIONS", () => {
     );
   });
 
+  /*
+   * `NUMERIC` would typecheck and be wrong.
+   *
+   * The Neon HTTP driver returns numeric columns as *strings*, and these rows
+   * are cast `as PhotoRow` with no runtime parsing — so a numeric column
+   * would put `"47.3769"` behind a field declared `number`, pass `tsc`, and
+   * project a dot at `NaN` on the globe with nothing anywhere reporting an
+   * error. Double precision is returned as a number.
+   */
+  it("stores coordinates as double precision, never numeric", () => {
+    const coordinates = MIGRATIONS.filter((statement) =>
+      /(precise|coarse)_(lat|lng)/.test(statement),
+    );
+    expect(coordinates).toHaveLength(4);
+    for (const statement of coordinates) {
+      expect(statement).toContain("DOUBLE PRECISION");
+      expect(statement.toUpperCase()).not.toContain("NUMERIC");
+    }
+  });
+
+  /*
+   * Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so a range check here
+   * would pass the first deploy and fail every one after it. Latitude and
+   * longitude are validated in the server action instead, where being out of
+   * range can become a sentence somebody reads.
+   */
+  it("adds no constraint that cannot be re-run", () => {
+    for (const statement of MIGRATIONS) {
+      expect(statement.toUpperCase()).not.toContain("ADD CONSTRAINT");
+    }
+  });
+
   it("declares contributors before photos, which references it", () => {
     const contributors = MIGRATIONS.findIndex((s) =>
       s.includes("CREATE TABLE IF NOT EXISTS contributors"),

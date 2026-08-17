@@ -90,13 +90,76 @@ describe("I6 — paid content is never in a cacheable payload", () => {
    * conditionally — deleting the component that displays them would expose
    * nothing.
    */
+  const feedColumns = repository.slice(
+    repository.indexOf("const FEED_COLUMNS"),
+    repository.indexOf("const OWN_COLUMNS"),
+  );
+
   it("the feed columns do not select what a membership pays for", () => {
-    const feedColumns = repository.slice(
-      repository.indexOf("const FEED_COLUMNS"),
-      repository.indexOf("const FEED_ORDER"),
-    );
     expect(feedColumns).not.toContain("precise_location");
     expect(feedColumns).not.toContain("technique");
+  });
+
+  /*
+   * The same rule, for the pin.
+   *
+   * A pin is stored at two precisions precisely so that a public globe and a
+   * member-only coordinate can both exist: the coarse pair is the centre of
+   * a ~100 km cell and belongs in every page's payload, the exact pair is
+   * the thing somebody paid for. Deriving one from the other at read time
+   * would put `precise_lat` in this list, which is the one place it must
+   * never be — so `coarsen()` runs at write time instead.
+   */
+  it("the feed columns carry the coarse point and never the exact one", () => {
+    expect(feedColumns).toContain("coarse_lat");
+    expect(feedColumns).toContain("coarse_lng");
+    expect(feedColumns).not.toContain("precise_lat");
+    expect(feedColumns).not.toContain("precise_lng");
+  });
+
+  /*
+   * The mapper is the other end of the same pipe. `PhotoRow` has no exact
+   * columns to read, but a future edit could widen the row type and this
+   * function is where that would first become visible in a payload.
+   */
+  it("the row-to-payload mapper names no exact coordinate", () => {
+    expect(read("lib", "photos", "map.ts")).not.toContain("precise_");
+  });
+
+  /*
+   * `is_specimen` consent was given against a checkbox that says "the two
+   * fields above" and names them. Extending it to a ten-metre coordinate
+   * would be the quiet widening the comments in that file exist to prevent,
+   * so the specimen query is pinned to what it asks for today.
+   */
+  it("the public specimen does not quietly acquire a coordinate", () => {
+    const specimen = repository.slice(
+      repository.indexOf("export async function getSpecimenPhoto"),
+      repository.indexOf("export async function listUnannouncedPhotos"),
+    );
+    expect(specimen.length).toBeGreaterThan(0);
+    expect(specimen).not.toContain("precise_lat");
+    expect(specimen).not.toContain("precise_lng");
+    expect(specimen).not.toContain("coarse_lat");
+  });
+
+  /*
+   * The globe's own query, which must not become the feed's.
+   *
+   * It exists as a separate statement rather than a reuse of `FEED_COLUMNS`
+   * so that a page drawing dots never serialises a base64 blur placeholder
+   * per photograph — and, more importantly here, so that widening the feed
+   * later cannot widen the globe by accident.
+   */
+  it("the globe query reads the coarse point and nothing paid for", () => {
+    const globe = repository.slice(
+      repository.indexOf("export async function listGlobePoints"),
+      repository.indexOf("export async function getSpecimenPhoto"),
+    );
+    expect(globe.length).toBeGreaterThan(0);
+    expect(globe).toContain("coarse_lat");
+    expect(globe).not.toContain("precise_");
+    expect(globe).not.toContain("blur_data_url");
   });
 
   /*
@@ -147,9 +210,22 @@ describe("I6 — paid content is never in a cacheable payload", () => {
       join("/lib", "photos", "types.ts"),
       join("/lib", "schema.ts"),
     ];
+    /*
+     * Widened from `/precise_location|technique/` when a pin became a paid
+     * field too. The `precise_` prefix is what lets one regex cover the new
+     * columns rather than needing a second mechanism beside this one — and
+     * `coarse_` deliberately cannot match it, because a coarsened point is
+     * public and belongs in any file that wants it.
+     *
+     * An exact coordinate deserves more protection than the prose, not less.
+     * Prose is vague and deniable; a coordinate is machine-actionable,
+     * republishable in bulk, and names a private place precisely.
+     */
     const found = allSourceFiles()
       .filter((file) =>
-        /precise_location|technique/.test(readFileSync(file, "utf8")),
+        /precise_(?:location|lat|lng)\b|\btechnique\b/.test(
+          readFileSync(file, "utf8"),
+        ),
       )
       .map((f) => f.replace(SRC, ""))
       .sort((a, b) => a.localeCompare(b));

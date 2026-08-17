@@ -15,6 +15,7 @@ function photo(overrides: Partial<GalleryImage> = {}): GalleryImage {
     location: "Reine",
     publishedAt: "2026-04-11T08:32:10.000Z",
     exif: null,
+    pin: null,
     author: { slug: "mara", name: "Mara Lindqvist", siteUrl: null },
     ...overrides,
   };
