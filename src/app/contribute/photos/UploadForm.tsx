@@ -298,7 +298,8 @@ export function UploadForm() {
         MB each. Upload the full-size originals — they are stored exactly as you
         sent them. Camera and exposure details are read from the file; the GPS
         block is never read, and the copy the gallery publishes carries no
-        metadata at all.
+        metadata at all. Where a photograph was taken is only ever something you
+        add afterwards, on the photograph itself.
       </p>
 
       <input

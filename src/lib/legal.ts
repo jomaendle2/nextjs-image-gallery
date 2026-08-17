@@ -5,26 +5,44 @@
  * in the Impressum, the privacy policy and the terms, and three copies of a
  * postal address is three chances to update two of them.
  *
- * `OPERATOR.street` and friends are deliberately empty. An Impressum with a
- * plausible-looking invented address is worse than none at all — it is a
- * false statement of identity on a legal notice — so the pages render a
- * visible, unmissable gap until these are filled in, and `legalIsComplete()`
- * says whether they have been.
+ * An Impressum with a plausible-looking invented address is worse than none
+ * at all — it is a false statement of identity on a legal notice — so the
+ * pages render a visible, unmissable gap until the address is filled in, and
+ * `legalIsComplete()` says whether it has been. The address below is the one
+ * on the operator's existing Impressum at jomaendle.com/impressum, so the two
+ * notices name the same person at the same place.
  *
  * German law (§5 DDG, formerly §5 TMG) requires the operator's name, a
  * postal address that accepts service — a PO box does not — an email
  * address, and a VAT identification number where one has been issued.
  */
 
-export const OPERATOR = {
+/**
+ * Widened to `string` rather than left to `as const`. With literal types the
+ * emptiness checks in `legalIsComplete()` and the Impressum become comparisons
+ * the compiler can prove, so filling the address in turned three guards into
+ * TS2367 errors. The guards have to survive the address being edited back out,
+ * which is exactly when they matter.
+ */
+interface Operator {
+  readonly name: string;
+  readonly street: string;
+  readonly city: string;
+  readonly country: string;
+  readonly email: string;
+  readonly vatId: string;
+  readonly kleinunternehmer: boolean;
+}
+
+export const OPERATOR: Operator = {
   /** Full legal name of the person or company operating the site. */
   name: "Jo Mändle",
 
   /** Street and number. A postal box is not sufficient under §5 DDG. */
-  street: "",
+  street: "Im Hirschmorgen 12",
 
   /** Postal code and town, e.g. "70173 Stuttgart". */
-  city: "",
+  city: "69181 Leimen",
 
   country: "Germany",
 
@@ -46,7 +64,7 @@ export const OPERATOR = {
    * with it.
    */
   kleinunternehmer: true,
-} as const;
+};
 
 /**
  * The three notices, in the order they are usually looked for.
@@ -104,6 +122,26 @@ export const PROCESSORS = [
     role: "Email delivery",
     data: "Email address and the contents of messages sent to it",
     basis: "Consent for the list (Art. 6(1)(a)); contract for sign-in links",
+  },
+  /*
+   * The only processor a *visitor* never reaches.
+   *
+   * MapTiler serves the tiles behind the location picker, which lives on one
+   * page behind a session. Nothing on a public page contacts it — invariant
+   * I14 asserts that exactly one file in the codebase mentions the map
+   * library at all, and that nothing under `src/components/gallery` does — so
+   * this entry triggers no consent banner and sets no cookie. The site still
+   * sets exactly one cookie, and it is still the session.
+   *
+   * Swiss rather than American, which is a shorter processor story for a
+   * German operator than a US provider with the usual transfer paperwork.
+   */
+  {
+    name: "MapTiler AG",
+    role: "Map tiles, on the photographer upload page only",
+    data: "IP address, when a signed-in photographer opens the map",
+    basis:
+      "Contract with contributors and legitimate interest (Art. 6(1)(b) and (f) GDPR)",
   },
   {
     name: "Plausible Analytics",

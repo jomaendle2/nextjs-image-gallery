@@ -93,9 +93,10 @@ export function WhatYouGet() {
           icon={<MapPin size={15} />}
           tone="accent"
         >
-          Not a region — the spot, written by the photographer. Nothing is read
-          from the image file: this gallery never records coordinates, and a
-          membership does not change that.
+          Not a region — the spot, in the photographer's own words, and the
+          point on the map if they marked one. Nothing is ever read from the
+          image file: everything here is something a photographer decided to put
+          there.
         </Row>
         <Row
           heading="How it was made"

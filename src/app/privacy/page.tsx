@@ -16,9 +16,23 @@ export const metadata: Metadata = {
  * from a template.
  *
  * Every claim here is checkable against a file, and several are unusual
- * enough to be worth stating plainly: no coordinates are ever read from a
- * photograph, and no record is kept of which member looked at what. A policy
- * that describes a generic website would be both less useful and less true.
+ * enough to be worth stating plainly: nothing is ever read out of a
+ * photograph's GPS block, and no record is kept of which member looked at
+ * what. A policy that describes a generic website would be both less useful
+ * and less true.
+ *
+ * The location paragraph was rewritten when photographers gained a map. The
+ * surviving promise is "never read from the file", which is the one people
+ * rely on for their own safety; "never records a coordinate" was the
+ * stronger claim, and it stopped being true the moment somebody could mark a
+ * spot on purpose. Saying so plainly, including that the blunt version is
+ * public, is the whole job of this page — a policy that quietly kept the old
+ * sentence would be the worst outcome available.
+ *
+ * Note what is *not* claimed: that a public page contacts nobody but our own
+ * host. Analytics loads from plausible.io on every page, so that sentence
+ * would be false. What is true, and is said, is that the map is not among
+ * them.
  */
 export default function PrivacyPage() {
   return (
@@ -33,7 +47,9 @@ export default function PrivacyPage() {
           no cookie banner because there is nothing to consent to: no
           advertising, no tracking across sites, no profile of you. The only
           cookie is the one that keeps you signed in, and it is only set once
-          you sign in.
+          you sign in. The map a photographer can use to mark where they stood
+          loads on their own upload page and nowhere else — no page you can
+          reach as a visitor ever contacts it.
         </p>
       </Section>
 
@@ -76,13 +92,17 @@ export default function PrivacyPage() {
             <strong className="font-medium text-white/85">
               Where a photograph was taken
             </strong>
-            , unless the photographer wrote it themselves. The GPS block in an
+            , unless the photographer marked it themselves. The GPS block in an
             image file is never read and never stored — the camera and exposure
             are taken from the file, the coordinates are skipped. The image the
             gallery serves is a fresh copy that carries no metadata at all, so
-            downloading it tells you nothing about where anybody stood. When a
-            member sees a location, it is a sentence a photographer chose to
-            type, not a coordinate extracted from a file.
+            downloading it tells you nothing about where anybody stood. A
+            photographer may choose to mark a spot on a map. When they do, we
+            store two things: the point they marked, which only members see, and
+            a deliberately blunt version of it — the centre of a square roughly
+            a hundred kilometres across — which is what the globe draws. Both
+            exist because a photographer decided they should, never because
+            something was extracted from a file.
           </li>
           <li>
             <strong className="font-medium text-white/85">

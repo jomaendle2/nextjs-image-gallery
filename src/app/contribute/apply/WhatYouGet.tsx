@@ -36,14 +36,19 @@ const OFFERS: readonly Offer[] = [
    * directly below it contradicted: the original is kept exactly as sent,
    * and stripping it would mean altering the file we promise not to touch.
    * Both cannot be true, and the one people rely on for their own safety is
-   * the one that had to become precise. What is actually guaranteed: the
-   * coordinates are never read into the database, and the copy the gallery
-   * publishes carries no metadata at all.
+   * the one that had to become precise.
+   *
+   * Rewritten again when the map picker arrived. The old sentence promised
+   * "no coordinate ever reaches our database", which a photographer marking
+   * a spot makes false — so it now promises the thing that is still true and
+   * is the thing people actually rely on: nothing is taken from the file.
+   * Anything stored is something they chose to put there, and they can take
+   * it back out.
    */
   {
-    title: "Your location stays private",
+    title: "Nothing is taken from your file",
     detail:
-      "The GPS block in your file is never read, so no coordinate ever reaches our database or the page. What the gallery publishes is a fresh copy carrying no metadata at all — downloading it tells nobody where you were. Camera and exposure are kept, because those are about the photograph rather than about you.",
+      "The GPS block in your file is never read, so where you were is never taken from it. What the gallery publishes is a fresh copy carrying no metadata at all — downloading it tells nobody anything. If you want to say where you stood you can write it down or mark it on a map, and you can clear it again; camera and exposure are kept, because those are about the photograph rather than about you.",
   },
   {
     title: "You keep control",

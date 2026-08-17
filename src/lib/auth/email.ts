@@ -183,7 +183,7 @@ export async function sendInvitation(
       "",
       "Upload the full-size originals. The gallery reads the camera and",
       "exposure from the file and never opens the GPS block, so where you",
-      "stood stays yours unless you choose to write it down.",
+      "stood stays yours unless you choose to write it down or mark it.",
       "",
       "If you were not expecting this, ignore it — nothing happens until you",
       "sign in.",
@@ -197,7 +197,7 @@ export async function sendInvitation(
          Sign in with this address — there is no password and nothing to
          accept. Upload the full-size originals: the gallery reads the camera
          and exposure from the file and never opens the GPS block, so where
-         you stood stays yours unless you choose to write it down.
+         you stood stays yours unless you choose to write it down or mark it.
        </p>
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
          If you were not expecting this, ignore it — nothing happens until you
