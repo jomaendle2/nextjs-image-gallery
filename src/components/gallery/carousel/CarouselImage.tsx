@@ -124,8 +124,14 @@ export function CarouselImage({
            * Erring one candidate high is deliberate: `sizes` is a promise, and
            * an image that is 8% short of its box is visibly soft where an
            * image 15% over it is only a few kilobytes.
+           *
+           * The first clause tracks the slot's own breakpoint: below `sm` it
+           * keeps only `px-2`, so the picture is worth almost the whole
+           * viewport width and saying `100vw - 3rem` there would under-declare
+           * it by two rems on the narrowest screens — exactly where a soft
+           * photograph is most obvious.
            */
-          sizes="(max-width: 768px) calc(100vw - 3rem), (max-width: 1200px) 85vw, 70vw"
+          sizes="(max-width: 640px) calc(100vw - 1rem), (max-width: 768px) calc(100vw - 3rem), (max-width: 1200px) 85vw, 70vw"
           src={src}
         />
       </button>

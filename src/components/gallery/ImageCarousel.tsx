@@ -250,7 +250,24 @@ export function ImageCarousel({
           >
             {images.map((image, index) => (
               <div
-                className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-6"
+                /*
+                 * `px-2` on a phone, `px-6` from `sm` up.
+                 *
+                 * On a portrait phone the photograph is bounded by the slot's
+                 * width, not the stage's height — so every pixel of horizontal
+                 * padding comes straight off the picture in both dimensions.
+                 * At 390 the old 48px cost the image 12% of its width and the
+                 * same of its height, on the device most of this traffic
+                 * arrives on and on a site whose promise to photographers is
+                 * about how their work looks.
+                 *
+                 * Not zero: the frame's rounded corners and hairline ring are
+                 * what make it read as a photograph rather than a background,
+                 * and they need somewhere to sit. Above `sm` the image is
+                 * height-bounded and the padding costs nothing, so it keeps
+                 * its original margin.
+                 */
+                className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center px-2 sm:px-6"
                 key={image.id}
               >
                 {index >= start && index <= end ? (
