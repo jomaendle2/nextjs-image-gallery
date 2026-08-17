@@ -5,6 +5,14 @@ interface CarouselImageProps {
   src: StaticImageData;
   alt: string;
   priority?: boolean;
+  /**
+   * Whether this slot's button is in the tab order. Only the photograph
+   * currently on screen should be; the buffered neighbours either side are
+   * off-screen, and tabbing to one of them scrolls it into view and changes
+   * which photograph the page is showing. See the call site in
+   * `ImageCarousel`.
+   */
+  focusable?: boolean;
   onClick?: () => void;
   ref?: Ref<HTMLImageElement>;
 }
@@ -44,11 +52,29 @@ export function CarouselImage({
   src,
   alt,
   priority = false,
+  focusable = true,
   onClick,
   ref,
 }: CarouselImageProps) {
   return (
-    <div className="relative w-full h-full flex items-center justify-center pt-6 pb-12">
+    /*
+      The padding is what the photograph is measured against, so on a short
+      viewport it has to be measured in the same currency.
+
+      `pt-6 pb-12` is 72px, unconditionally. That is a comfortable margin under
+      a photograph on a desktop and it was the entire stage on a phone in
+      landscape, where the row this sits in had collapsed to 27px: the padding
+      alone asked for more height than the box had, so `max-h-full` left the
+      photograph nothing, it rendered at 0×0 and there was nothing to look at.
+      The floor in `ImageCarousel` is the real fix for
+      that, but 72px is still a third of the stage at 390px tall, and it buys
+      air that a landscape phone does not have to spend.
+
+      A height query rather than a width breakpoint: `sm:` is about width, and
+      the viewport this is wrong on is 844px wide. Short is the property that
+      matters, and short is the property being asked about.
+    */
+    <div className="relative w-full h-full flex items-center justify-center pt-6 pb-12 [@media(max-height:640px)]:pt-2 [@media(max-height:640px)]:pb-4">
       {/*
         A real button rather than a click handler on the <img>: it is
         keyboard reachable, exposed to assistive tech, and announces what
@@ -58,6 +84,7 @@ export function CarouselImage({
         aria-label={`View ${alt} full screen`}
         className="group relative max-w-full h-full flex items-center justify-center max-h-full cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-[6px] focus-visible:outline-white/80"
         onClick={onClick}
+        tabIndex={focusable ? undefined : -1}
         type="button"
       >
         <Image
@@ -81,7 +108,24 @@ export function CarouselImage({
           placeholder="blur"
           priority={priority}
           ref={ref}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 80vw"
+          /*
+           * What the slot is actually worth, not what the viewport is.
+           *
+           * `100vw / 90vw / 80vw` described a photograph that fills the window.
+           * This one never does: the slot has `px-6` around it, and above the
+           * phone sizes the image is bounded by the stage's height rather than
+           * its width, so it comes in well under the declared share. Measured
+           * at 1440×900 the image renders 922px wide while `80vw` claimed
+           * 1152 and pulled `w=1200` out of the srcset — a size the browser
+           * then scales down. Deducting the padding and asking for a share the
+           * picture can actually occupy lands on `w=1080`, which is the next
+           * candidate up from what is drawn.
+           *
+           * Erring one candidate high is deliberate: `sizes` is a promise, and
+           * an image that is 8% short of its box is visibly soft where an
+           * image 15% over it is only a few kilobytes.
+           */
+          sizes="(max-width: 768px) calc(100vw - 3rem), (max-width: 1200px) 85vw, 70vw"
           src={src}
         />
       </button>

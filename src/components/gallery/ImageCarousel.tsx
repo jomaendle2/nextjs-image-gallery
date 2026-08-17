@@ -175,7 +175,33 @@ export function ImageCarousel({
           </div>
         )}
 
-        <div className="relative z-10 flex-1 overflow-hidden">
+        {/*
+          `min-h-[45%]` is the floor, and it is the whole landscape fix.
+
+          This was `flex-1 overflow-hidden` and nothing else. `flex-1` means
+          `flex: 1 1 0%` — the stage asks for no height of its own and lives
+          entirely on what the column has left over. The title, the credit row
+          and the dock below it are all unshrinkable, so on anything short they
+          take the height first and the stage gets the remainder, which on a
+          phone in landscape is a rounding error: measured 27px at 844×390,
+          17px at 667×375 and 2px at 740×360. `CarouselImage`'s own vertical
+          padding is larger than that on its own, so `max-h-full` resolved to
+          zero and the photograph rendered at 0×0. There was no photograph on
+          the photography site, on every phone held sideways.
+
+          A floor rather than a fixed height: on a tall phone and on a desktop
+          the stage already takes 60-75% of the layer and `flex-1` keeps giving
+          it every spare pixel, so nothing about those viewports changes. The
+          floor only binds where the chrome would otherwise have eaten it all.
+
+          A percentage, not `vh` or `dvh`: this column is a `fixed inset-0`
+          layer, so its own height already is the viewport the reader can see,
+          whichever way that viewport is being measured this frame. 45% of the
+          parent is therefore exactly 45% of the visible layer, and needs no
+          opinion about iOS's large-versus-small viewport — the distinction
+          `GlobeOverlay` has to reason about because it sits in normal flow.
+        */}
+        <div className="relative z-10 min-h-[45%] flex-1 overflow-hidden">
           {/* Main carousel container with scroll snap */}
           <section
             aria-label="Image gallery"
@@ -194,6 +220,30 @@ export function ImageCarousel({
                 {index >= start && index <= end ? (
                   <CarouselImage
                     alt={photoAltText(image)}
+                    /*
+                      Exactly one image button is in the tab order: the one
+                      being looked at.
+
+                      Every buffered slot rendered a focusable button, and the
+                      buffer follows the index, so Tab moved focus to the next
+                      photograph's off-screen button. The browser scrolled it
+                      into view to show the focused control, the scroll handler
+                      read the new position and committed a new index — so
+                      pressing Tab changed the photograph, the caption and the
+                      backdrop (WCAG 3.2.1, On Focus). Repeat and the visitor
+                      walked all N photographs before reaching Previous, Next,
+                      the dock, the photographer's name, Share or Details, and
+                      arrived at that chrome standing on the last picture
+                      rather than the one they started on (WCAG 2.4.3).
+
+                      `tabIndex={-1}` rather than `inert` on the slot: inert
+                      would also remove the neighbours from the accessibility
+                      tree, and it takes them out of hit testing, which is a
+                      larger claim to make about the surface the reader swipes.
+                      Keyboard navigation is not lost either way — the arrow
+                      keys and the dock both page the carousel.
+                    */
+                    focusable={index === currentIndex}
                     onClick={handleImageClick}
                     priority={index === currentIndex}
                     src={image.src}
@@ -215,11 +265,46 @@ export function ImageCarousel({
           />
         </div>
 
-        <CaptionBar
-          currentIndex={currentIndex}
-          image={currentImage}
-          images={images}
-          /*
+        {/*
+        The chrome yields, and when there is genuinely not enough room for it
+        it scrolls rather than disappearing.
+
+        The floor above has to come out of something. On a phone in landscape
+        the caption bar is its tall stacked form — caption, credit, dock, one
+        under the other, 243px measured at 844×390 — and the column is 390px
+        tall in total, so the two cannot both have what they ask for. This
+        wrapper is what lets the bar lose the argument: `min-h-0` undoes the
+        `min-height: auto` that stops a flex child shrinking below its content,
+        and the bar's own `flex-shrink-0` no longer applies because the wrapper
+        is the flex item now.
+
+        `overflow-y-auto` rather than `overflow-hidden` is the part that
+        matters. Clipping would leave the dock and the photographer's name
+        cut off the bottom of a fixed layer that has no scrollbar of its own —
+        present in the DOM, reachable by Tab, and invisible. Scrolling keeps
+        every control reachable at the cost of a small gesture, and above the
+        short viewports it never engages: when the bar fits, nothing here
+        changes at all.
+
+        No `justify-end` in that column, tempting as it is to pin the dock to
+        the bottom edge. Content pushed past the *start* of a scroll container
+        cannot be scrolled back to — there is no negative scroll position — so
+        end-justifying an overflowing box puts the caption and the credit above
+        the top of the region and leaves them there. Measured: the dock showed
+        and the two rows above it were gone. Normal flow overflows at the
+        bottom instead, which is the edge a scrollbar can reach.
+
+        `overflow-x-hidden` alongside it because a box with one axis scrollable
+        computes the other to `auto`, and the bar carries negative margins for
+        its 44px touch targets — enough to hand the reader a stray horizontal
+        scrollbar under the photograph.
+      */}
+        <div className="relative z-10 flex min-h-0 flex-col overflow-y-auto overflow-x-hidden">
+          <CaptionBar
+            currentIndex={currentIndex}
+            image={currentImage}
+            images={images}
+            /*
             The details panel takes the keyboard the same way the modal
             does. Without this, arrow keys inside an open panel would page
             the photograph behind it, and the panel would then be describing
@@ -229,9 +314,10 @@ export function ImageCarousel({
             already `(open: boolean) => void`, so wrapping it in a
             `useCallback` was a second name for the same function.
           */
-          onDetailsOpenChange={setIsDisabled}
-          onImageSelect={goToIndex}
-        />
+            onDetailsOpenChange={setIsDisabled}
+            onImageSelect={goToIndex}
+          />
+        </div>
       </main>
 
       {/* Full screen image modal */}
