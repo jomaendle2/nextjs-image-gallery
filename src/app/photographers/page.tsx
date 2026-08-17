@@ -150,7 +150,13 @@ export default async function PhotographersPage() {
               One email when new photographs go up, and nothing else. There is a
               feed too, if you would rather not give us an address.
             </p>
-            <TextLink href="/subscribe">
+            {/*
+              `standalone`, which is also what stops the arrow orphaning.
+              Without it the anchor stays inline, so the trailing icon wrapped
+              onto a line of its own — and the link measured 34px tall, under
+              the floor. One word fixes both.
+            */}
+            <TextLink href="/subscribe" standalone={true}>
               Follow the gallery
               <ArrowRight aria-hidden="true" size={13} />
             </TextLink>

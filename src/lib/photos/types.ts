@@ -134,3 +134,29 @@ export interface PublishInput {
    */
   is_specimen: boolean;
 }
+
+/**
+ * A `PhotoExif | null` as a `jsonb` bind parameter.
+ *
+ * `JSON.stringify(null)` is the four-character string `"null"`, and casting
+ * that to `jsonb` stores the JSON value null rather than SQL NULL. The column
+ * then looks populated to every operator that matters: `WHERE exif IS NULL`
+ * matches nothing, `COALESCE` never fires, and a diagnostic query counting
+ * photographs without camera data quietly returns zero. Returning a real
+ * `null` binds SQL NULL, and `NULL::jsonb` is still NULL.
+ *
+ * The one function in a file of types, and it is here for a reason worth
+ * writing down. It used to live in `derive.ts`, whose first two lines are
+ * `import exifr` and `import sharp` — so a value import of it from
+ * `repository.ts` pulled both into the serverless bundle of every route that
+ * reads a photograph, image decoders and native binaries and all, for a
+ * `JSON.stringify`. Fifteen functions carried roughly thirty megabytes each
+ * to get it. `types.ts` reaches `derive.ts` only through `import type`, which
+ * erases at compile time, so nothing here drags a decoder anywhere.
+ *
+ * That is also the rule for anything added below: this module may name
+ * `derive.ts` in a type position and must never name it in a value one.
+ */
+export function exifParam(exif: PhotoExif | null): string | null {
+  return exif === null ? null : JSON.stringify(exif);
+}

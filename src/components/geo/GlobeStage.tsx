@@ -38,11 +38,17 @@ import { GlobeCanvas } from "./GlobeCanvas";
  */
 
 /**
- * Below this the finer coastline is invisible and the swap is bytes for
- * nothing, so the expanded globe only asks for it once it is genuinely large.
- * A phone in portrait gets the same picture, just not the same file.
+ * How large the sphere has to be, **in device pixels**, before the finer
+ * coastline is worth fetching.
+ *
+ * Device pixels, not CSS pixels, and the difference is the whole point. The
+ * first version of this used CSS pixels and a threshold of 600, which
+ * excluded every phone — but a 390px-wide handset at DPR 3 paints the globe
+ * across roughly 1000 real pixels, which is *more* than a 1440 laptop at DPR
+ * 1. Judging detail by CSS pixels denies the finer coastline to precisely the
+ * screens that resolve it best.
  */
-const FINE_FROM_PX = 600;
+const FINE_FROM_DEVICE_PX = 900;
 
 export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
   const [open, setOpen] = useState(false);
@@ -55,9 +61,10 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
    */
   const handleOpen = useCallback((next: boolean) => {
     if (next) {
-      setWide(
-        Math.min(globalThis.innerWidth, globalThis.innerHeight) >= FINE_FROM_PX,
-      );
+      const across =
+        Math.min(globalThis.innerWidth, globalThis.innerHeight) *
+        (globalThis.devicePixelRatio || 1);
+      setWide(across >= FINE_FROM_DEVICE_PX);
     }
     setOpen(next);
   }, []);
@@ -70,14 +77,20 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
           Always visible rather than revealed on hover: a hover affordance on
           a touch screen is an affordance that does not exist.
         */}
+        {/*
+          The pill sits under the sphere rather than over it. Half on and half
+          off the globe, it read as pasted on — and at 390 its edge came
+          within a few pixels of the page gutter. Centred beneath, it belongs
+          to the globe without covering any of it.
+        */}
         <button
-          className="group relative block w-full cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+          className="group flex w-full cursor-pointer flex-col items-center gap-3 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
           type="button"
         >
           <GlobeCanvas className="w-full" points={points} />
           <span
             className={glassControl(
-              `absolute right-2 bottom-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-white/70 transition-colors group-hover:text-white ${META}`,
+              `inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-white/70 transition-colors group-hover:text-white ${META}`,
             )}
           >
             <Maximize2 aria-hidden="true" size={12} />
@@ -100,12 +113,19 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
           </Title>
 
           {/*
-            Square, and sized off the *smaller* axis so the sphere is never
-            cropped. `min(88vw, 82vh)` rather than a max-width, because a
-            landscape window and a portrait one fail in opposite directions.
+            Square, sized off whichever axis is scarcer so the sphere is never
+            cropped — a landscape window and a portrait one run out in
+            opposite directions.
+
+            The numbers are as generous as the chrome allows, because the
+            first version was not and the result was absurd: at 390x844,
+            `min(88vw, 82vh)` came out at 343px while the globe on the page
+            behind it measured 358. A control promising a bigger view
+            delivered a smaller one. On a phone the width is all there is, so
+            it takes nearly all of it.
           */}
           <GlobeCanvas
-            className="h-[min(88vw,82vh)] w-[min(88vw,82vh)] cursor-grab active:cursor-grabbing"
+            className="h-[min(96vw,74vh)] w-[min(96vw,74vh)] cursor-grab active:cursor-grabbing"
             detail={wide ? "fine" : "coarse"}
             points={points}
           />

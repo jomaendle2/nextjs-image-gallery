@@ -3,14 +3,21 @@ import type { Contributor } from "@/lib/auth/types";
 import { isOwner } from "@/lib/auth/types";
 import { sql } from "@/lib/database";
 import { coarsen } from "./coarsen";
-import { exifParam } from "./derive";
-import type {
-  DraftPhotoInput,
-  GlobePointRow,
-  OwnPhotoRow,
-  PhotoRow,
-  Pin,
-  PublishInput,
+/*
+ * `exifParam` comes from `types.ts`, not from `derive.ts` where the rest of
+ * the EXIF handling lives. Importing it from `derive.ts` is a value import of
+ * a module that loads `sharp` and `exifr`, and the file tracer follows that
+ * into the deployed bundle of every route this repository reaches — which is
+ * most of them. See the note on `exifParam` itself.
+ */
+import {
+  type DraftPhotoInput,
+  exifParam,
+  type GlobePointRow,
+  type OwnPhotoRow,
+  type PhotoRow,
+  type Pin,
+  type PublishInput,
 } from "./types";
 
 /** Length chosen so ids stay short in URLs while collisions stay negligible. */

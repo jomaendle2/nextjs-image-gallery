@@ -21,12 +21,24 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
   const { slug } = await params;
-  const contributor = await getContributorBySlug(slug);
+
+  /*
+   * Both queries at once. The photographs are keyed by slug, so the feed's
+   * items never depended on the contributor row — the two were sequential
+   * only because they were written in that order.
+   *
+   * A slug nobody owns costs one wasted query, since the photographs are
+   * fetched before `notFound()` can fire. A feed reader polls this on a
+   * timer, so the round trip saved on every real request is worth more than
+   * the one spent on a request that was going to 404 anyway.
+   */
+  const [contributor, images] = await Promise.all([
+    getContributorBySlug(slug),
+    listGalleryImages(slug),
+  ]);
   if (!contributor) {
     notFound();
   }
-
-  const images = await listGalleryImages(slug);
 
   const xml = buildRssFeed(images, {
     title: `${contributor.display_name} — the beauty of earth.`,

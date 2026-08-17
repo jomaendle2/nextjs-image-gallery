@@ -79,6 +79,30 @@ export async function listContributors(): Promise<
 }
 
 /**
+ * The slug of every photographer a visitor can actually reach: not revoked,
+ * and with at least one published photograph.
+ *
+ * One list, three consumers, and that is the point. The sitemap decides what
+ * to advertise with this filter, and `/by/[slug]` and its slideshow decide
+ * what to prerender with it — so a set that disagreed would either advertise
+ * pages nobody had built or build pages nobody was told about. It was
+ * written out once and about to be written out twice more.
+ *
+ * `revoked_at` and `published_count` are both required: `listContributors`
+ * is the moderation view and returns everybody, including people who have
+ * been removed and people who have uploaded nothing. Either of those gets a
+ * 404 or an empty gallery, which is not a page worth having in either list.
+ */
+export async function listPublicContributorSlugs(): Promise<string[]> {
+  const contributors = await listContributors();
+  return contributors
+    .filter(
+      (person) => person.revoked_at === null && person.published_count > 0,
+    )
+    .map((person) => person.slug);
+}
+
+/**
  * Inserting the row *is* the invitation — there is no pending state to track.
  * The slug is de-duplicated with a numeric suffix so two photographers with
  * the same name both get a working page.

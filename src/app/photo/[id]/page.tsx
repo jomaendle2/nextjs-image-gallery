@@ -14,6 +14,25 @@ interface PageProps {
 }
 
 /**
+ * Every published photograph, built once and then revalidated hourly.
+ *
+ * Without this the `revalidate` above was dead code. A dynamic segment with
+ * no `generateStaticParams` has nothing to prerender, so Next rendered this
+ * page on every request and there was no cache entry for the hour to apply
+ * to — `prerender-manifest.json` listed no dynamic routes at all. The whole
+ * feed is read here anyway (see `findPhoto`), so the page that costs a query
+ * per visitor is the one URL a photographer actually shares.
+ *
+ * `dynamicParams` is left at its default of true on purpose: a photograph
+ * published after the last build renders on demand and is cached from then
+ * on, which is what `revalidateFeeds` counts on.
+ */
+export async function generateStaticParams(): Promise<{ id: string }[]> {
+  const images = await listGalleryImages();
+  return images.map((image) => ({ id: image.id }));
+}
+
+/**
  * The feed, plus where in it this photograph sits.
  *
  * Reading the whole feed rather than fetching one row is deliberate on two

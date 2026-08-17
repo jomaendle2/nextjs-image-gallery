@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { listGalleryImages } from "@/data/galleryData";
-import { listContributors } from "@/lib/auth/contributors";
+import { listPublicContributorSlugs } from "@/lib/auth/contributors";
 import { siteOrigin } from "@/lib/site-url";
 
 /**
@@ -61,26 +61,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   /*
+   * Both lists at once. They are independent queries against the same
+   * database and neither reads the other, so awaiting them in turn spent one
+   * full round trip doing nothing — on the one route that has to finish
+   * before a crawler will look at any of the pages it names.
+   *
    * A revoked contributor's page 404s, so listing it would be a crawl error
-   * we reported ourselves. `listContributors` returns them, hence the filter.
+   * we reported ourselves, and somebody who has uploaded but published
+   * nothing gets an empty gallery. `listPublicContributorSlugs` is that
+   * filter, shared with the two `/by` routes so the set advertised here and
+   * the set prerendered there cannot drift apart.
    */
-  const contributors = await listContributors();
-  const contributorRoutes: MetadataRoute.Sitemap = contributors
-    .filter(
-      (person) => person.revoked_at === null && person.published_count > 0,
-    )
-    .flatMap((person) => [
-      {
-        url: `${origin}/by/${person.slug}`,
-        changeFrequency: "weekly" as const,
-        priority: 0.9,
-      },
-      {
-        url: `${origin}/by/${person.slug}/slideshow`,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      },
-    ]);
+  const [slugs, images] = await Promise.all([
+    listPublicContributorSlugs(),
+    listGalleryImages(),
+  ]);
+
+  const contributorRoutes: MetadataRoute.Sitemap = slugs.flatMap((slug) => [
+    {
+      url: `${origin}/by/${slug}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
+    {
+      url: `${origin}/by/${slug}/slideshow`,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    },
+  ]);
 
   /*
    * One entry per photograph. These are the pages with something unique to
@@ -88,13 +96,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * the ones most worth crawling, and there are far more of them than there
    * are of everything else here put together.
    */
-  const photoRoutes: MetadataRoute.Sitemap = (await listGalleryImages()).map(
-    (image) => ({
-      url: `${origin}/photo/${image.id}`,
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    }),
-  );
+  const photoRoutes: MetadataRoute.Sitemap = images.map((image) => ({
+    url: `${origin}/photo/${image.id}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }));
 
   return [...staticRoutes, ...contributorRoutes, ...photoRoutes];
 }

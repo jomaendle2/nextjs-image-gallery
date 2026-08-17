@@ -131,8 +131,14 @@ export function PhotoDetails({ image }: { image: GalleryImage }) {
         outside. No share button here: the one in the caption bar is the share
         control, and a second instance would keep its own tick state, so the
         same photograph would read as copied in one place and not the other.
+
+        It follows the last field rather than being pinned to the foot of the
+        panel. `mt-auto` opened a hole — measured at 224px on a phone and over
+        300 on a laptop — with an orphaned view count under a hairline at the
+        bottom of an otherwise empty half. A column of fields should end where
+        the fields end.
       */}
-      <div className="mt-auto border-white/[0.08] border-t pt-4">
+      <div className="border-white/[0.08] border-t pt-4">
         <ViewCount imageId={image.id} variant="modal" />
       </div>
     </SheetContent>

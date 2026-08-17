@@ -3,13 +3,33 @@ import { notFound } from "next/navigation";
 import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { getGalleryImages } from "@/data/galleryData";
-import { getContributorBySlug } from "@/lib/auth/contributors";
+import {
+  getContributorBySlug,
+  listPublicContributorSlugs,
+} from "@/lib/auth/contributors";
 import { contributorAlternates } from "@/lib/metadata";
 
 export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * The same photographers `/by/[slug]` builds, from the same function.
+ *
+ * The grid and the slideshow are two views of one gallery and the sitemap
+ * lists both, so prerendering one and rendering the other per request would
+ * be an arbitrary split — and this is the half that carries the carousel, so
+ * it is the more expensive of the two to render.
+ *
+ * Until this existed the `revalidate` above had nothing to revalidate, which
+ * is the other half of why `revalidateFeeds` never cleared this URL: there
+ * was no cache entry to clear.
+ */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const slugs = await listPublicContributorSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -59,12 +79,24 @@ export async function generateMetadata({
  */
 export default async function ContributorSlideshow({ params }: PageProps) {
   const { slug } = await params;
-  const contributor = await getContributorBySlug(slug);
+
+  /*
+   * Both queries at once: the photographs are looked up by slug, so the
+   * second never needed the first one's answer.
+   *
+   * A slug nobody owns costs one wasted query, because the photographs are
+   * fetched before `notFound()` can fire. That is the right trade at this
+   * ratio — every real visit saves a full round trip — and an unknown slug
+   * is not something `generateStaticParams` builds.
+   */
+  const [contributor, images] = await Promise.all([
+    getContributorBySlug(slug),
+    getGalleryImages(slug),
+  ]);
   if (!contributor) {
     notFound();
   }
 
-  const images = await getGalleryImages(slug);
   if (images.length === 0) {
     return <EmptyGallery authorName={contributor.display_name} />;
   }

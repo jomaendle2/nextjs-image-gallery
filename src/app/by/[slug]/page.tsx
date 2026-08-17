@@ -4,7 +4,10 @@ import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { PhotoGrid } from "@/components/gallery/PhotoGrid";
 import { StructuredData } from "@/components/StructuredData";
 import { getGalleryImages } from "@/data/galleryData";
-import { getContributorBySlug } from "@/lib/auth/contributors";
+import {
+  getContributorBySlug,
+  listPublicContributorSlugs,
+} from "@/lib/auth/contributors";
 import { contributorAlternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographerSchema } from "@/lib/structured-data";
@@ -13,6 +16,23 @@ export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * Every photographer the sitemap advertises, built once and revalidated
+ * hourly — literally the same list, from the same function, so the two
+ * cannot disagree about who has a page.
+ *
+ * Without this the `revalidate` above never applied to anything: a dynamic
+ * segment with no params to prerender is rendered on demand every time, so
+ * the page a photographer shares paid for two queries per visitor.
+ *
+ * `dynamicParams` stays at its default of true, so a photographer who
+ * publishes their first photograph between builds still has a page.
+ */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const slugs = await listPublicContributorSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 /*
@@ -24,16 +44,22 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const contributor = await getContributorBySlug(slug);
-  if (!contributor) {
-    return { title: "Not found" };
-  }
   /*
    * Their photographs go on the card, not just their name. This is the link
    * a photographer sends about their own work, so a preview containing no
    * photography is the worst version a gallery can have.
+   *
+   * Fetched alongside the contributor rather than after them, for the reason
+   * spelled out on the page body below: the photographs are keyed by slug,
+   * so the second query never depended on the first one's answer.
    */
-  const images = await getGalleryImages(contributor.slug);
+  const [contributor, images] = await Promise.all([
+    getContributorBySlug(slug),
+    getGalleryImages(slug),
+  ]);
+  if (!contributor) {
+    return { title: "Not found" };
+  }
   /*
    * The display blobs, not the image optimizer.
    *
@@ -77,12 +103,26 @@ export async function generateMetadata({
 
 export default async function ContributorGallery({ params }: PageProps) {
   const { slug } = await params;
-  const contributor = await getContributorBySlug(slug);
+
+  /*
+   * Both queries at once. The photographs are looked up by slug, not by the
+   * contributor's id, so the second question never needed the first one's
+   * answer — it was only ever written below it.
+   *
+   * A slug nobody owns now costs one wasted query: the photographs are
+   * fetched before `notFound()` can fire. That is the right trade at this
+   * ratio — every real visit saves a full round trip, and the query returns
+   * nothing quickly — and it is bounded, because an unknown slug is not
+   * something `generateStaticParams` builds.
+   */
+  const [contributor, images] = await Promise.all([
+    getContributorBySlug(slug),
+    getGalleryImages(slug),
+  ]);
   if (!contributor) {
     notFound();
   }
 
-  const images = await getGalleryImages(slug);
   if (images.length === 0) {
     return <EmptyGallery authorName={contributor.display_name} />;
   }

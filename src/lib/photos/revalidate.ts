@@ -4,10 +4,17 @@ import { revalidatePath } from "next/cache";
  * Every cached surface a photograph appears on.
  *
  * Shared rather than local, because ad-hoc revalidation lists kept missing
- * one. `/photo/[id]` is its own ISR entry with `revalidate = 3600` and needs
- * its route pattern and a type — passing one concrete URL clears one concrete
- * URL — so it is the one most easily forgotten, and the one that matters
- * most: it is the URL somebody actually shares.
+ * one. `/photo/[id]` needs its route pattern and a type rather than a URL —
+ * passing one concrete URL clears one concrete URL, and there is one entry
+ * per published photograph — so it is the one most easily forgotten, and the
+ * one that matters most: it is the URL somebody actually shares.
+ *
+ * That line was, until recently, clearing nothing at all. None of the three
+ * gallery routes had a `generateStaticParams`, so despite each exporting
+ * `revalidate = 3600` there was no prerendered entry anywhere for any of
+ * them — every visit rendered from scratch and this function swept an empty
+ * cache. They now build at deploy and revalidate hourly, which is what makes
+ * every path below real; the slideshow was missing outright and is added.
  *
  * The admin actions each hand-rolled a different subset. Revoking a
  * contributor cleared neither their page nor their photographs, so a revoked
@@ -17,6 +24,13 @@ import { revalidatePath } from "next/cache";
 export function revalidateFeeds(slug: string): void {
   revalidatePath("/");
   revalidatePath(`/by/${slug}`);
+  /*
+   * The grid and the slideshow are separate cache entries, and only the grid
+   * was ever cleared. A photographer who published, looked at their own
+   * slideshow and saw yesterday's set would have no way to tell that from
+   * the upload having failed.
+   */
+  revalidatePath(`/by/${slug}/slideshow`);
   revalidatePath("/photo/[id]", "page");
   revalidatePath("/photographers");
   /*

@@ -23,13 +23,25 @@ export const LABEL = "block font-medium text-sm text-white/70";
 export const LABEL_HINT = "text-white/55";
 
 /**
- * A standalone link that clears the 44px floor.
+ * A standalone link that clears the 44px floor, in both directions.
  *
  * The padding is pulled straight back out by the negative margin, so the
  * target grows without moving the text beside it. Links inside a sentence are
  * exempt from the rule and must not use this.
+ *
+ * `min-w-11` and the horizontal pair are the half this was missing, and it is
+ * the mistake DESIGN.md records by name: "once by giving a link `min-h-11`
+ * and leaving it 13px wide". It had happened again — the footer's own comment
+ * believed the copyright link was the last offender, while `Globe` measured
+ * 33px wide, `Terms` 35 and `Imprint` 40. A 44px floor on one axis is not a
+ * 44px target.
+ *
+ * No `justify-center`: `min-w-11` pads a short link out to the floor, and
+ * centring inside that box would ragged the left edge of any left-aligned
+ * list containing a title shorter than 44px. The padding goes on the end.
  */
-export const TOUCH_LINK = "-my-3 inline-flex min-h-11 items-center py-3";
+export const TOUCH_LINK =
+  "-mx-2 -my-3 inline-flex min-h-11 min-w-11 items-center px-2 py-3";
 
 /**
  * A link inside a sentence, on a reading page.

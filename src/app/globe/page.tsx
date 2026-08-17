@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GlobeStage } from "@/components/geo/GlobeStage";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LINK, META, TOUCH_LINK } from "@/components/ui/field";
+import { TextLink } from "@/components/ui/TextLink";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { CELL_KM } from "@/lib/photos/coarsen";
@@ -94,7 +95,7 @@ export default async function GlobePage() {
                 two read as one statement: here is the world, and here is what
                 these marks do and do not mean.
               */}
-              <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16">
+              <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16">
                 <p className="max-w-prose text-pretty text-[1.0625rem] text-white/65 leading-relaxed">
                   Photographers mark these themselves; nothing is ever read from
                   a photograph's file. Each place is deliberately blunt: the
@@ -126,12 +127,20 @@ export default async function GlobePage() {
                     <ul className="mt-2.5 space-y-1">
                       {cell.photos.map((photo) => (
                         <li key={photo.id}>
-                          <Link
-                            className={`${LINK} text-[0.9375rem]`}
+                          {/*
+                            `standalone`, because tapping one of these is the
+                            entire purpose of the page. Raw `LINK` left them
+                            18px tall in a list with 4px between them — the
+                            exact mistake DESIGN.md records by name. The
+                            negative margin in `TOUCH_LINK` pulls the padding
+                            straight back out, so the rhythm is unchanged.
+                          */}
+                          <TextLink
                             href={`/photo/${photo.id}`}
+                            standalone={true}
                           >
                             {photoTitle(photo.title)}
-                          </Link>
+                          </TextLink>
                         </li>
                       ))}
                     </ul>
