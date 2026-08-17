@@ -150,8 +150,24 @@ export async function sendInvitation(
   to: string,
   displayName: string,
   invitedByName?: string,
+  signInUrl?: string,
 ): Promise<void> {
-  const url = `${siteOrigin()}/contribute`;
+  /*
+   * The invitation carries a sign-in link when the caller could mint one.
+   *
+   * It used to point at `/contribute` — the form — so a button reading "sign
+   * in and add your work" actually meant "go and ask us for a second email".
+   * Six actions and two emails before a photographer saw anything of their
+   * own. Now the link is the sign-in, on a seven-day token
+   * (`INVITE_TTL_MINUTES`), which is the answer to the objection that stopped
+   * this being done before: a token mailed today would sit in an inbox for
+   * days, and now it is allowed to.
+   *
+   * Optional, and falling back to the form, because minting can return null —
+   * an address that is somehow no longer invited by the time the mail is built
+   * must still get a usable email rather than none.
+   */
+  const url = signInUrl ?? `${siteOrigin()}/contribute`;
   const name = escapeHtml(displayName);
 
   /*
@@ -179,14 +195,17 @@ export async function sendInvitation(
     text: [
       opening,
       "",
-      `Sign in with this address — there is no password and nothing to accept: ${url}`,
+      `Open this to sign in — there is no password and nothing to accept: ${url}`,
+      "",
+      "You publish your own work. Nobody reviews it, and nothing waits for",
+      "us: give a photograph a title and a description and it is live.",
       "",
       "Upload the full-size originals. The gallery reads the camera and",
       "exposure from the file and never opens the GPS block, so where you",
       "stood stays yours unless you choose to write it down or mark it.",
       "",
-      "If you were not expecting this, ignore it — nothing happens until you",
-      "sign in.",
+      "The link works once and lasts a week. If you were not expecting this,",
+      "ignore it — nothing happens until you sign in.",
     ].join("\n"),
     html: page(
       `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
@@ -194,14 +213,17 @@ export async function sendInvitation(
        </p>
        ${button(url, "Sign in and add your work")}
        <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         Sign in with this address — there is no password and nothing to
-         accept. Upload the full-size originals: the gallery reads the camera
-         and exposure from the file and never opens the GPS block, so where
-         you stood stays yours unless you choose to write it down or mark it.
+         You publish your own work — nobody reviews it, and nothing waits for
+         us. Give a photograph a title and a description and it is live.
+       </p>
+       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
+         Upload the full-size originals: the gallery reads the camera and
+         exposure from the file and never opens the GPS block, so where you
+         stood stays yours unless you choose to write it down or mark it.
        </p>
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         If you were not expecting this, ignore it — nothing happens until you
-         sign in.
+         The link works once and lasts a week. If you were not expecting this,
+         ignore it — nothing happens until you sign in.
        </p>`,
     ),
   });

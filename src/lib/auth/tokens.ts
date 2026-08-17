@@ -1,11 +1,34 @@
 import { sql } from "@/lib/database";
 import { memberExists } from "@/lib/members/repository";
+import { siteOrigin } from "@/lib/site-url";
 import { generateSecret, hashSecret } from "./secrets";
 import { normaliseEmail } from "./slug";
 import type { Contributor, ContributorRole } from "./types";
 
-/** Long enough to walk to the inbox, short enough to be worthless if leaked. */
-const TOKEN_TTL_MINUTES = 15;
+/**
+ * Long enough to walk to the inbox, short enough to be worthless if leaked.
+ *
+ * The default, and the right one for "email me a link": the person is at the
+ * keyboard, waiting, and the link is worth a session the moment it arrives.
+ */
+export const LOGIN_TTL_MINUTES = 60;
+
+/**
+ * How long a link mailed to somebody who is not expecting it stays good.
+ *
+ * An invitation is not a magic link. Nobody is waiting at a keyboard for it —
+ * it arrives in the middle of somebody's week and gets opened the next
+ * morning, or after lunch, or on the train. Fifteen minutes was the reason the
+ * invitation could not carry a token at all, and the argument recorded against
+ * doing so was precisely this: *a token mailed today would sit in an inbox for
+ * days.*
+ *
+ * That argument is about expiry, not about tokens. Seven days is the answer to
+ * it. The link is still single-use, still 256 bits, still hashed at rest, and
+ * still only worth what the address behind it is worth — which for a fresh
+ * invitation is one contributor account with nothing in it yet.
+ */
+export const INVITE_TTL_MINUTES = 7 * 24 * 60;
 
 /**
  * Issues a single-use login secret for an invited contributor.
@@ -13,8 +36,18 @@ const TOKEN_TTL_MINUTES = 15;
  * Returns null for an address that is not invited or has been revoked. The
  * caller must respond identically either way — the sign-in form is not
  * allowed to become an oracle for who is on the list.
+ *
+ * `ttlMinutes` is the caller's, because the three things that mail a link want
+ * three different answers and used to get one. The sign-in form wants an hour;
+ * an invitation wants a week (`INVITE_TTL_MINUTES`); and the membership
+ * welcome — which is mailed by a Stripe webhook, not by somebody waiting —
+ * wanted an hour and was silently getting fifteen minutes, so a member who
+ * opened it over lunch had just paid for a link that no longer worked.
  */
-export async function mintLoginToken(email: string): Promise<string | null> {
+export async function mintLoginToken(
+  email: string,
+  ttlMinutes: number = LOGIN_TTL_MINUTES,
+): Promise<string | null> {
   const address = normaliseEmail(email);
 
   /*
@@ -38,9 +71,7 @@ export async function mintLoginToken(email: string): Promise<string | null> {
   }
 
   const secret = generateSecret();
-  const expiresAt = new Date(
-    Date.now() + TOKEN_TTL_MINUTES * 60 * 1000,
-  ).toISOString();
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
 
   /*
    * The token is issued to the *address*. `contributor_id` is written when
@@ -146,4 +177,21 @@ export async function pruneLoginTokens(): Promise<void> {
    * already runs occasional housekeeping.
    */
   await sql`DELETE FROM sessions WHERE expires_at < now();`;
+}
+
+/**
+ * The link that goes in an invitation, or the form's URL if minting failed.
+ *
+ * Shared by the two doors that create a contributor — the owner's invite and a
+ * photographer's peer invite — so both mail the same thing. It was worth
+ * extracting rather than repeating because the fallback is the interesting
+ * half: `mintLoginToken` returns null for an address it cannot place, and an
+ * invitation with no usable link at all would be worse than one pointing at
+ * the form.
+ */
+export async function invitationUrl(email: string): Promise<string> {
+  const secret = await mintLoginToken(email, INVITE_TTL_MINUTES);
+  return secret === null
+    ? `${siteOrigin()}/contribute`
+    : `${siteOrigin()}/contribute/verify?token=${secret}`;
 }

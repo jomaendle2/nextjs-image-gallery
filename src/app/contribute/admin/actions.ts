@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth/email";
 import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
+import { invitationUrl } from "@/lib/auth/tokens";
 import { isOwner } from "@/lib/auth/types";
 import { toGalleryImage } from "@/lib/photos/map";
 import {
@@ -89,7 +90,21 @@ export async function invite(
    */
   let mailed = true;
   try {
-    await sendInvitation(created.email, created.display_name);
+    /*
+     * Signed, and carrying a sign-in link.
+     *
+     * `actor.display_name` was already available and already passed by the
+     * peer-invite path — omitting it here meant the owner's own invitations,
+     * including the first one ever sent to a new photographer, arrived signed
+     * by nobody. A stranger being told they have been chosen, by no one in
+     * particular, reads as spam.
+     */
+    await sendInvitation(
+      created.email,
+      created.display_name,
+      actor.display_name,
+      await invitationUrl(created.email),
+    );
   } catch (error) {
     mailed = false;
     console.error("Could not send the invitation:", error);
