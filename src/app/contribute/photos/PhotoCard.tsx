@@ -4,6 +4,7 @@ import { ChevronDown, Pin } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, memo, useCallback, useState } from "react";
 import { exifLine } from "@/lib/photos/exif-line";
+import { photoTitle } from "@/lib/photos/title";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoEditForm } from "./PhotoEditForm";
 
@@ -78,7 +79,7 @@ export const PhotoCard = memo(function PhotoCardRow({
   mapStyleUrl: string | null;
 }) {
   const exif = exifLine(photo.exif);
-  const untitled = (photo.title ?? "").trim() === "";
+  const untitled = photo.title.trim() === "";
 
   /*
    * The form is mounted on first open and kept thereafter.
@@ -154,7 +155,7 @@ export const PhotoCard = memo(function PhotoCardRow({
             <p
               className={`truncate font-medium text-[0.9375rem] ${untitled ? "text-white/55 italic" : "text-white"}`}
             >
-              {untitled ? "Untitled" : photo.title}
+              {photoTitle(photo.title)}
             </p>
             <p className="mt-0.5 truncate text-white/55 text-xs">
               <span>

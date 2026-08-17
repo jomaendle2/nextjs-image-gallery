@@ -66,9 +66,7 @@ export function membershipConfigured(): boolean {
  * Null when Stripe did not send one, which happens on events that describe a
  * subscription without renewing it.
  */
-export function periodEndToIso(
-  seconds: number | null | undefined,
-): string | null {
+function periodEndToIso(seconds: number | null | undefined): string | null {
   return typeof seconds === "number"
     ? new Date(seconds * 1000).toISOString()
     : null;

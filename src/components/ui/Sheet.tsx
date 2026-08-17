@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 
 export const Sheet = Root;
 export const SheetTrigger = Trigger;
-export const SheetClose = Close;
 
 export function SheetContent({
   children,

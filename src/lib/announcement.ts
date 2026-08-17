@@ -1,6 +1,7 @@
 import type { GalleryImage } from "@/data/galleryData";
 import { escapeHtml } from "@/lib/auth/email";
 import { photoAltText } from "@/lib/photos/alt-text";
+import { photoTitle } from "@/lib/photos/title";
 
 /**
  * The body of the "new work" message, built away from the sending.
@@ -21,7 +22,8 @@ interface AnnouncementParts {
 /** Beyond this, the message is a catalogue rather than an invitation. */
 export const ANNOUNCEMENT_LIMIT = 12;
 
-function subjectFor(count: number, images: readonly GalleryImage[]): string {
+function subjectFor(images: readonly GalleryImage[]): string {
+  const count = images.length;
   const [first] = images;
   if (count === 1 && first) {
     const title = first.title.trim();
@@ -49,20 +51,19 @@ export function buildAnnouncement(
   const shown = images.slice(0, ANNOUNCEMENT_LIMIT);
   const remainder = images.length - shown.length;
 
-  const lines = shown.map((image) => {
-    const title = image.title.trim() === "" ? "Untitled" : image.title;
-    return `${title} — ${image.author.name}\n${origin}/photo/${image.id}`;
-  });
+  const lines = shown.map(
+    (image) =>
+      `${photoTitle(image.title)} — ${image.author.name}\n${origin}/photo/${image.id}`,
+  );
 
   const items = shown
-    .map((image) => {
-      const title = image.title.trim() === "" ? "Untitled" : image.title;
-      return `<li style="margin:0 0 18px">
-      <a href="${escapeHtml(`${origin}/photo/${image.id}`)}" style="color:#e8eaed;text-decoration:none;font-weight:600">${escapeHtml(title)}</a>
+    .map(
+      (image) => `<li style="margin:0 0 18px">
+      <a href="${escapeHtml(`${origin}/photo/${image.id}`)}" style="color:#e8eaed;text-decoration:none;font-weight:600">${escapeHtml(photoTitle(image.title))}</a>
       <div style="margin-top:2px;color:#6b7178;font-size:13px">${escapeHtml(image.author.name)}</div>
       <div style="margin-top:4px;color:#a8adb4;font-size:13px;line-height:1.5">${escapeHtml(photoAltText(image))}</div>
-    </li>`;
-    })
+    </li>`,
+    )
     .join("\n");
 
   const more =
@@ -73,7 +74,7 @@ export function buildAnnouncement(
       : "";
 
   return {
-    subject: subjectFor(images.length, images),
+    subject: subjectFor(images),
     text: [
       images.length === 1
         ? "A new photograph is up."

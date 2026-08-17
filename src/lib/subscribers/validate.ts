@@ -5,6 +5,8 @@
  * unauthenticated stranger can post to.
  */
 
+import { formText } from "@/app/form-state";
+import { MAX_URL } from "@/lib/applications/validate";
 import { looksLikeEmail } from "@/lib/auth/slug";
 
 export type SubscribeResult =
@@ -21,7 +23,7 @@ export function validateSubscription(form: FormData): SubscribeResult {
     return { ok: false, error: "SILENT_DROP" };
   }
 
-  const email = String(form.get("email") ?? "").trim();
+  const email = formText(form, "email", MAX_URL);
 
   if (email === "") {
     return { ok: false, error: "Please enter your email address." };

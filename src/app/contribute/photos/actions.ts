@@ -1,7 +1,7 @@
 "use server";
 
 import { del } from "@vercel/blob";
-import { type FormState, failed, succeeded } from "@/app/form-state";
+import { type FormState, failed, formText, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
 import {
   deletePhoto,
@@ -20,18 +20,13 @@ const MAX_DESCRIPTION = 300;
 const MAX_TECHNIQUE = 600;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-function text(formData: FormData, key: string, max: number): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
 const MAX_LATITUDE = 90;
 const MAX_LONGITUDE = 180;
 
 /**
  * One half of a coordinate: a number, `null` for absent, `NaN` for wrong.
  *
- * Beside `text` and following the `HEX_COLOR` precedent above. The range
+ * Beside `formText` and following the `HEX_COLOR` precedent above. The range
  * check lives here rather than in a `CHECK` constraint because Postgres has
  * no `ADD CONSTRAINT IF NOT EXISTS`, and because somebody who typed 471.3
  * should read a sentence rather than meet a 500.
@@ -115,25 +110,25 @@ export async function savePhoto(
     return failed("Missing photograph.");
   }
 
-  const title = text(formData, "title", MAX_TITLE);
-  const description = text(formData, "description", MAX_DESCRIPTION);
+  const title = formText(formData, "title", MAX_TITLE);
+  const description = formText(formData, "description", MAX_DESCRIPTION);
   if (title === "" || description === "") {
     return failed("A title and a description are both required.");
   }
 
-  const bgColor = text(formData, "bg_color", 7);
+  const bgColor = formText(formData, "bg_color", 7);
   if (!HEX_COLOR.test(bgColor)) {
     return failed("The background colour must be a hex value.");
   }
 
-  const location = text(formData, "location", MAX_TITLE);
+  const location = formText(formData, "location", MAX_TITLE);
 
   /*
    * The two member-only fields. Optional, and empty for most photographs —
    * a photographer says where they stood only when they want to.
    */
-  const preciseLocation = text(formData, "precise_location", MAX_TITLE);
-  const technique = text(formData, "technique", MAX_TECHNIQUE);
+  const preciseLocation = formText(formData, "precise_location", MAX_TITLE);
+  const technique = formText(formData, "technique", MAX_TECHNIQUE);
 
   const marked = readPin(formData);
   if ("problem" in marked) {
@@ -207,6 +202,33 @@ export async function togglePublished(
   }
 }
 
+/**
+ * Deletes storage that no row points at any more, after the rows are gone.
+ *
+ * Both blobs per photograph, not one. An upload writes the original and a
+ * re-encoded display copy; deleting only the original left multiple megabytes
+ * behind with no row pointing at them, which meant nothing could ever find
+ * them again to clean up.
+ *
+ * Failures are logged rather than surfaced, and the whole thing runs after
+ * the rows are deleted: the photograph is already off the site, which is what
+ * was asked for, and an orphaned blob is a storage bill rather than a broken
+ * page.
+ *
+ * Not `"use server"`-exported, so it stays a plain helper — both delete
+ * actions had written this same `Promise.all` out, which is one place too
+ * many for a rule about which failures are allowed to be silent.
+ */
+async function deleteBlobs(paths: readonly string[]): Promise<void> {
+  await Promise.all(
+    paths.map((target) =>
+      del(target).catch((error: unknown) => {
+        console.error(`Could not delete the blob ${target}:`, error);
+      }),
+    ),
+  );
+}
+
 export async function removePhoto(id: string): Promise<void> {
   const actor = await requireContributor();
   const deleted = await deletePhoto(id, actor);
@@ -214,24 +236,9 @@ export async function removePhoto(id: string): Promise<void> {
     return;
   }
 
-  /*
-   * Both blobs, not one. An upload writes the original and a re-encoded
-   * display copy; deleting only the original left multiple megabytes behind
-   * with no row pointing at them, which meant nothing could ever find them
-   * again to clean up.
-   *
-   * The row is the source of truth, so a blob with no row is unreachable and
-   * goes too. Failure is logged rather than surfaced — the photograph is
-   * already off the site, which is what was asked for.
-   */
-  const blobs = [deleted.blob_pathname, deleted.display_pathname].filter(
-    (target): target is string => target !== null,
-  );
-  await Promise.all(
-    blobs.map((target) =>
-      del(target).catch((error: unknown) => {
-        console.error(`Could not delete the blob ${target}:`, error);
-      }),
+  await deleteBlobs(
+    [deleted.blob_pathname, deleted.display_pathname].filter(
+      (target): target is string => target !== null,
     ),
   );
 
@@ -318,18 +325,7 @@ export async function bulkRemovePhotos(
     }
   }
 
-  /*
-   * Blobs after the rows, and failures only logged. The photographs are
-   * already gone from the site, which is what was asked for; an orphaned
-   * blob is a storage bill rather than a broken page.
-   */
-  await Promise.all(
-    blobs.map((target) =>
-      del(target).catch((error: unknown) => {
-        console.error(`Could not delete the blob ${target}:`, error);
-      }),
-    ),
-  );
+  await deleteBlobs(blobs);
 
   for (const slug of slugs) {
     revalidateFeeds(slug);

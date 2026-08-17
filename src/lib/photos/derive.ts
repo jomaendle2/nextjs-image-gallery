@@ -184,7 +184,7 @@ async function readExif(buffer: Buffer): Promise<PhotoExif | null> {
  * only what the gallery renders from, capped at the largest width next/image
  * can ask for, which is why it costs no visible quality.
  */
-export async function makeDisplayBuffer(buffer: Buffer): Promise<Buffer> {
+async function makeDisplayBuffer(buffer: Buffer): Promise<Buffer> {
   return await sharp(buffer, { failOn: "error" })
     .rotate()
     .resize({

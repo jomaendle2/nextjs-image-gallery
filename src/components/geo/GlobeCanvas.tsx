@@ -47,7 +47,7 @@ const ALPHA_LIMB = 0.16;
 const DRAG_DEGREES = 180;
 
 /**
- * The latitude facing the camera when nothing else decides it.
+ * The latitude facing the camera.
  *
  * Not zero. An equator-on globe is the view nobody has ever photographed the
  * earth from — every picture of it, from Apollo to a school globe on a desk,
@@ -130,7 +130,6 @@ function paintSphere(
 export function GlobeCanvas({
   points,
   className = "",
-  facing = null,
   detail = "coarse",
 }: {
   points: readonly GlobePoint[];
@@ -145,16 +144,6 @@ export function GlobeCanvas({
    * swap is the only thing that happens.
    */
   detail?: "coarse" | "fine";
-  /**
-   * Turn the sphere to face this point and hold it there, instead of letting
-   * it spin.
-   *
-   * For a globe that is about one photograph rather than about the gallery: a
-   * sphere showing the Atlantic while the caption says Bali is worse than no
-   * sphere. Dragging still works, because somebody who wants to see where
-   * that is relative to everywhere else should be able to.
-   */
-  facing?: { lat: number; lng: number } | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   /*
@@ -240,17 +229,14 @@ export function GlobeCanvas({
       context.lineJoin = "round";
 
       /*
-       * A globe with somewhere to be does not wander. `facing` pins the
-       * sphere so the mark sits in the middle of it, and the drag offset is
-       * added on top so it can still be turned by hand.
+       * The drag offset is added on top of the spin rather than replacing it,
+       * so turning the sphere by hand moves where it is rather than stopping
+       * it being a globe that turns.
        */
-      const turned =
-        still || facing !== null
-          ? 0
-          : ((time - start) / 1000) * SPIN_PER_SECOND;
+      const turned = still ? 0 : ((time - start) / 1000) * SPIN_PER_SECOND;
       const view = {
-        spin: turned + dragged.current - (facing?.lng ?? 0),
-        tilt: facing?.lat ?? DEFAULT_TILT,
+        spin: turned + dragged.current,
+        tilt: DEFAULT_TILT,
         radius,
       };
 
@@ -265,7 +251,7 @@ export function GlobeCanvas({
        * setting is a request to stop rather than to be gentle about it.
        * Dragging still works, because that is motion somebody asked for.
        */
-      if ((!still && facing === null) || holding !== null) {
+      if (!still || holding !== null) {
         frame = requestAnimationFrame(render);
       }
     };
@@ -311,10 +297,10 @@ export function GlobeCanvas({
     /*
      * A globe holding still has stopped rendering, and a canvas resized by
      * CSS keeps whatever bitmap it had — so without this, a reduced-motion
-     * reader or a photograph's fixed globe would stretch into a blurred
-     * ellipse the first time its column changed width. The spinning case
-     * hides the bug by redrawing sixty times a second, which is exactly why
-     * it would otherwise have shipped.
+     * reader's globe would stretch into a blurred ellipse the first time its
+     * column changed width. The spinning case hides the bug by redrawing
+     * sixty times a second, which is exactly why it would otherwise have
+     * shipped.
      */
     const observer = new ResizeObserver(wake);
     observer.observe(canvas);
@@ -330,7 +316,7 @@ export function GlobeCanvas({
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointercancel", onUp);
     };
-  }, [facing]);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; `detailed` arriving is the only reason to
   useEffect(() => {

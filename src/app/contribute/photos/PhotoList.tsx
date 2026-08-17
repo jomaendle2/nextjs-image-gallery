@@ -91,26 +91,35 @@ export function PhotoList({
    * the difference between typing smoothly at fifty photographs and
    * stuttering.
    */
+  /*
+   * All three bulk buttons do the same three things — hand the selection to
+   * a server action, then empty it — so they say it once. Written out three
+   * times, the shared part was the part nobody re-read, which is where a
+   * missing `clearSelection` would have hidden: the rows stay ticked, the
+   * bar stays up, and pressing again re-runs the action on photographs it
+   * has already changed.
+   */
+  const onSelection = useCallback(
+    (action: (ids: string[]) => Promise<unknown>) => {
+      run(async () => {
+        await action([...selected]);
+        clearSelection();
+      });
+    },
+    [run, selected, clearSelection],
+  );
+
   const publishSelected = useCallback(() => {
-    run(async () => {
-      await bulkSetPublished([...selected], true);
-      clearSelection();
-    });
-  }, [run, selected, clearSelection]);
+    onSelection((ids) => bulkSetPublished(ids, true));
+  }, [onSelection]);
 
   const unpublishSelected = useCallback(() => {
-    run(async () => {
-      await bulkSetPublished([...selected], false);
-      clearSelection();
-    });
-  }, [run, selected, clearSelection]);
+    onSelection((ids) => bulkSetPublished(ids, false));
+  }, [onSelection]);
 
   const deleteSelected = useCallback(() => {
-    run(async () => {
-      await bulkRemovePhotos([...selected]);
-      clearSelection();
-    });
-  }, [run, selected, clearSelection]);
+    onSelection(bulkRemovePhotos);
+  }, [onSelection]);
 
   const onQueryChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value),

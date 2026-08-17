@@ -8,7 +8,7 @@ import { clientIp, createLimiter } from "@/lib/rate-limit";
  * come back. This is here to make automated inflation tedious, not to
  * ration reading.
  */
-const viewLimiter = createLimiter(240, 15 * 60 * 1000);
+const viewLimiter = createLimiter(240);
 
 /**
  * A bound on the input, not a description of an id.

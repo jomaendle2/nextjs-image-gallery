@@ -28,6 +28,26 @@ interface PanZoomTransform {
 }
 
 /**
+ * Writes a new scale onto the live transform, recentring as it crosses 1x.
+ *
+ * Dragging is only allowed above 1x, so an image that is panned off centre
+ * and then zoomed back out would be stranded there with no way to bring it
+ * back short of Reset. Both routes to a new scale — the buttons and a pinch
+ * — cross that threshold, and both had written the recentre out by hand. An
+ * invariant stated twice holds only until somebody corrects one of them.
+ *
+ * Mutates rather than returning, because the transform is a ref the pointer
+ * handlers write to directly and a copy would be a second source of truth.
+ */
+function scaleTo(transform: PanZoomTransform, next: number): void {
+  transform.scale = next;
+  if (next <= 1) {
+    transform.x = 0;
+    transform.y = 0;
+  }
+}
+
+/**
  * Zoom and pan for the full-screen viewer.
  *
  * The pan offset lives in a ref and is written straight to the element's
@@ -91,16 +111,7 @@ export function usePanZoom() {
   // Read the live scale off the ref, never off a captured `scale`, so the
   // handlers stay stable and can't act on a stale value.
   const applyScale = useCallback((next: number) => {
-    transformRef.current.scale = next;
-    /*
-     * Dragging is only allowed above 1x, so an image that is panned off
-     * centre and then zoomed back out would be stranded there with no way
-     * to bring it back short of Reset. Recentre as we cross the threshold.
-     */
-    if (next <= 1) {
-      transformRef.current.x = 0;
-      transformRef.current.y = 0;
-    }
+    scaleTo(transformRef.current, next);
     setScale(next);
   }, []);
 
@@ -193,11 +204,7 @@ export function usePanZoom() {
 
     const ratio = distanceBetween(first, second) / pinch.distance;
     const next = Math.min(Math.max(pinch.scale * ratio, MIN_SCALE), MAX_SCALE);
-    transformRef.current.scale = next;
-    if (next <= 1) {
-      transformRef.current.x = 0;
-      transformRef.current.y = 0;
-    }
+    scaleTo(transformRef.current, next);
     schedulePaint();
     return true;
   }, [schedulePaint]);

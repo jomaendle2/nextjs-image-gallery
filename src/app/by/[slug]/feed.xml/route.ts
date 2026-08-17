@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { listGalleryImages } from "@/data/galleryData";
 import { getContributorBySlug } from "@/lib/auth/contributors";
-import { buildRssFeed } from "@/lib/feed";
+import { buildRssFeed, rssResponse } from "@/lib/feed";
 import { siteOrigin } from "@/lib/site-url";
 
 export const revalidate = 3600;
@@ -35,11 +35,5 @@ export async function GET(
     selfPath: `/by/${contributor.slug}/feed.xml`,
   });
 
-  return new Response(xml, {
-    headers: {
-      "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control":
-        "public, s-maxage=3600, stale-while-revalidate=86400, max-age=0",
-    },
-  });
+  return rssResponse(xml);
 }

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import { SearchField } from "@/components/ui/SearchField";
+import { photoTitle } from "@/lib/photos/title";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { PhotoRowActions } from "./PhotoRowActions";
 
@@ -26,7 +27,7 @@ function matches(photo: OwnPhotoRow, needle: string): boolean {
     return true;
   }
   return (
-    (photo.title ?? "").toLowerCase().includes(needle) ||
+    photo.title.toLowerCase().includes(needle) ||
     (photo.location ?? "").toLowerCase().includes(needle) ||
     (photo.author_name ?? "").toLowerCase().includes(needle)
   );
@@ -101,9 +102,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
                 />
                 <div className="min-w-0">
                   <p className="truncate font-medium text-sm">
-                    {(photo.title ?? "").trim() === ""
-                      ? "Untitled draft"
-                      : photo.title}
+                    {photoTitle(photo.title, "Untitled draft")}
                     {photo.is_opener ? (
                       <span className="ml-2 rounded-full bg-caution-fill px-1.5 py-0.5 text-[0.625rem] text-caution uppercase tracking-[0.08em]">
                         Opener

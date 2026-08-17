@@ -30,3 +30,27 @@ export function failed(message: string): FormState {
 export function succeeded(message: string): FormState {
   return { message, tone: "success" };
 }
+
+/**
+ * One field off a form: trimmed, bounded, and never `undefined`.
+ *
+ * The same five lines were written four times under four names — `text` in
+ * the photo actions, `field` in the application validator, and inline
+ * `String(form.get(…) ?? "").trim()` chains in the invite reader and the
+ * subscribe validator, the last of which bounded nothing at all. That is the
+ * problem: a length limit that has to be remembered at each call site is a
+ * limit that will be forgotten at the next one, and these are forms an
+ * unauthenticated stranger can post to.
+ *
+ * Returns `""` rather than `null` for a missing or non-string entry, so a
+ * caller checks emptiness once instead of absence and emptiness separately —
+ * a `File` in a text field and an omitted field are the same nothing as far
+ * as any of these forms are concerned.
+ *
+ * Beside `FormState` for the same reason it is: every caller lives beside a
+ * `"use server"` module, which may export only async functions.
+ */
+export function formText(form: FormData, name: string, max: number): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}

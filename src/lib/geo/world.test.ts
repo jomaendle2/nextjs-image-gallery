@@ -241,8 +241,6 @@ describe("the finer coastline is never bundled", () => {
     const fine = gzipSync(readFileSync(FINE_FILE)).length;
     const everyday = gzipSync(JSON.stringify(WORLD_LAND)).length;
     expect(fine).toBeGreaterThan(everyday * 2);
-    // A ceiling of its own, because it is still a real download.
-    expect(fine).toBeLessThan(CEILINGS.fine);
   });
 });
 

@@ -22,7 +22,10 @@ import type { GlobePointRow } from "./types";
 
 /** One coarsened cell, and the photographs that landed in it. */
 export interface GlobeCell {
-  /** Stable identity for a React key and for the canvas's hit testing. */
+  /**
+   * Stable identity, and the tiebreaker of last resort when two cells hold
+   * the same number of photographs under the same first label.
+   */
   key: string;
   lat: number;
   lng: number;
@@ -38,7 +41,7 @@ export interface GlobeCell {
    * photographer may mark a spot without writing a location.
    */
   labels: string[];
-  photos: { id: string; title: string; authorSlug: string }[];
+  photos: { id: string; title: string }[];
 }
 
 /**
@@ -81,11 +84,7 @@ export function groupIntoCells(rows: readonly GlobePointRow[]): GlobeCell[] {
     if (label !== "" && !cell.labels.includes(label)) {
       cell.labels.push(label);
     }
-    cell.photos.push({
-      id: row.id,
-      title: row.title,
-      authorSlug: row.author_slug,
-    });
+    cell.photos.push({ id: row.id, title: row.title });
   }
 
   return [...cells.values()].sort(compareCells);

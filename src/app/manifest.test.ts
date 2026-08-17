@@ -3,14 +3,20 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * The three places one colour is written down.
+ * The four places one colour is written down.
  *
  * `--ground` in the stylesheet is the colour the viewer sits on. The root
- * layout repeats it as `themeColor` so browser chrome matches, and the web
+ * layout repeats it as `themeColor` so browser chrome matches, the web
  * manifest repeats it again as `theme_color` and `background_color` so an
- * installed app's toolbar and splash do too. Nothing in the language ties
- * the three together: the manifest is a plain object, the viewport export is
- * a plain object, and the stylesheet is text.
+ * installed app's toolbar and splash do too, and `/api/og` repeats it a
+ * fourth time as the card's background. Nothing in the language ties the
+ * four together: the manifest is a plain object, the viewport export is a
+ * plain object, and the stylesheet is text.
+ *
+ * The OG route's literal is legitimate — Satori has no CSS, which is why
+ * that file sits on `design.test.ts`'s stylesheet exemption list — but a
+ * colour nothing checks is a colour that drifts, and the social card is the
+ * one surface where drift is seen by people who have never opened the site.
  *
  * So they drifted. The manifest carried the teal fallback tint while
  * claiming in a comment to match the layout, which meant a home-screen
@@ -51,5 +57,12 @@ describe("the ground colour is one colour", () => {
 
     expect(theme?.toLowerCase()).toBe(ground?.toLowerCase());
     expect(background?.toLowerCase()).toBe(ground?.toLowerCase());
+  });
+
+  it("the OG card's background matches it too", () => {
+    const og = /GROUND\s*=\s*"(#[0-9a-f]{6})"/i.exec(
+      read("src", "app", "api", "og", "route.tsx"),
+    )?.[1];
+    expect(og?.toLowerCase()).toBe(ground?.toLowerCase());
   });
 });

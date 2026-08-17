@@ -1,3 +1,4 @@
+import { formText } from "@/app/form-state";
 import {
   looksLikeEmail,
   normaliseEmail,
@@ -12,9 +13,25 @@ import {
  * so everything it accepts is bounded here rather than trusted downstream.
  */
 
-const MAX_NAME = 80;
+/**
+ * How long a photographer's name may be, wherever one is typed.
+ *
+ * Exported because the invite form has to agree with it, and used to do so
+ * by declaring its own `80` under a comment saying it matched this one — a
+ * coupling maintained by hand, which is the kind that stops being true the
+ * first time somebody changes one number.
+ */
+export const MAX_NAME = 80;
 const MAX_NOTE = 200;
-const MAX_URL = 300;
+
+/**
+ * The bound on the two long free-text fields, an address and a link.
+ *
+ * Exported for the same reason `MAX_NAME` is: the invite form reads the same
+ * two fields and bounded neither, because its reader hand-rolled the trim
+ * and there was no length in sight to remind anyone.
+ */
+export const MAX_URL = 300;
 
 export interface ApplicationInput {
   email: string;
@@ -33,11 +50,6 @@ export type ApplicationResult =
  * upgraded to https rather than refused.
  */
 
-function field(form: FormData, name: string, max: number): string {
-  const value = form.get(name);
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
 export function validateApplication(form: FormData): ApplicationResult {
   /*
    * Honeypot. A field no human sees and every naive bot fills in. Reported
@@ -48,17 +60,17 @@ export function validateApplication(form: FormData): ApplicationResult {
     return { ok: false, error: "SILENT_DROP" };
   }
 
-  const displayName = field(form, "display_name", MAX_NAME);
+  const displayName = formText(form, "display_name", MAX_NAME);
   if (displayName === "") {
     return { ok: false, error: "Tell us your name." };
   }
 
-  const email = normaliseEmail(field(form, "email", MAX_URL));
+  const email = normaliseEmail(formText(form, "email", MAX_URL));
   if (!looksLikeEmail(email)) {
     return { ok: false, error: "That does not look like an email address." };
   }
 
-  const siteUrl = normaliseSiteUrl(field(form, "site_url", MAX_URL));
+  const siteUrl = normaliseSiteUrl(formText(form, "site_url", MAX_URL));
   if (siteUrl === null) {
     return {
       ok: false,
@@ -66,7 +78,7 @@ export function validateApplication(form: FormData): ApplicationResult {
     };
   }
 
-  const note = field(form, "note", MAX_NOTE);
+  const note = formText(form, "note", MAX_NOTE);
 
   return {
     ok: true,

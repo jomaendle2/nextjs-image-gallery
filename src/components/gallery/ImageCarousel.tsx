@@ -108,18 +108,6 @@ export function ImageCarousel({
     setIsDisabled(false);
   }, [setIsDisabled]);
 
-  /*
-   * The details panel takes the keyboard the same way the modal does. Without
-   * this, arrow keys inside an open panel would page the photograph behind
-   * it, and the panel would then be describing a different picture.
-   */
-  const handleDetailsOpenChange = useCallback(
-    (open: boolean) => {
-      setIsDisabled(open);
-    },
-    [setIsDisabled],
-  );
-
   // Derived during render: the background is a pure function of the index,
   // so computing it in an effect only bought an extra commit per navigation.
   /*
@@ -231,7 +219,17 @@ export function ImageCarousel({
           currentIndex={currentIndex}
           image={currentImage}
           images={images}
-          onDetailsOpenChange={handleDetailsOpenChange}
+          /*
+            The details panel takes the keyboard the same way the modal
+            does. Without this, arrow keys inside an open panel would page
+            the photograph behind it, and the panel would then be describing
+            a different picture.
+
+            The setter, passed straight through: it is already stable and
+            already `(open: boolean) => void`, so wrapping it in a
+            `useCallback` was a second name for the same function.
+          */
+          onDetailsOpenChange={setIsDisabled}
           onImageSelect={goToIndex}
         />
       </main>

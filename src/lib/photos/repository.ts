@@ -187,8 +187,7 @@ export async function getMemberDetails(id: string): Promise<{
  */
 export async function listGlobePoints(): Promise<GlobePointRow[]> {
   const rows = await sql`
-    SELECT p.id, p.title, p.location, p.coarse_lat, p.coarse_lng,
-           c.slug AS author_slug
+    SELECT p.id, p.title, p.location, p.coarse_lat, p.coarse_lng
     FROM photos p JOIN contributors c ON c.id = p.author_id
     WHERE p.published_at IS NOT NULL AND c.revoked_at IS NULL
       AND p.coarse_lat IS NOT NULL AND p.coarse_lng IS NOT NULL

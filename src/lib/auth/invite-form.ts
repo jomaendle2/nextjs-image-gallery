@@ -1,7 +1,6 @@
+import { formText } from "@/app/form-state";
+import { MAX_NAME, MAX_URL } from "@/lib/applications/validate";
 import { looksLikeEmail, normaliseEmail, normaliseSiteUrl } from "./slug";
-
-/** Matches the name length the apply form accepts. */
-const MAX_NAME = 80;
 
 export type InviteInput =
   | { email: string; displayName: string; siteUrl: string | null }
@@ -29,11 +28,9 @@ export function readInviteForm(
   formData: FormData,
   actorEmail: string,
 ): InviteInput {
-  const email = normaliseEmail(String(formData.get("email") ?? ""));
-  const displayName = String(formData.get("display_name") ?? "")
-    .trim()
-    .slice(0, MAX_NAME);
-  const siteUrlRaw = String(formData.get("site_url") ?? "").trim();
+  const email = normaliseEmail(formText(formData, "email", MAX_URL));
+  const displayName = formText(formData, "display_name", MAX_NAME);
+  const siteUrlRaw = formText(formData, "site_url", MAX_URL);
 
   if (!looksLikeEmail(email) || displayName === "") {
     return { error: "An email address and a name are required." };

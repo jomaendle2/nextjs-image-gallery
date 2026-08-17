@@ -4,6 +4,7 @@ import { CheckSquare, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
 import { GlassButton } from "@/components/ui/glass-button";
+import { photoTitle } from "@/lib/photos/title";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import { count } from "@/lib/plural";
 
@@ -21,10 +22,6 @@ import { count } from "@/lib/plural";
 
 /** How many titles to list before summarising the rest. */
 const NAMED_IN_CONFIRMATION = 8;
-
-function titleOf(photo: OwnPhotoRow): string {
-  return (photo.title ?? "").trim() === "" ? "Untitled" : (photo.title ?? "");
-}
 
 function DeleteConfirmation({
   chosen,
@@ -53,7 +50,7 @@ function DeleteConfirmation({
       <ul className="space-y-0.5 text-white/60 text-xs">
         {chosen.slice(0, NAMED_IN_CONFIRMATION).map((photo) => (
           <li className="truncate" key={photo.id}>
-            {titleOf(photo)}
+            {photoTitle(photo.title)}
           </li>
         ))}
         {extra > 0 ? <li className="text-white/55">and {extra} more</li> : null}

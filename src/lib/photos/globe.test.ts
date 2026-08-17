@@ -20,7 +20,6 @@ function row(over: Partial<GlobePointRow>): GlobePointRow {
     location: "Nusa Penida",
     coarse_lat: -8.7028,
     coarse_lng: 115.1637,
-    author_slug: "jo",
     ...over,
   };
 }

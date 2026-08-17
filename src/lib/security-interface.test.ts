@@ -78,7 +78,7 @@ describe("I2 — bulk writes carry the same authorization as single ones", () =>
    */
   it("bulk delete names what it is about to delete", () => {
     const bar = read("app", "contribute", "photos", "BulkBar.tsx");
-    expect(bar).toContain("titleOf(photo)");
+    expect(bar).toContain("photoTitle(photo.title)");
     expect(bar).toMatch(/chosen\.slice\(/);
     /*
      * And the destructive confirm must still be a separate, armed step —

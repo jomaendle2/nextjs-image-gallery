@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { type FormState, failed, succeeded } from "@/app/form-state";
+import type { AnnounceOutcome } from "@/lib/announce-result";
 import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
 import {
@@ -29,13 +30,6 @@ import { revalidateFeeds } from "@/lib/photos/revalidate";
 import { siteOrigin } from "@/lib/site-url";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 
-/** What a send did, for the button to report. */
-export interface AnnounceResult {
-  sent: number;
-  failed: number;
-  photographs: number;
-}
-
 /**
  * Kept as a name rather than a shape: the form is now shared with the
  * contributor invite, so the shape lives in `../invite-state` and this is an
@@ -43,8 +37,6 @@ export interface AnnounceResult {
  * `"use server"` module where a value would not be.
  */
 export type AdminFormState = FormState;
-
-const _MAX_NAME = 80;
 
 /**
  * Every action here re-checks the role on the server.
@@ -247,7 +239,7 @@ export async function ownerSetPublished(
  * weekly cron does not send — it emails the owner that there is something
  * to send, and this is what they press.
  */
-export async function announceNewWork(): Promise<AnnounceResult> {
+export async function announceNewWork(): Promise<AnnounceOutcome> {
   await requireOwner();
 
   const rows = await listUnannouncedPhotos();

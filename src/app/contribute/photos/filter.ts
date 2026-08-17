@@ -24,7 +24,7 @@ export function matches(photo: OwnPhotoRow, needle: string): boolean {
     return true;
   }
   return (
-    (photo.title ?? "").toLowerCase().includes(needle) ||
+    photo.title.toLowerCase().includes(needle) ||
     (photo.location ?? "").toLowerCase().includes(needle)
   );
 }

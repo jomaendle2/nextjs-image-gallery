@@ -61,10 +61,6 @@ export function CaptionBar({
       <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(0,1fr)_fit-content(45%)_minmax(0,1fr)] lg:gap-6">
         <ImageInfo image={image} />
 
-        {/*
-          Stacked on mobile the credit belongs with the caption it describes,
-          above the strip; in the three-column bar it sits on the right.
-        */}
         <div className="order-3 min-w-0 lg:order-2">
           <ImageIndicators
             currentIndex={currentIndex}
@@ -73,6 +69,10 @@ export function CaptionBar({
           />
         </div>
 
+        {/*
+          Stacked on mobile the credit belongs with the caption it describes,
+          above the strip; in the three-column bar it sits on the right.
+        */}
         <div className="order-2 min-w-0 lg:order-3">
           <PhotoCredit image={image} onOpenChange={onDetailsOpenChange} />
         </div>

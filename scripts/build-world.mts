@@ -8,7 +8,7 @@
  * The coastline of the world changes about as often as this file needs to, so
  * the output is committed as data and this exists to make the provenance
  * checkable rather than to run on every deploy. It fetches eighteen megabytes
- * over the network and writes two files; nothing else imports it.
+ * over the network and writes three files; nothing else imports it.
  *
  * Deliberately not a dependency. `mapshaper`, `topojson-client` and `d3-geo`
  * would each do part of this in fewer lines, and all three would sit in
@@ -158,9 +158,9 @@ interface GeoJson {
  * piece of land in the middle of Asia, which is exactly the sort of thing
  * that makes a map read as wrong without anybody being able to say why.
  */
-function readPolygons(geo: GeoJson): Polygon[] {
+function readPolygons(source: GeoJson): Polygon[] {
   const polygons: Polygon[] = [];
-  for (const feature of geo.features) {
+  for (const feature of source.features) {
     const { type, coordinates } = feature.geometry;
     const many = (
       type === "Polygon"
@@ -181,9 +181,9 @@ function readPolygons(geo: GeoJson): Polygon[] {
  * separately so they never get closed. A border joined back to its own start
  * is a country-shaped outline, which is the thing this layer exists to avoid.
  */
-function readLines(geo: GeoJson): Point[][] {
+function readLines(source: GeoJson): Point[][] {
   const lines: Point[][] = [];
-  for (const feature of geo.features) {
+  for (const feature of source.features) {
     const { type, coordinates } = feature.geometry;
     const many = (
       type === "LineString"
@@ -391,10 +391,12 @@ const borderLines = readLines((await borderResponse.json()) as GeoJson)
   .map((line) => simplify(line, RECIPES.borders.tolerance))
   .filter((line) => line.length >= 2)
   .map((line) =>
-    line.map(([x, y]): Point => [
-      round(x, RECIPES.borders.places),
-      round(y, RECIPES.borders.places),
-    ]),
+    line.map(
+      ([x, y]): Point => [
+        round(x, RECIPES.borders.places),
+        round(y, RECIPES.borders.places),
+      ],
+    ),
   );
 
 const pathPolygons = prepare(all, RECIPES.path, PATH_NORTH);

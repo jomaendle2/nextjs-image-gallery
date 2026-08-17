@@ -58,7 +58,6 @@ export interface GlobePointRow {
   location: string | null;
   coarse_lat: number;
   coarse_lng: number;
-  author_slug: string;
 }
 
 /** What a contributor sees on their own dashboard, drafts included. */

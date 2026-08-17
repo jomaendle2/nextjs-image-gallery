@@ -5,7 +5,7 @@ import { isActive, type Member } from "@/lib/members/status";
 import { generateSecret, hashSecret } from "./secrets";
 import type { Contributor, ContributorRole } from "./types";
 
-export const SESSION_COOKIE = "gallery_session";
+const SESSION_COOKIE = "gallery_session";
 
 const SESSION_DAYS = 30;
 const SESSION_MAX_AGE = SESSION_DAYS * 24 * 60 * 60;

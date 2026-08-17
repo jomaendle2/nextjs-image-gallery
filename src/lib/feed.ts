@@ -14,6 +14,30 @@ import { photoAltText } from "@/lib/photos/alt-text";
 /** Feeds are a recent-items format. Older work is what the sitemap is for. */
 export const FEED_LIMIT = 50;
 
+/**
+ * The XML, wrapped as the response both feed routes return identically.
+ *
+ * They had each written out the same content type and the same cache header
+ * by hand, with the reasoning commented on one of them and silently copied
+ * to the other — so a reader of `/by/[slug]/feed.xml` met three magic numbers
+ * with nothing explaining them, and any change to the caching would have had
+ * to be made twice to stay true.
+ *
+ * A reader polls a feed on its own schedule and there is no reason for every
+ * one of them to reach the database. An hour at the edge with a day of
+ * stale-while-revalidate means a burst of subscribers costs one query, and a
+ * slow rebuild never leaves anybody with nothing.
+ */
+export function rssResponse(xml: string): Response {
+  return new Response(xml, {
+    headers: {
+      "Content-Type": "application/rss+xml; charset=utf-8",
+      "Cache-Control":
+        "public, s-maxage=3600, stale-while-revalidate=86400, max-age=0",
+    },
+  });
+}
+
 const XML_ESCAPES: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",

@@ -9,6 +9,7 @@ import { GROUND } from "@/lib/photo-ground";
 import { CELL_KM } from "@/lib/photos/coarsen";
 import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
+import { photoTitle } from "@/lib/photos/title";
 import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
@@ -129,7 +130,7 @@ export default async function GlobePage() {
                             className={`${LINK} text-[0.9375rem]`}
                             href={`/photo/${photo.id}`}
                           >
-                            {photo.title === "" ? "Untitled" : photo.title}
+                            {photoTitle(photo.title)}
                           </Link>
                         </li>
                       ))}
