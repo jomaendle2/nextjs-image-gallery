@@ -1,6 +1,6 @@
 import { MapPin, NotebookPen } from "lucide-react";
 import Image from "next/image";
-import { META } from "@/components/ui/field";
+import { META, META_TYPE } from "@/components/ui/field";
 
 /**
  * One real photograph, with the two things a membership unlocks printed on it.
@@ -109,7 +109,13 @@ export function MembershipSpecimen({
               {photo.technique}
             </p>
           </div>
-          <p className={`text-white/70 ${META}`}>What members see</p>
+          {/*
+        `META_TYPE`, not `META`: this is a raw template rather than `cn`, so
+        `META`'s own `text-white/55` would sit in the same class attribute as
+        the `/70` wanted here and the winner would be Tailwind's emit order.
+        The same hazard `META_TYPE` was split out for, in a second place.
+      */}
+          <p className={`text-white/70 ${META_TYPE}`}>What members see</p>
         </div>
       </figcaption>
     </figure>

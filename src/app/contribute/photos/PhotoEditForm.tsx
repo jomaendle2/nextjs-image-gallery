@@ -77,7 +77,7 @@ export function PhotoEditForm({
           className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs ${
             isPublished
               ? "bg-white/15 text-white/90"
-              : "bg-white/5 text-white/50"
+              : "bg-white/5 text-white/55"
           }`}
         >
           {isPublished ? "Published" : "Draft"}

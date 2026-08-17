@@ -4,6 +4,17 @@ import { cn } from "@/lib/utils";
 interface GlassButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "primary" | "danger" | "arm" | "icon";
   size?: "default" | "icon" | "sm";
+  /**
+   * The submit at the end of a form, which spans the column on a phone.
+   *
+   * `GLASS_BASE` is `inline-flex`, so every one of these was a 200-odd-pixel
+   * button floating at the left of a 390px screen — except `/membership`,
+   * which passed `w-full sm:w-auto` through `className` and so was the only
+   * form on the site whose action filled the thumb's reach. A layout
+   * decision one call site happened to make is not a design system; the
+   * breakpoint is here so all of them make the same one.
+   */
+  fullWidth?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -14,6 +25,25 @@ const GLASS_BASE = cn(
   "hover:bg-[var(--glass-fill-hover)] active:scale-95",
   "disabled:opacity-50 disabled:pointer-events-none",
 );
+
+/**
+ * The accent fill, named once so a link can wear it too.
+ *
+ * `variant="primary"` covers every case where the one action a page was
+ * opened to take is a `<button>`. `/photographers` is the case where it is
+ * not: "Apply to contribute" navigates, and an anchor cannot nest inside a
+ * button — so before this the page's primary action was plain glass while
+ * the accent sat on "Follow the gallery" beside it, which told the reader the
+ * secondary action was the point.
+ *
+ * Exported rather than copied for the reason `design.test.ts` states: if the
+ * accent can be spelled out in a `className`, whether a control is primary
+ * stops being a property of the control and becomes a thing each page decides
+ * again. Still at most one per view — the moment there are two, neither is
+ * primary — so say why at any call site that reaches for this.
+ */
+export const PRIMARY_FILL =
+  "border-accent-edge bg-accent-fill text-accent-bright hover:bg-accent-fill-hover";
 
 /**
  * The look, separated from the element.
@@ -42,6 +72,7 @@ export function GlassButton({
   variant = "default",
   size = "default",
   type = "button",
+  fullWidth = false,
   ref,
   ...props
 }: GlassButtonProps) {
@@ -60,8 +91,7 @@ export function GlassButton({
          * accent is allowed to fill a surface, and there is at most one per
          * view — the moment there are two, neither is primary.
          */
-        variant === "primary" &&
-          "rounded-2xl border-accent-edge bg-accent-fill text-accent-bright hover:bg-accent-fill-hover",
+        variant === "primary" && cn("rounded-2xl", PRIMARY_FILL),
         /*
          * The armed destructive action: the one that goes through.
          *
@@ -85,6 +115,8 @@ export function GlassButton({
         size === "default" && "min-h-12 px-6 py-3 text-sm",
         size === "icon" && "h-12 w-12",
         size === "sm" && "min-h-11 px-4 py-2 text-sm",
+
+        fullWidth && "w-full sm:w-auto",
 
         className,
       )}

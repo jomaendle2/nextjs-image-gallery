@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { SECTION_HEADING } from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 import { listPendingApplications } from "@/lib/applications/repository";
 import { listContributors } from "@/lib/auth/contributors";
@@ -52,7 +53,7 @@ export default async function AdminPage() {
     >
       {applications.length === 0 ? null : (
         <section className="mb-8">
-          <h2 className="mb-3 font-semibold text-lg tracking-[-0.03em]">
+          <h2 className={`mb-3 ${SECTION_HEADING}`}>
             Pending applications ({applications.length})
           </h2>
           <ul className="space-y-2">
@@ -95,9 +96,7 @@ export default async function AdminPage() {
       <AnnounceActions pending={unannounced} subscribers={subscribers} />
 
       <section className="glass-thin rounded-3xl p-6">
-        <h2 className="mb-1 font-semibold text-lg tracking-[-0.03em]">
-          Invite a photographer
-        </h2>
+        <h2 className={`mb-1 ${SECTION_HEADING}`}>Invite a photographer</h2>
         <p className="mb-4 text-sm text-white/55">
           Adding someone here is the invitation — there is nothing for them to
           accept. They sign in at{" "}
@@ -108,7 +107,7 @@ export default async function AdminPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 font-semibold text-lg tracking-[-0.03em]">
+        <h2 className={`mb-3 ${SECTION_HEADING}`}>
           People ({contributors.length})
         </h2>
         <ul className="space-y-2">

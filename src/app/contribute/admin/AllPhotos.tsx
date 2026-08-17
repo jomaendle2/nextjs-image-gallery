@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import { SECTION_HEADING } from "@/components/ui/field";
 import { SearchField } from "@/components/ui/SearchField";
 import { photoTitle } from "@/lib/photos/title";
 import type { OwnPhotoRow } from "@/lib/photos/types";
@@ -49,7 +50,7 @@ export function AllPhotos({ photos }: { photos: OwnPhotoRow[] }) {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 font-semibold text-lg tracking-[-0.03em]">
+      <h2 className={`mb-3 ${SECTION_HEADING}`}>
         Every photograph ({photos.length})
       </h2>
 

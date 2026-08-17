@@ -1,7 +1,7 @@
-import { ArrowLeft, ArrowUpRight, Rss } from "lucide-react";
-import Link from "next/link";
-import { META } from "@/components/ui/field";
+import { ArrowUpRight, Rss } from "lucide-react";
+import { META, PAGE_TITLE } from "@/components/ui/field";
 import { ShareButton } from "@/components/ui/ShareButton";
+import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import type { GalleryAuthor } from "@/data/galleryData";
 import { count } from "@/lib/plural";
 import { ViewToggle } from "./ViewToggle";
@@ -37,16 +37,15 @@ export function ContributorHeader({
             stop. Small caps are the language for metadata like the photo
             count below; putting the mark itself in tracked capitals and
             dropping its period made it read as a different logo.
-          */}
-          <Link
-            className="-my-3 inline-flex min-h-11 items-center gap-1.5 rounded-full py-3 font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
-            href="/"
-          >
-            <ArrowLeft aria-hidden="true" size={13} />
-            the beauty of earth.
-          </Link>
 
-          <h1 className="mt-1.5 font-semibold text-2xl text-white tracking-[-0.035em] sm:text-3xl">
+            It is a component now because this copy had drifted: it spelled
+            out the vertical half of `TOUCH_LINK` and left out the horizontal
+            half, so the one back-link on the photographer pages was the one
+            that failed the width floor.
+          */}
+          <WordmarkLink />
+
+          <h1 className={`mt-1.5 text-white ${PAGE_TITLE}`}>
             {contributor.name}
           </h1>
 

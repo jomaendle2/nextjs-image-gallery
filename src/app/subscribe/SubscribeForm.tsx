@@ -57,7 +57,13 @@ export function SubscribeForm() {
         />
       </div>
 
-      <GlassButton disabled={pending} size="sm" type="submit" variant="primary">
+      <GlassButton
+        disabled={pending}
+        fullWidth={true}
+        size="sm"
+        type="submit"
+        variant="primary"
+      >
         {pending ? "Sending…" : "Follow the gallery"}
       </GlassButton>
 

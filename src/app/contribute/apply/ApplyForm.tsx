@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState, useId } from "react";
-import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
+import {
+  FIELD,
+  LABEL,
+  LABEL_HINT,
+  SECTION_HEADING,
+} from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { type ApplyState, apply } from "./actions";
 
@@ -18,9 +23,7 @@ export function ApplyForm() {
   if (state.tone === "sent") {
     return (
       <div className="glass-thin rounded-2xl p-6">
-        <h2 className="font-semibold text-lg tracking-[-0.03em]">
-          Application received
-        </h2>
+        <h2 className={SECTION_HEADING}>Application received</h2>
         <p className="mt-2 text-pretty text-sm text-white/60 leading-relaxed">
           Jo looks at every one personally, so a reply takes a few days rather
           than a few minutes. If it is a yes, you will get an email with a link
@@ -108,7 +111,12 @@ export function ApplyForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <GlassButton disabled={pending} type="submit" variant="primary">
+        <GlassButton
+          disabled={pending}
+          fullWidth={true}
+          type="submit"
+          variant="primary"
+        >
           {pending ? "Sending…" : "Apply to contribute"}
         </GlassButton>
         <p aria-live="polite" className="text-sm text-white/60">

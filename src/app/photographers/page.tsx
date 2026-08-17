@@ -1,11 +1,17 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
-import { META, TOUCH_LINK } from "@/components/ui/field";
-import { glassControl } from "@/components/ui/glass-button";
+import {
+  BODY_SMALL,
+  META,
+  PAGE_TITLE,
+  SECTION_HEADING,
+} from "@/components/ui/field";
+import { glassControl, PRIMARY_FILL } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
+import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
@@ -37,17 +43,9 @@ export default async function PhotographersPage() {
     >
       <div className="mx-auto w-full max-w-[1536px] px-4 py-10 sm:px-8 sm:py-14">
         <header>
-          <Link
-            className={`${TOUCH_LINK} gap-1.5 font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-            href="/"
-          >
-            <ArrowLeft aria-hidden="true" size={13} />
-            the beauty of earth.
-          </Link>
+          <WordmarkLink />
 
-          <h1 className="mt-1.5 font-semibold text-2xl tracking-[-0.035em] sm:text-3xl">
-            Photographers
-          </h1>
+          <h1 className={`mt-1.5 ${PAGE_TITLE}`}>Photographers</h1>
           <p className={`mt-1 ${META}`}>
             {count(contributors.length, "photographer")}
           </p>
@@ -110,10 +108,8 @@ export default async function PhotographersPage() {
               odd verb to put beside photographs of landscapes, and a
               question mark does not make a headline friendly. Say the thing.
             */}
-            <h2 className="font-semibold text-xl tracking-[-0.03em]">
-              Add your photographs
-            </h2>
-            <p className="mt-2 text-pretty text-sm text-white/55 leading-relaxed">
+            <h2 className={SECTION_HEADING}>Add your photographs</h2>
+            <p className={`mt-2 text-pretty ${BODY_SMALL}`}>
               The gallery is invited rather than open, which is why it stays
               small. Send us a link to your work and we will take a look.
             </p>
@@ -121,11 +117,19 @@ export default async function PhotographersPage() {
               A link, not a GlassButton: this navigates, and nesting an anchor
               inside a button is invalid. It borrows the same glass treatment so
               it still reads as the primary action.
+
+              `PRIMARY_FILL` because this is the one action this page exists to
+              produce, and it was the one control on it wearing no accent —
+              the teal sat on "Follow the gallery" two sections down, which is
+              the secondary answer to the page's question. DESIGN.md allows one
+              accent primary per view; this is that one. The subscribe link
+              keeps the accent every link on a reading page has, which is a
+              different permission.
             */}
             <Link
               /* A Link, which cannot nest inside a button. */
               className={glassControl(
-                "mt-5 min-h-11 px-5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80",
+                `mt-5 min-h-11 px-5 text-sm ${PRIMARY_FILL} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`,
               )}
               href="/contribute/apply"
             >
@@ -143,10 +147,8 @@ export default async function PhotographersPage() {
             nothing pointing at it, which is a page nobody can find.
           */}
           <section className="mt-10 max-w-prose">
-            <h2 className="font-semibold text-xl tracking-[-0.03em]">
-              Hear about new work
-            </h2>
-            <p className="mt-2 text-pretty text-sm text-white/55 leading-relaxed">
+            <h2 className={SECTION_HEADING}>Hear about new work</h2>
+            <p className={`mt-2 text-pretty ${BODY_SMALL}`}>
               One email when new photographs go up, and nothing else. There is a
               feed too, if you would rather not give us an address.
             </p>

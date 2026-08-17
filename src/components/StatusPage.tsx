@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { TOUCH_LINK } from "@/components/ui/field";
+import { BODY_SMALL, PAGE_TITLE } from "@/components/ui/field";
+import { TextLink } from "@/components/ui/TextLink";
 import { GROUND } from "@/lib/photo-ground";
 
 interface StatusPageProps {
@@ -27,24 +27,29 @@ export function StatusPage({ title, detail, action }: StatusPageProps) {
       style={{ backgroundColor: GROUND }}
     >
       <div className="w-full max-w-sm text-center">
+        {/*
+          A label, not `WordmarkLink`: the way home is already the link below
+          it, and two anchors to `/` on a page this small is one of them
+          nobody needs. It keeps the wordmark's own setting for the same
+          reason the photographer header does.
+        */}
         <p className="font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em]">
           the beauty of earth.
         </p>
 
-        <h1 className="mt-6 text-balance font-semibold text-2xl tracking-[-0.035em] sm:text-3xl">
-          {title}
-        </h1>
-        <p className="mt-3 text-pretty text-sm text-white/50 leading-relaxed">
-          {detail}
-        </p>
+        <h1 className={`mt-6 text-balance ${PAGE_TITLE}`}>{title}</h1>
+        <p className={`mt-3 text-pretty ${BODY_SMALL}`}>{detail}</p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
-          <Link
-            className={`${TOUCH_LINK} font-medium text-sm text-white/70 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white hover:decoration-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-            href="/"
-          >
+          {/*
+            `TextLink`, not the fifth spelling of a link this used to be —
+            white/70 with a quarter-opacity underline, invented here and
+            nowhere else. A 404 is a reading page, and on a reading page a
+            link is accent and comes from one component.
+          */}
+          <TextLink href="/" standalone={true}>
             Back to the gallery
-          </Link>
+          </TextLink>
           {action}
         </div>
       </div>

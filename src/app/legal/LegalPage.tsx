@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
+import { BODY, SECTION_HEADING } from "@/components/ui/field";
 import { Notice } from "@/components/ui/Notice";
 import { TextLink } from "@/components/ui/TextLink";
 import { legalIsComplete, OPERATOR } from "@/lib/legal";
@@ -41,7 +42,7 @@ export function LegalPage({
         </Notice>
       )}
 
-      <div className="max-w-prose space-y-8 text-[0.9375rem] text-white/65 leading-relaxed">
+      <div className={`max-w-prose space-y-8 ${BODY}`}>
         {children}
 
         <p className="border-white/10 border-t pt-6 text-sm text-white/55">
@@ -66,9 +67,7 @@ export function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="font-semibold text-[1.0625rem] text-white tracking-[-0.02em]">
-        {heading}
-      </h2>
+      <h2 className={SECTION_HEADING}>{heading}</h2>
       {children}
     </section>
   );

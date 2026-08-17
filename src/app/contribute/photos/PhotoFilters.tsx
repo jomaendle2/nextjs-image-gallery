@@ -55,7 +55,7 @@ export function PhotoFilters({
             className={`inline-flex min-h-11 cursor-pointer items-center rounded-lg px-3 font-medium text-[0.8125rem] transition-colors focus-within:outline-2 focus-within:outline-white/80 ${
               filter === value
                 ? "bg-white/10 text-white"
-                : "text-white/50 hover:text-white/80"
+                : "text-white/55 hover:text-white/80"
             }`}
             key={value}
           >

@@ -1,10 +1,16 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GlobeStage } from "@/components/geo/GlobeStage";
 import { SiteFooter } from "@/components/SiteFooter";
-import { LINK, META, TOUCH_LINK } from "@/components/ui/field";
+import {
+  BODY,
+  LINK,
+  META,
+  PAGE_TITLE,
+  SECTION_HEADING,
+} from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
+import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { CELL_KM } from "@/lib/photos/coarsen";
@@ -58,17 +64,9 @@ export default async function GlobePage() {
     >
       <div className="mx-auto w-full max-w-[1536px] px-4 py-10 sm:px-8 sm:py-14">
         <header>
-          <Link
-            className={`${TOUCH_LINK} gap-1.5 font-semibold text-[0.8125rem] text-white/55 tracking-[-0.02em] transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-            href="/"
-          >
-            <ArrowLeft aria-hidden="true" size={13} />
-            the beauty of earth.
-          </Link>
+          <WordmarkLink />
 
-          <h1 className="mt-1.5 font-semibold text-2xl tracking-[-0.035em] sm:text-3xl">
-            Where these were taken
-          </h1>
+          <h1 className={`mt-1.5 ${PAGE_TITLE}`}>Where these were taken</h1>
           <p className={`mt-1 ${META}`}>
             {`${count(cells.length, "place")} · ${count(photographs, "photograph")}`}
           </p>
@@ -76,7 +74,7 @@ export default async function GlobePage() {
 
         <main className="mt-10">
           {cells.length === 0 ? (
-            <p className="max-w-prose text-pretty text-[0.9375rem] text-white/60 leading-relaxed">
+            <p className={`max-w-prose text-pretty ${BODY}`}>
               No photographer has marked a place yet. When one does, it will
               appear here.{" "}
               <Link className={LINK} href="/">
@@ -96,7 +94,7 @@ export default async function GlobePage() {
                 these marks do and do not mean.
               */}
               <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16">
-                <p className="max-w-prose text-pretty text-[1.0625rem] text-white/65 leading-relaxed">
+                <p className={`max-w-prose text-pretty ${BODY}`}>
                   Photographers mark these themselves; nothing is ever read from
                   a photograph's file. Each place is deliberately blunt: the
                   middle of a square about {CELL_KM} kilometres across, so it
@@ -118,9 +116,20 @@ export default async function GlobePage() {
               <ul className="mt-14 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
                 {cells.map((cell) => (
                   <li key={cell.key}>
-                    <h2 className="font-semibold text-[1.0625rem] text-white tracking-[-0.025em]">
-                      {labelFor(cell)}
-                    </h2>
+                    {/*
+                      `SECTION_HEADING`, even though there are forty of these
+                      rather than three.
+
+                      The argument for keeping it its own size was that a
+                      place name in a grid cell is a label, not a page
+                      section. But the token's own docblock draws that line
+                      somewhere else, and draws it well: a label captions a
+                      number or a field, and a heading introduces something.
+                      Each of these introduces a list of photographs, and it
+                      is the only `h2` on the page. A sixth size to say
+                      "heading, but in a column" is how five of them got here.
+                    */}
+                    <h2 className={SECTION_HEADING}>{labelFor(cell)}</h2>
                     <p className={`mt-1 ${META}`}>
                       {count(cell.photos.length, "photograph")}
                     </p>

@@ -210,7 +210,7 @@ function body(data: Details | undefined): ReactNode {
     return (
       <div>
         <p className={META}>Where exactly, and how</p>
-        <p className="mt-1.5 text-[0.9375rem] text-white/50 leading-relaxed">
+        <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
           The photographer has not written anything for this one.
         </p>
       </div>

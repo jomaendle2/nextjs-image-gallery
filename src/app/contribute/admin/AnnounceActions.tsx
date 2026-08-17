@@ -3,6 +3,7 @@
 import { Send } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ActionError } from "@/components/ui/ActionError";
+import { SECTION_HEADING } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useServerAction } from "@/hooks/useServerAction";
 import { describeAnnouncement } from "@/lib/announce-result";
@@ -110,7 +111,7 @@ export function AnnounceActions({
 
   return (
     <section className="mb-8">
-      <h2 className="mb-1 font-semibold text-lg tracking-[-0.03em]">
+      <h2 className={`mb-1 ${SECTION_HEADING}`}>
         {pending === 0 ? "Announced" : `Waiting to be announced (${pending})`}
       </h2>
 

@@ -10,7 +10,12 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { META, SECTION_HEADING } from "@/components/ui/field";
+import {
+  BODY_SMALL,
+  ITEM_HEADING,
+  META,
+  SECTION_HEADING,
+} from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 import { MEMBERSHIP, OPERATOR } from "@/lib/legal";
 
@@ -62,12 +67,8 @@ function Row({
         {icon}
       </span>
       <div className="min-w-0">
-        <h3 className="font-semibold text-[0.9375rem] text-white tracking-[-0.02em]">
-          {heading}
-        </h3>
-        <p className="mt-1 text-pretty text-[0.8125rem] text-white/50 leading-relaxed">
-          {children}
-        </p>
+        <h3 className={ITEM_HEADING}>{heading}</h3>
+        <p className={`mt-1 text-pretty ${BODY_SMALL}`}>{children}</p>
       </div>
     </li>
   );
@@ -138,7 +139,7 @@ function Disclosure({
     <details className="glass-hairline group rounded-2xl px-5">
       <summary className="-mx-5 flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 rounded-2xl font-medium text-white/85 text-sm marker:content-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80">
         {summary}
-        <span className="flex items-center gap-2 text-white/50">
+        <span className="flex items-center gap-2 text-white/55">
           <span className={META}>{`${count} things`}</span>
           <ChevronDown
             aria-hidden="true"

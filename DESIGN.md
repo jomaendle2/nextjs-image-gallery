@@ -11,9 +11,21 @@ size when their state changes, because a bar that resizes under a photograph
 moves the photograph.
 
 **The reading pages** are the documents: `/contribute/*`, `/membership`,
-`/subscribe`, `/photographers`, and the three legal pages. These are read
-rather than looked through. They sit on `--color-surface`, a step lighter
-than the viewer's ground, and they are allowed one accent.
+`/subscribe`, `/photographers`, `/globe`, and the three legal pages. These are
+read rather than looked through. They are allowed one accent.
+
+Two of them sit on `--ground` rather than `--color-surface`, and that is the
+register they belong to rather than a third one. `/photographers` and `/globe`
+are indexes: lists of links with prose around them, no photograph on the page
+larger than a thumbnail, and every rule that matters here — one accent primary
+per view, links in a sentence are accent, headings come from the tokens —
+applies to them unchanged. "Links are accent" is about prose: a whole row that
+is itself a link, like a contributor on `/photographers`, stays white and
+carries an arrow instead, because accenting an entire row would make the page
+a wall of accent and defeat the one-accent rule above it. They keep the darker ground because both are reached directly
+from the gallery and a step lighter would read as leaving the site. Ground is
+a transition, and the register is the rule set; only the second one decides
+anything.
 
 ---
 
@@ -76,7 +88,11 @@ had been typed three or four times and had already drifted.
 
 | Component / token | Owns |
 | --- | --- |
-| `GlassButton` | Every button. `variant="primary"` is the accent; at most one per view. |
+| `GlassButton` | Every button. `variant="primary"` is the accent; at most one per view. `fullWidth` is the form submit that spans the column on a phone. |
+| `PRIMARY_FILL` | The accent fill, for the one primary action that has to be a link rather than a button. |
+| `WordmarkLink` | The "← the beauty of earth." back to the gallery. Every reading page's way out — `StatusPage` is the one exception and says why in place. |
+| `PAGE_TITLE`, `SECTION_HEADING`, `ITEM_HEADING` | The three headings: the page, a section of it, one card in a grid of them. A fourth needs what the third had — two files that had independently arrived at the same value. Inventing one by eye is how there came to be five. |
+| `BODY`, `BODY_SMALL` | Prose, and the note beside it. Two rungs where the pages had five — though roughly three dozen hand-typed prose runs outside the viewer have not been moved onto them yet, `ContributeShell`'s subtitle among them. The rungs are settled; the sweep is not finished. |
 | `TextLink` | Every link on a reading page. Internal and external, and the standalone-vs-inline touch rule. |
 | `Notice` | Every error, warning and success message. |
 | `FIELD`, `LABEL`, `LABEL_HINT` | Form fields. |
@@ -117,3 +133,9 @@ Kept because each was expensive to find and none of them is obvious.
   reason. Use a `key`; do not reset from an effect.
 - **Colour that does not mean anything is noise.** If two things are
   different colours, a reader will look for the difference.
+- **A rule only holds the thing it is written about.** `design.test.ts`
+  constrained colour and said so, and for a while that read as thoroughness.
+  Meanwhile the type drifted into five section headings, five body sizes at
+  four opacities and four spellings of one back-link — none of them a colour,
+  so none of them visible to anything. Two rules now hold the mechanical half
+  of the type as well. The half nobody is checking is the half that moves.

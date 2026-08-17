@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { allSourceFiles, SRC } from "./source-text";
+import { allSourceFiles, code, SRC } from "./source-text";
 
 /**
  * The design system, as the few rules a test can actually hold.
@@ -140,8 +140,15 @@ describe("text stays readable on the ground", () => {
    * on 11px uppercase metadata — nowhere near the large-text exemption. The
    * site had 57 of them, including the legal footer and the hint under every
    * form field.
+   *
+   * The range runs to 54, so the floor is 55 — which is what the failure
+   * message below has always asked for. It used to stop at 45, leaving 46
+   * through 54 passing a test that told them in words they were wrong, and
+   * three paragraphs had settled in that gap. `BODY_SMALL` in `field.ts` is
+   * set at 55 for the same reason; a regex one digit looser than its own
+   * argument is not a rule, it is a suggestion with a stern tone.
    */
-  const TOO_FAINT = /text-white\/(?:1\d|2\d|3\d|4[0-5])\b/;
+  const TOO_FAINT = /text-white\/(?:1\d|2\d|3\d|4\d|5[0-4])\b/;
 
   it("no text uses an opacity below the AA floor", () => {
     const offenders: string[] = [];
@@ -178,6 +185,104 @@ describe("text stays readable on the ground", () => {
       offenders,
       "Use text-white/55 or higher. Below that it fails WCAG AA on this " +
         "background, and the small uppercase metadata is where it hurts most.",
+    ).toEqual([]);
+  });
+});
+
+/*
+ * Everything above this line is about colour, and for a long time that was
+ * the whole file — it said so itself: nothing here constrained type size,
+ * tracking, uppercase or heading level. Which is exactly why the type drifted
+ * where the colour did not. An audit found five treatments for a section
+ * heading, body prose at five sizes and four opacities, four spellings of one
+ * back-link, and the metadata run re-typed verbatim in two components. Not one
+ * of those was a colour, so not one of them was visible here.
+ *
+ * These two rules are narrow on purpose. They do not try to hold the type
+ * scale — that is judgement, like whether the accent is earned. They hold the
+ * one mechanical thing: that the treatment lives in `field.ts` and every page
+ * reads it from there, rather than each page typing its own and drifting.
+ */
+describe("type comes from the tokens, not from each page", () => {
+  const FIELD_TS = join("/components", "ui", "field.ts");
+
+  /*
+   * The small-caps metadata treatment, in any spelling.
+   *
+   * Matched loosely between the size and the tracking rather than as one
+   * fixed string, because the two offenders spelled it differently: the
+   * gallery's top bar had `text-white/55` sitting in the middle of the run,
+   * and the share button left the colour out entirely so its call sites
+   * could pass one. A rule that only catches the spelling you happen to have
+   * in front of you is most of the way to no rule — this file learned that
+   * once already, over hex versus Tailwind palette utilities.
+   */
+  const META_RUN = /text-\[0\.6875rem\][^"`]*tracking-\[0\.14em\]/;
+
+  it("no file re-types the metadata run", () => {
+    /*
+     * `code()`, so that describing the run in a comment is not an offence.
+     * Both of these rules were written against raw source and both fired on
+     * prose: `PAGE_TITLE`'s own docblock sat one `<h1 ` away from failing the
+     * heading rule below. `source-text.ts` exists for exactly this and states
+     * the lesson — a test that punishes explaining the rule is a test that
+     * gets the explanation deleted — and this file has already learned it
+     * once, over hex versus the palette utilities.
+     */
+    const offenders = allSourceFiles()
+      .map((file) => ({ file, relative: file.replace(SRC, "") }))
+      .filter(({ relative }) => relative !== FIELD_TS)
+      .filter(({ file }) => META_RUN.test(code(readFileSync(file, "utf8"))))
+      .map(({ relative }) => relative);
+
+    expect(
+      offenders,
+      "Import META (or META_TYPE, if the call site sets its own colour) " +
+        "from components/ui/field.ts. This run is the most repeated string " +
+        "on the site and it had already been copied twice.",
+    ).toEqual([]);
+  });
+
+  /*
+   * A heading that sets its own tracking has decided it is not the same kind
+   * of heading as the others, and after five pages have each decided that,
+   * the site has five heading treatments and no scale.
+   *
+   * Tracking rather than size, because tracking is the tell: two headings at
+   * `text-lg` are the same heading, whereas `-0.03em` beside `-0.035em`
+   * beside `-0.04em` is three people setting the same thing by eye. And only
+   * negative tracking — `META`'s `+0.14em` is a different treatment with its
+   * own rule above.
+   *
+   * `h1` through `h4`, and `tracking-tight` alongside the bracket form. The
+   * first version covered only `h1`/`h2` and only the bracket, which left two
+   * live hand-set `h3`s in the tree and left the most likely next drift —
+   * Tailwind's own named -0.025em — invisible to the rule that exists to
+   * catch it.
+   *
+   * The viewer is out of scope. There a heading sits on a photograph with a
+   * text-shadow and competes with it for contrast, which is a typographic
+   * problem the reading pages do not have; `ImageCarousel` at `-0.045em` is
+   * deliberate and specific to that.
+   */
+  const HAND_SET_HEADING = /<h[1-4]\s[^>]*tracking-(?:\[-0\.0|tight\b)/;
+  const VIEWER = join(SRC, "components", "gallery");
+
+  it("no heading on a reading page sets its own tracking", () => {
+    const offenders = allSourceFiles()
+      .filter((file) => !file.startsWith(VIEWER))
+      .filter((file) => {
+        // Attributes wrap across lines, so match the tag as one string.
+        // Comments stripped first, for the reason given on the rule above.
+        const source = code(readFileSync(file, "utf8")).replace(/\s+/g, " ");
+        return HAND_SET_HEADING.test(source);
+      })
+      .map((file) => file.replace(SRC, ""));
+
+    expect(
+      offenders,
+      "Use PAGE_TITLE or SECTION_HEADING from components/ui/field.ts. A " +
+        "sixth value is how the first five got here.",
     ).toEqual([]);
   });
 });

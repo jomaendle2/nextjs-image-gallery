@@ -2,6 +2,7 @@
 
 import { Check, Link2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { META_TYPE } from "./field";
 
 /** How long the confirmation glyph stays before returning to the link icon. */
 const CONFIRM_MS = 2000;
@@ -102,7 +103,7 @@ export function ShareButton({
   return (
     <button
       aria-label={`Copy a link to ${label}`}
-      className={`-mx-4 -my-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-1.5 text-[0.6875rem] uppercase tracking-[0.14em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${className}`}
+      className={`${META_TYPE} -mx-4 -my-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${className}`}
       onClick={handleShare}
       type="button"
     >

@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/SiteFooter";
 import { EnvironmentBanner } from "@/components/ui/EnvironmentBanner";
-import { TOUCH_LINK } from "@/components/ui/field";
+import { PAGE_TITLE, TOUCH_LINK } from "@/components/ui/field";
+import { WordmarkLink } from "@/components/ui/WordmarkLink";
 
 /**
  * The frame every /contribute page sits in.
@@ -90,19 +91,15 @@ function Frame({
               aria-label="Breadcrumb"
               className="flex flex-wrap items-baseline gap-x-2 text-sm"
             >
-              <Link
-                className={`${TOUCH_LINK} font-semibold text-white/50 tracking-[-0.03em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
-                href="/"
-              >
-                the beauty of earth.
-              </Link>
+              <WordmarkLink />
               {back === undefined ? null : (
                 <>
                   <span aria-hidden="true" className="text-white/25">
                     /
                   </span>
                   <Link
-                    className={`${TOUCH_LINK} text-white/50 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
+                    /* /55 rather than /50, to match the wordmark it trails. */
+                    className={`${TOUCH_LINK} text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80`}
                     href={back.href}
                   >
                     {back.label}
@@ -110,9 +107,7 @@ function Frame({
                 </>
               )}
             </nav>
-            <h1 className="mt-2 font-semibold text-2xl tracking-[-0.04em] sm:text-3xl">
-              {title}
-            </h1>
+            <h1 className={`mt-2 ${PAGE_TITLE}`}>{title}</h1>
             {subtitle === undefined ? null : (
               <p className="mt-2 max-w-prose text-balance text-white/60">
                 {subtitle}

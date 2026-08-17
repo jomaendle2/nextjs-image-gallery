@@ -30,8 +30,8 @@ export function SubscribeButton({ signedIn }: { signedIn: boolean }) {
         price and the recurrence stay exactly where the law wants them.
       */}
       <GlassButton
-        className="w-full sm:w-auto"
         disabled={busy}
+        fullWidth={true}
         onClick={go}
         variant="primary"
       >

@@ -46,7 +46,7 @@ export default async function VerifyPage({
     >
       <form action={completeSignIn}>
         <input name="token" type="hidden" value={token} />
-        <GlassButton className="w-full" type="submit" variant="primary">
+        <GlassButton fullWidth={true} type="submit" variant="primary">
           Sign in
         </GlassButton>
       </form>

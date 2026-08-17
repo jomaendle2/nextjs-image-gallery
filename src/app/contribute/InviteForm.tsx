@@ -87,6 +87,7 @@ export function InviteForm({
 
       <GlassButton
         disabled={pending || exhausted}
+        fullWidth={true}
         size="sm"
         type="submit"
         variant="primary"

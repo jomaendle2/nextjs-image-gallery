@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { META } from "@/components/ui/field";
 
 /**
  * The only chrome added to the main gallery.
@@ -13,7 +14,7 @@ export function GalleryTopBar() {
   return (
     <div className="relative z-10 flex justify-end safe-x-4 safe-t-4 sm:safe-x-8 sm:safe-t-5">
       <Link
-        className="inline-flex min-h-11 items-center rounded-full px-3 text-[0.6875rem] text-white/55 uppercase tracking-[0.14em] transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+        className={`${META} inline-flex min-h-11 items-center rounded-full px-3 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80`}
         href="/photographers"
       >
         photographers

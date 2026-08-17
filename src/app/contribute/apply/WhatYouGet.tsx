@@ -1,4 +1,8 @@
-import { META } from "@/components/ui/field";
+import {
+  BODY_SMALL,
+  ITEM_HEADING,
+  SECTION_HEADING,
+} from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 
 interface Offer {
@@ -60,17 +64,21 @@ const OFFERS: readonly Offer[] = [
 export function WhatYouGet() {
   return (
     <section className="mb-10">
-      <h2 className={`font-medium ${META}`}>What you get</h2>
+      {/*
+        `/membership` sets a section called "What you get" with
+        `SECTION_HEADING`; this one set the same words at 11px uppercase,
+        which is the exact bug that token's docblock says it exists to fix —
+        a heading introducing four paragraphs, rendered as a caption. One
+        page, two answers to the same question, is how the wall of flat
+        sections happened.
+      */}
+      <h2 className={SECTION_HEADING}>What you get</h2>
 
       <ul className="mt-4 grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] sm:grid-cols-2">
         {OFFERS.map((offer) => (
           <li className="bg-surface p-4 sm:p-5" key={offer.title}>
-            <h3 className="font-semibold text-[0.9375rem] text-white tracking-[-0.02em]">
-              {offer.title}
-            </h3>
-            <p className="mt-1.5 text-pretty text-[0.8125rem] text-white/50 leading-relaxed">
-              {offer.detail}
-            </p>
+            <h3 className={ITEM_HEADING}>{offer.title}</h3>
+            <p className={`mt-1.5 text-pretty ${BODY_SMALL}`}>{offer.detail}</p>
           </li>
         ))}
       </ul>
