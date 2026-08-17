@@ -204,6 +204,76 @@ export async function listGlobePoints(): Promise<GlobePointRow[]> {
 }
 
 /**
+ * One photograph per coarsened cell, for the card the expanded globe shows
+ * when a mark is pointed at.
+ *
+ * **Deliberately inside the globe's slice in `src/lib/security.test.ts`,
+ * between `listGlobePoints` and `getSpecimenPhoto`.** That test reads the
+ * source between those two names and asserts the region reaches no exact
+ * coordinate and no base64 placeholder. Both prohibitions are exactly right
+ * for this query, so sitting inside the gate is the point rather than an
+ * accident: a public image query for the globe must never reach a ten-metre
+ * pin, and must never carry a placeholder blob per row.
+ *
+ * It was first written below `getSpecimenPhoto`, on the argument that an
+ * unrelated security test should not arbitrate which columns a thumbnail may
+ * select. That was wrong twice over. The two columns it forbids are the two
+ * this must not have — and the slice above it runs from `getSpecimenPhoto` to
+ * `listUnannouncedPhotos`, so "below" put a coarsened latitude inside the
+ * assertion that the *specimen* query has not quietly acquired a coordinate.
+ * That test failed, correctly, and this is where the function belongs.
+ *
+ * Note that the assertion reads raw source rather than stripped code, so this
+ * paragraph cannot spell the two column names it is about — `world.test.ts`
+ * solved the same problem the other way, by stripping comments before
+ * matching, and records why: a check that punishes explaining the rule is a
+ * check that gets the explanation deleted. Worth folding in here the next
+ * time that file is opened.
+ *
+ * `bg_color` rather than a placeholder blob is the same argument the
+ * `listGlobePoints` docblock makes about payload: a few hundred bytes of
+ * base64 per row against seven characters of hex, for a 96px thumbnail that
+ * is on screen for as long as a pointer rests on a dot. The gate now holds
+ * that decision in place.
+ *
+ * **One picture per cell, chosen here rather than by the client.**
+ * `DISTINCT ON` over the coarsened pair takes the most recently published
+ * photograph from each place. Recency rather than random, because the page
+ * and this route revalidate on independent clocks: a choice that varied
+ * between them would show a different picture depending on which cache
+ * answered.
+ */
+export async function listGlobeThumbnails(): Promise<
+  {
+    coarse_lat: number;
+    coarse_lng: number;
+    url: string;
+    width: number;
+    height: number;
+    bg_color: string;
+  }[]
+> {
+  const rows = await sql`
+    SELECT DISTINCT ON (p.coarse_lat, p.coarse_lng)
+           p.coarse_lat, p.coarse_lng,
+           COALESCE(p.display_url, p.blob_url) AS url,
+           p.width, p.height, p.bg_color
+    FROM photos p JOIN contributors c ON c.id = p.author_id
+    WHERE p.published_at IS NOT NULL AND c.revoked_at IS NULL
+      AND p.coarse_lat IS NOT NULL AND p.coarse_lng IS NOT NULL
+    ORDER BY p.coarse_lat, p.coarse_lng, p.published_at DESC;
+  `;
+  return rows.map((row) => ({
+    coarse_lat: row["coarse_lat"] as number,
+    coarse_lng: row["coarse_lng"] as number,
+    url: row["url"] as string,
+    width: row["width"] as number,
+    height: row["height"] as number,
+    bg_color: row["bg_color"] as string,
+  }));
+}
+
+/**
  * One published photograph whose photographer filled in both member fields.
  *
  * For `/membership`, which sells those two fields and until now described

@@ -1,31 +1,31 @@
 "use client";
 
 import {
-  Close,
   Content,
-  Description,
   Overlay,
   Portal,
   Root,
   Title,
   Trigger,
 } from "@radix-ui/react-dialog";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
-import { META } from "@/components/ui/field";
+import { META, META_TYPE } from "@/components/ui/field";
 import { glassControl } from "@/components/ui/glass-button";
 import type { GlobePoint } from "@/lib/photos/globe";
 import { count } from "@/lib/plural";
 import { GlobeCanvas } from "./GlobeCanvas";
+import { type GlobePlace, loadPlaces } from "./places";
 
 /**
  * The globe, and the way to look at it properly.
  *
  * Two sizes rather than one, because the two jobs are different. Inline it is
  * a picture of the subject, sized to sit beside a paragraph. Opened, it is
- * the thing itself: as large as the window allows, turnable, and drawn from a
- * coastline four times finer — which is fetched on that click and never
- * before, so the page costs nothing for a reader who does not open it.
+ * the thing itself: as large as the window allows, turnable in both
+ * directions, magnifiable, drawn from a coastline four times finer, and
+ * answering when a place is pointed at.
  *
  * Radix rather than a hand-rolled overlay, for the same reason `Sheet` uses
  * it: the genuinely hard parts are focus trapping, scroll locking, Escape,
@@ -35,36 +35,58 @@ import { GlobeCanvas } from "./GlobeCanvas";
  * than it looks. The canvas is `aria-hidden` decoration over a complete list
  * of links; wrapping it in a button is what keeps the one interactive thing
  * on this page reachable from a keyboard.
+ *
+ * **On the canvas staying unreachable by keyboard.** `PhotoGrid` records the
+ * rule that "a tile that only names itself to a mouse is one a keyboard user
+ * navigates blind", and that rule is satisfied here at the page level rather
+ * than inside this component: `/globe` already renders every one of these
+ * places, with every photograph under it, as an ordered list of real links
+ * that works with JavaScript switched off. Making a few hundred marks
+ * focusable would add a few hundred tab stops announcing a worse version of a
+ * list the reader can already read, and the list would still be the thing
+ * anybody actually used. What must not happen is a mouse-only control inside
+ * a focus trap — so the zoom steps, the close button and everything in the
+ * card are real buttons and real links.
  */
 
 /**
- * How large the sphere has to be, **in device pixels**, before the finer
- * coastline is worth fetching.
+ * The inside of the overlay, fetched on the click that opens it.
  *
- * Device pixels, not CSS pixels, and the difference is the whole point. The
- * first version of this used CSS pixels and a threshold of 600, which
- * excluded every phone — but a 390px-wide handset at DPR 3 paints the globe
- * across roughly 1000 real pixels, which is *more* than a 1440 laptop at DPR
- * 1. Judging detail by CSS pixels denies the finer coastline to precisely the
- * screens that resolve it best.
+ * `ssr: false` because there is nothing to render on the server: the dialog
+ * is shut until somebody presses the button, and the component measures its
+ * own canvas on mount. What this buys is roughly eight kilobytes gzipped off
+ * `/globe` — the gesture vocabulary, the magnification, the hit testing, the
+ * card and the `next/image` runtime behind its thumbnail — on a page whose
+ * visitors mostly never open the globe at all.
+ *
+ * It arrives alongside the finer coastline and the places, on the same click,
+ * so it adds no round trip that was not already happening.
  */
-const FINE_FROM_DEVICE_PX = 900;
+const GlobeOverlay = dynamic(
+  () => import("./GlobeOverlay").then((module) => module.GlobeOverlay),
+  { ssr: false },
+);
 
 export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
   const [open, setOpen] = useState(false);
-  const [wide, setWide] = useState(false);
+  const [places, setPlaces] = useState<Map<string, GlobePlace> | null>(null);
 
-  /*
-   * Measured when it opens rather than during render. The window has no size
-   * on the server, so reading it while rendering is a hydration mismatch
-   * waiting for somebody to move this component somewhere it renders early.
-   */
   const handleOpen = useCallback((next: boolean) => {
     if (next) {
-      const across =
-        Math.min(globalThis.innerWidth, globalThis.innerHeight) *
-        (globalThis.devicePixelRatio || 1);
-      setWide(across >= FINE_FROM_DEVICE_PX);
+      /*
+       * Started here rather than inside the overlay, so the request is in
+       * flight while the overlay's own JavaScript is still downloading.
+       */
+      loadPlaces()
+        .then((list) => {
+          setPlaces(new Map(list.map((entry) => [entry.key, entry])));
+        })
+        .catch((cause: unknown) => {
+          // The card is the enhancement on top of the enhancement. Without it
+          // the globe still turns and the page behind it still lists every
+          // photograph, so this must not reach the error boundary.
+          console.error("Could not load the places:", cause);
+        });
     }
     setOpen(next);
   }, []);
@@ -89,8 +111,13 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
         >
           <GlobeCanvas className="w-full" points={points} />
           <span
+            /*
+             * `META_TYPE` rather than `META`: `glassControl` merges through
+             * `twMerge`, so `META`'s own `text-white/55` would come last and
+             * silently beat the `/70` this call site is asking for.
+             */
             className={glassControl(
-              `inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-white/70 transition-colors group-hover:text-white ${META}`,
+              `inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-white/70 transition-colors group-hover:text-white ${META_TYPE}`,
             )}
           >
             <Maximize2 aria-hidden="true" size={12} />
@@ -107,41 +134,24 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
         */}
         <Overlay className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm data-[state=closed]:animate-[viewer-backdrop-out_180ms_var(--ease-glass)] data-[state=open]:animate-[viewer-fade-in_300ms_var(--ease-glass)_backwards]" />
 
-        <Content className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-4 p-4 focus:outline-none data-[state=open]:animate-[viewer-fade-in_320ms_var(--ease-glass)_backwards]">
+        {/*
+          `overscroll-contain` so a wheel that runs past the magnification
+          ceiling stops there rather than scrolling whatever is behind the
+          overlay.
+        */}
+        <Content className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-4 overscroll-contain p-4 focus:outline-none data-[state=open]:animate-[viewer-fade-in_320ms_var(--ease-glass)_backwards]">
+          {/*
+            The title stays here rather than moving into the lazily-loaded
+            half. Radix wants a `Title` inside `Content` for the dialog to be
+            labelled, and a dialog announcing itself as nothing for the few
+            hundred milliseconds its contents are downloading is one a screen
+            reader user opens blind.
+          */}
           <Title className={META}>
             {`The globe · ${count(points.length, "place")}`}
           </Title>
 
-          {/*
-            Square, sized off whichever axis is scarcer so the sphere is never
-            cropped — a landscape window and a portrait one run out in
-            opposite directions.
-
-            The numbers are as generous as the chrome allows, because the
-            first version was not and the result was absurd: at 390x844,
-            `min(88vw, 82vh)` came out at 343px while the globe on the page
-            behind it measured 358. A control promising a bigger view
-            delivered a smaller one. On a phone the width is all there is, so
-            it takes nearly all of it.
-          */}
-          <GlobeCanvas
-            className="h-[min(96vw,74vh)] w-[min(96vw,74vh)] cursor-grab active:cursor-grabbing"
-            detail={wide ? "fine" : "coarse"}
-            points={points}
-          />
-
-          <Description className="text-[0.8125rem] text-white/55">
-            Drag to turn it.
-          </Description>
-
-          <Close
-            aria-label="Close the globe"
-            className={glassControl(
-              "absolute top-4 right-4 inline-flex size-11 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
-            )}
-          >
-            <X aria-hidden="true" size={16} />
-          </Close>
+          <GlobeOverlay places={places} points={points} />
         </Content>
       </Portal>
     </Root>

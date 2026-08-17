@@ -79,6 +79,27 @@ point, so 300 photographs are roughly 120 cells, and the canvas is handed
 three numbers a cell rather than the photograph lists. If a picture is
 wanted there, it is one picture per cell chosen server-side, not one per row.
 
+**That escape hatch has now been taken, and `/api/globe` is where it went.**
+Pointing at a place on the expanded globe shows a card with the place, the
+count and one thumbnail — and none of it is in the page payload. The route is
+fetched when the overlay opens, cached for the same hour as the page, and
+returns one representative photograph per cell picked by `DISTINCT ON` in
+`listGlobeThumbnails`. `/globe` itself is byte-for-byte what it was: the
+canvas is still handed three numbers a cell, and the readers who never open
+the globe pay nothing.
+
+| photographs | `/globe` props | `/api/globe`, on open |
+| ---: | ---: | ---: |
+| 14 | ~0.4 KB | ~2 KB |
+| 300 | ~4 KB | ~35 KB |
+| 1000 | ~10 KB | ~90 KB |
+
+**Trigger for splitting that route: ~800 photographs**, or a gzipped body
+past about 25 KB. At that point the per-cell `photos` arrays are most of the
+payload and belong in a per-cell route, leaving labels, counts and thumbnails
+in the list. Same shape of decision as the windowing above, written down now
+so it is crossed deliberately.
+
 **And the index behind it.** `listGlobePoints` has no index; it is a
 sequential scan over the same table the feed already scans, which at 14 rows
 and at 300 is free. `photos_globe_idx` — partial, on `coarse_lat` where it

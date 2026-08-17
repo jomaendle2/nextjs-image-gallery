@@ -1,4 +1,11 @@
-import type { GlobePoint } from "@/lib/photos/globe";
+import { beyondHorizon, boundingCaps } from "./caps";
+import type { Mark } from "./marks";
+import {
+  cameraDirection,
+  type Projected,
+  project,
+  type View,
+} from "./projection";
 
 /**
  * Everything drawn on the globe, kept away from the component that owns the
@@ -9,13 +16,14 @@ import type { GlobePoint } from "@/lib/photos/globe";
  * shared a file until the sphere grew a body, a graticule and filled land,
  * at which point neither half was readable next to the other.
  *
+ * The arithmetic underneath has since moved out too, into `projection.ts`,
+ * `caps.ts` and `marks.ts`, so that what is left here is only the drawing.
+ *
  * No colour anywhere in here. The caller sets one `fillStyle` and one
  * `strokeStyle` from the canvas element's own computed colour, and every
  * function below varies nothing but `globalAlpha` — which is what keeps a
  * canvas inside a design system whose colours live in a stylesheet.
  */
-
-const TO_RADIANS = Math.PI / 180;
 
 const ALPHA_BODY = 0.05;
 const ALPHA_LAND = 0.1;
@@ -33,56 +41,6 @@ const GRATICULE_RESOLUTION = 3;
 const DOT_CORE = 2.4;
 const DOT_RING = 5.5;
 const DOT_HALO = 11;
-
-export interface Projected {
-  x: number;
-  y: number;
-  /** True when the point is on the near side of the sphere. */
-  visible: boolean;
-}
-
-/**
- * Where the viewer is standing, and how big the sphere is on screen.
- *
- * Passed as one object rather than three arguments because every painter
- * below needs all of it and nothing below needs anything else. `tilt` is the
- * latitude facing the camera: zero looks at the equator edge-on, which is
- * the view a school globe is never photographed from.
- */
-export interface View {
-  spin: number;
-  tilt: number;
-  radius: number;
-}
-
-/**
- * Orthographic: the view from infinitely far away, which is what a globe
- * looks like.
- *
- * The full two-angle form rather than the equator-on shortcut the first
- * version used. `cos(c)` is the cosine of the angular distance from the
- * point facing the camera, so its sign is the whole visibility test — and
- * with a tilt in it, the sphere can be turned to face a photograph instead
- * of always facing the Gulf of Guinea.
- */
-export function project(lat: number, lng: number, view: View): Projected {
-  const phi = lat * TO_RADIANS;
-  const phi0 = view.tilt * TO_RADIANS;
-  const lambda = (lng + view.spin) * TO_RADIANS;
-
-  const cosPhi = Math.cos(phi);
-  const sinPhi = Math.sin(phi);
-  const cosPhi0 = Math.cos(phi0);
-  const sinPhi0 = Math.sin(phi0);
-  const cosLambda = Math.cos(lambda);
-
-  return {
-    x: view.radius * cosPhi * Math.sin(lambda),
-    // Screen y grows downward; latitude grows upward.
-    y: -view.radius * (cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosLambda),
-    visible: sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosLambda > 0,
-  };
-}
 
 /**
  * Lays a ring onto the sphere, pushing whatever is round the back out to the
@@ -200,13 +158,26 @@ export function drawLand(
   view: View,
   land: readonly (readonly (readonly number[])[])[],
 ): void {
-  for (const polygon of land) {
-    const { path, anyVisible } = layOnSphere(polygon, view);
-    if (anyVisible) {
-      context.globalAlpha = ALPHA_LAND;
-      context.fill(path, "evenodd");
-      context.globalAlpha = ALPHA_COAST;
-      context.stroke(path);
+  const caps = boundingCaps(land);
+  const camera = cameraDirection(view);
+
+  for (let index = 0; index < land.length; index += 1) {
+    const cap = caps[index];
+    const polygon = land[index];
+
+    // Anything round the back cannot contribute a pixel. See `beyondHorizon`.
+    if (
+      cap !== undefined &&
+      polygon !== undefined &&
+      !beyondHorizon(cap, camera)
+    ) {
+      const { path, anyVisible } = layOnSphere(polygon, view);
+      if (anyVisible) {
+        context.globalAlpha = ALPHA_LAND;
+        context.fill(path, "evenodd");
+        context.globalAlpha = ALPHA_COAST;
+        context.stroke(path);
+      }
     }
   }
 }
@@ -261,27 +232,39 @@ export function drawBorders(
  */
 export function drawPoints(
   context: CanvasRenderingContext2D,
-  points: readonly GlobePoint[],
-  view: View,
+  marks: readonly Mark[],
+  highlighted: number | null,
 ): void {
-  for (const point of points) {
-    const at = project(point.lat, point.lng, view);
-    if (at.visible) {
+  for (const mark of marks) {
+    const lit = mark.index === highlighted;
+
+    /*
+     * The highlight is alpha and geometry, never colour. Every painter in
+     * this file varies nothing but `globalAlpha` for the reason the module
+     * docblock gives, and a highlight is not the place to make an exception
+     * — `design.test.ts` reads this file as text and would catch it anyway.
+     */
+    if (lit) {
       context.globalAlpha = ALPHA_HALO;
       context.beginPath();
-      context.arc(at.x, at.y, DOT_HALO, 0, Math.PI * 2);
-      context.fill();
-
-      context.globalAlpha = ALPHA_RING;
-      context.beginPath();
-      context.arc(at.x, at.y, DOT_RING, 0, Math.PI * 2);
+      context.arc(mark.x, mark.y, DOT_HALO + 4, 0, Math.PI * 2);
       context.stroke();
-
-      context.globalAlpha = 1;
-      context.beginPath();
-      context.arc(at.x, at.y, DOT_CORE, 0, Math.PI * 2);
-      context.fill();
     }
+
+    context.globalAlpha = ALPHA_HALO;
+    context.beginPath();
+    context.arc(mark.x, mark.y, DOT_HALO, 0, Math.PI * 2);
+    context.fill();
+
+    context.globalAlpha = lit ? 1 : ALPHA_RING;
+    context.beginPath();
+    context.arc(mark.x, mark.y, DOT_RING, 0, Math.PI * 2);
+    context.stroke();
+
+    context.globalAlpha = 1;
+    context.beginPath();
+    context.arc(mark.x, mark.y, DOT_CORE, 0, Math.PI * 2);
+    context.fill();
   }
 }
 

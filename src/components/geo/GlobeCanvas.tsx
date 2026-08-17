@@ -3,14 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { GlobePoint } from "@/lib/photos/globe";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
-import {
-  drawBody,
-  drawBorders,
-  drawGraticule,
-  drawLand,
-  drawPoints,
-  type View,
-} from "./paint";
+import type { GestureRefs } from "./gestures";
+import type { Mark } from "./marks";
+import { placeMarks } from "./marks";
+import { simpleDrag } from "./simple-drag";
+import { type Detailed, FILL, type Land, paintSphere } from "./sphere";
 
 /**
  * The globe, as an enhancement over the list that is already on the page.
@@ -37,14 +34,6 @@ import {
 /** Degrees turned per second. Slow enough to read, fast enough to notice. */
 const SPIN_PER_SECOND = 3.2;
 
-/** Fraction of the canvas the sphere fills, leaving the rim somewhere to sit. */
-const FILL = 0.88;
-
-const ALPHA_LIMB = 0.16;
-
-/** A drag across the full width turns the globe half way round. */
-const DRAG_DEGREES = 180;
-
 /**
  * The latitude facing the camera.
  *
@@ -55,16 +44,6 @@ const DRAG_DEGREES = 180;
  */
 const DEFAULT_TILT = 20;
 
-/** Polygons of rings of flat lng/lat pairs. A hole is the Caspian. */
-type Land = readonly (readonly (readonly number[])[])[];
-/** Open polylines. Country borders, drawn only on the expanded globe. */
-type Borders = readonly (readonly number[])[];
-
-interface Detailed {
-  land: Land;
-  borders: Borders;
-}
-
 /**
  * Fetches the four-times-finer coastline, once per session.
  *
@@ -73,6 +52,13 @@ interface Detailed {
  * `import()` is the whole point: nothing in the static graph names
  * `world-fine.ts`, so it is its own chunk and a reader who never expands the
  * globe never pays for it.
+ *
+ * **This function has to stay in this file, textually.** `world.test.ts`
+ * asserts that the string `world-fine` appears in exactly one source file and
+ * names that file as `components/geo/GlobeCanvas.tsx`. Moving these six lines
+ * into `sphere.ts` alongside the rest of the coastline plumbing — which is
+ * where they otherwise belong — turns a green suite red for a reason that
+ * takes an hour to find.
  */
 let finePromise: Promise<Detailed> | null = null;
 function loadFineLand(): Promise<Detailed> {
@@ -109,69 +95,58 @@ function loadCoarseLand(): Promise<Land> {
   return coarsePromise;
 }
 
-/**
- * One whole sphere, in the order the layers have to go down: body, then
- * everything that lives on the surface, then the rim.
- *
- * Split out of the frame loop because the loop's job is timing and sizing,
- * and this one's is a picture. Between them they were one function doing
- * both, which is the shape a render loop grows into if nobody stops it.
- */
-function paintSphere(
-  context: CanvasRenderingContext2D,
-  view: View,
-  ink: string,
-  content: {
-    detailed: Detailed | null;
-    coarse: Land | null;
-    points: readonly GlobePoint[];
-  },
-): void {
-  drawBody(context, view.radius, ink);
-
-  /*
-   * Everything on the surface is clipped to the disc. The limb arithmetic in
-   * `paint.ts` is close rather than exact, and a hard edge is what turns
-   * "close" into "a sphere".
-   */
-  context.save();
-  context.beginPath();
-  context.arc(0, 0, view.radius, 0, Math.PI * 2);
-  context.clip();
-
-  drawGraticule(context, view);
-  /*
-   * Neither set has arrived on the first frame or two, and a globe with a
-   * body, a graticule and a rim but no coastline is a perfectly good globe to
-   * hold for a moment. The alternative — waiting for land before painting
-   * anything — would replace a sphere gaining detail with a blank square.
-   */
-  const land = content.detailed?.land ?? content.coarse;
-  if (land !== null) {
-    drawLand(context, view, land);
-  }
-  if (content.detailed !== null) {
-    drawBorders(context, view, content.detailed.borders);
-  }
-  drawPoints(context, content.points, view);
-
-  context.restore();
-
-  // The rim last, so nothing paints over it.
-  context.globalAlpha = ALPHA_LIMB;
-  context.beginPath();
-  context.arc(0, 0, view.radius, 0, Math.PI * 2);
-  context.stroke();
-  context.globalAlpha = 1;
-}
-
-export function GlobeCanvas({
-  points,
-  className = "",
-  detail = "coarse",
-}: {
+interface GlobeCanvasProps {
   points: readonly GlobePoint[];
   className?: string;
+  /**
+   * Whether this globe is the one somebody came to use.
+   *
+   * The inline globe on `/globe` passes nothing and behaves exactly as it
+   * always has: it turns slowly, a horizontal drag nudges it, and a vertical
+   * swipe scrolls the page past it. The expanded globe is the instrument —
+   * it tilts, it stops turning once it is yours, and it takes the vertical
+   * axis away from the page.
+   *
+   * One prop rather than two components because the difference is entirely
+   * in the event handling; the sphere is the same sphere, and a second copy
+   * of `paintSphere` is how the two would drift apart.
+   */
+  interactive?: boolean;
+  /**
+   * How much the sphere is magnified. Owned by the caller, because the zoom
+   * buttons live in the chrome around the canvas and the coastline the caller
+   * hands down depends on it.
+   */
+  zoom?: number;
+  /** A wheel or a pinch, reported back so the buttons and the caller agree. */
+  onZoomChange?: (zoom: number) => void;
+  /**
+   * Which mark is selected, and where it is, in CSS pixels from the canvas's
+   * top-left corner — which is the coordinate space the card sitting over the
+   * canvas is positioned in. `null` when a press cleared the selection.
+   */
+  onHover?: (chosen: { index: number; x: number; y: number } | null) => void;
+  /**
+   * The full gesture vocabulary — tilt, pinch, wheel, hit testing — handed in
+   * rather than imported.
+   *
+   * This looks like indirection for its own sake and is not: it is what keeps
+   * `gestures.ts`, `zoom.ts` and the hover card out of `/globe`'s JavaScript.
+   * Every visitor to that page renders the inline globe, and almost none of
+   * them open the expanded one; a static import here would put the whole
+   * interaction in the page's bundle for the benefit of the few who click.
+   * `GlobeOverlay` is loaded on that click and passes `attachGestures` in.
+   *
+   * Without it the canvas keeps the modest drag it has always had — one
+   * pointer, horizontal only, no zoom and no marks to point at. That is
+   * exactly what the inline globe did before any of this, and it is twenty
+   * lines rather than three hundred.
+   */
+  attach?: (
+    canvas: HTMLCanvasElement,
+    wake: () => void,
+    refs: GestureRefs,
+  ) => () => void;
   /**
    * `"fine"` swaps in a coastline several times finer and adds country
    * borders, fetched on mount rather than bundled.
@@ -182,7 +157,18 @@ export function GlobeCanvas({
    * swap is the only thing that happens.
    */
   detail?: "coarse" | "fine";
-}) {
+}
+
+export function GlobeCanvas({
+  points,
+  className = "",
+  detail = "coarse",
+  interactive = false,
+  zoom = 1,
+  onZoomChange,
+  onHover,
+  attach,
+}: GlobeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   /*
    * Both read through refs, so the frame loop is created once and neither a
@@ -191,6 +177,53 @@ export function GlobeCanvas({
   const latest = useRef(points);
   latest.current = points;
   const dragged = useRef(0);
+  const tilted = useRef(DEFAULT_TILT);
+
+  /*
+   * Whether the reader has taken hold of the globe, and therefore whether it
+   * is still allowed to turn on its own.
+   *
+   * A globe that keeps drifting under a pointer is not an instrument, it is
+   * a moving target: a mark travelling at `SPIN_PER_SECOND` crosses its own
+   * halo in about three seconds, so anything hover-driven would be a chase.
+   * Stopping on first contact is what makes the rest of the expanded view
+   * possible, and it is also where nearly all of the frame budget comes
+   * from — a settled globe requests no frames at all.
+   *
+   * This unifies with the reduced-motion path rather than sitting beside it:
+   * a reader who asked for no motion simply starts out settled.
+   */
+  const settled = useRef(false);
+
+  /*
+   * Kept as a ref for the same reason as everything else here: the frame loop
+   * is built once, and a prop change must not restart it mid-turn.
+   */
+  const live = useRef(interactive);
+  live.current = interactive;
+  const zoomed = useRef(zoom);
+  zoomed.current = zoom;
+
+  /*
+   * Callbacks through refs for the same reason as everything else: the frame
+   * loop and the listeners are built once, and a parent re-rendering with a
+   * fresh closure must not tear them down and rebuild them mid-gesture.
+   */
+  const reportZoom = useRef(onZoomChange);
+  reportZoom.current = onZoomChange;
+  const reportHover = useRef(onHover);
+  reportHover.current = onHover;
+  const wire = useRef(attach);
+  wire.current = attach;
+
+  /*
+   * Where the marks landed on the last frame painted, which is what the
+   * pointer is tested against. Safe to read between frames only because an
+   * interactive globe has settled — see `settled` above and the note on
+   * `placeMarks`.
+   */
+  const marks = useRef<Mark[]>([]);
+  const highlighted = useRef<number | null>(null);
 
   /*
    * The everyday coastline, on mount and unconditionally — every globe draws
@@ -198,10 +231,10 @@ export function GlobeCanvas({
    */
   const [coarse, setCoarse] = useState<Land | null>(null);
   useEffect(() => {
-    let live = true;
+    let alive = true;
     loadCoarseLand()
       .then((land) => {
-        if (live) {
+        if (alive) {
           setCoarse(land);
         }
       })
@@ -211,7 +244,7 @@ export function GlobeCanvas({
         console.error("Could not load the coastline:", cause);
       });
     return () => {
-      live = false;
+      alive = false;
     };
   }, []);
 
@@ -220,10 +253,10 @@ export function GlobeCanvas({
     if (detail !== "fine") {
       return;
     }
-    let live = true;
+    let alive = true;
     loadFineLand()
       .then((fine) => {
-        if (live) {
+        if (alive) {
           setDetailed(fine);
         }
       })
@@ -233,7 +266,7 @@ export function GlobeCanvas({
         console.error("Could not load the detailed coastline:", cause);
       });
     return () => {
-      live = false;
+      alive = false;
     };
   }, [detail]);
 
@@ -258,10 +291,16 @@ export function GlobeCanvas({
 
     const ink = globalThis.getComputedStyle(canvas).color;
     const still = prefersReducedMotion();
+    settled.current = still;
     let frame = 0;
     let start: number | null = null;
-    let holding: number | null = null;
-    let from = 0;
+    /*
+     * Which pointer is turning the globe. A box rather than a `let`, because
+     * `attachGestures` writes it and the loop below reads it — a held globe
+     * keeps asking for frames even after it has otherwise settled.
+     */
+    const holding: { current: number | null } = { current: null };
+    let spun = 0;
 
     const render = (time: number) => {
       start ??= time;
@@ -270,7 +309,14 @@ export function GlobeCanvas({
       const { width, height } = canvas.getBoundingClientRect();
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
-      const radius = (Math.min(width, height) / 2) * FILL;
+      /*
+       * Two radii, and the whole of the zoom is the gap between them. `frame`
+       * is the circle the picture is cut to and never changes with zoom, so
+       * magnifying does not grow the globe's footprint on the page — it fills
+       * the same porthole with more sphere.
+       */
+      const porthole = (Math.min(width, height) / 2) * FILL;
+      const radius = porthole * zoomed.current;
 
       /*
        * Resizing a canvas resets its context, so every piece of state here is
@@ -296,17 +342,30 @@ export function GlobeCanvas({
        * so turning the sphere by hand moves where it is rather than stopping
        * it being a globe that turns.
        */
-      const turned = still ? 0 : ((time - start) / 1000) * SPIN_PER_SECOND;
+      const turned =
+        still || settled.current
+          ? spun
+          : ((time - start) / 1000) * SPIN_PER_SECOND;
+      /*
+       * The spin is frozen at the value it had reached rather than reset, so
+       * taking hold of the globe stops it where it is instead of snapping it
+       * back to the Gulf of Guinea.
+       */
+      spun = turned;
       const view = {
         spin: turned + dragged.current,
-        tilt: DEFAULT_TILT,
+        tilt: tilted.current,
         radius,
       };
+
+      marks.current = placeMarks(latest.current, view);
 
       paintSphere(context, view, ink, {
         detailed: drawn.current,
         coarse: drawnCoarse.current,
-        points: latest.current,
+        marks: marks.current,
+        frame: porthole,
+        highlighted: highlighted.current,
       });
 
       /*
@@ -315,47 +374,29 @@ export function GlobeCanvas({
        * setting is a request to stop rather than to be gentle about it.
        * Dragging still works, because that is motion somebody asked for.
        */
-      if (!still || holding !== null) {
+      if (!(still || settled.current) || holding.current !== null) {
         frame = requestAnimationFrame(render);
       }
     };
 
-    /*
-     * Drag to turn it, which is most of the reason this is a canvas rather
-     * than a picture. The canvas is `aria-hidden` and not focusable, so this
-     * adds no keyboard trap and no announced control the list does not
-     * already cover. Pointer events rather than mouse, so a thumb works.
-     */
     const wake = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(render);
     };
-    const onDown = (event: PointerEvent) => {
-      holding = event.pointerId;
-      from = event.clientX;
-      canvas.setPointerCapture(event.pointerId);
-    };
-    const onMove = (event: PointerEvent) => {
-      if (holding === event.pointerId) {
-        const { width } = canvas.getBoundingClientRect();
-        dragged.current +=
-          ((event.clientX - from) / (width || 1)) * DRAG_DEGREES;
-        from = event.clientX;
-        // A held or still globe has stopped rendering; a drag has to wake it.
-        wake();
-      }
-    };
-    const onUp = (event: PointerEvent) => {
-      if (holding === event.pointerId) {
-        holding = null;
-        canvas.releasePointerCapture(event.pointerId);
-      }
-    };
 
-    canvas.addEventListener("pointerdown", onDown);
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerup", onUp);
-    canvas.addEventListener("pointercancel", onUp);
+    const detach =
+      wire.current?.(canvas, wake, {
+        holding,
+        settled,
+        live,
+        zoomed,
+        dragged,
+        tilted,
+        marks,
+        highlighted,
+        reportZoom,
+        reportHover,
+      }) ?? simpleDrag(canvas, wake, { holding, dragged });
     frame = requestAnimationFrame(render);
 
     /*
@@ -375,10 +416,7 @@ export function GlobeCanvas({
       repaint.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
-      canvas.removeEventListener("pointerdown", onDown);
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerup", onUp);
-      canvas.removeEventListener("pointercancel", onUp);
+      detach();
     };
   }, []);
 
@@ -387,11 +425,15 @@ export function GlobeCanvas({
    * or one that has finished its reduced-motion single frame — has stopped
    * rendering by then. Either arriving has to ask for one more frame, which
    * is why both are listed.
+   *
+   * `zoom` is here for the same reason and one more: the wheel and the pinch
+   * repaint themselves, but the zoom buttons change the prop from outside and
+   * nothing else would notice.
    */
-  // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; a coastline arriving is the only reason to
+  // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; a coastline or a zoom arriving is the only reason to
   useEffect(() => {
     repaint.current?.();
-  }, [detailed, coarse]);
+  }, [detailed, coarse, zoom]);
 
   return (
     /*
@@ -403,9 +445,15 @@ export function GlobeCanvas({
      *
      * `touch-pan-y` so a drag turns the globe while a swipe still scrolls the
      * page — on a phone the page has to win the vertical axis.
+     *
+     * The expanded globe takes that axis back with `touch-none`, and it is
+     * the only place that is safe: Radix has already locked the body scroll
+     * behind the dialog, so there is no page scrolling left to steal. Getting
+     * this the wrong way round on the inline globe would trap a thumb on
+     * `/globe` — a reader would swipe up and the page would sit there.
      */
     <canvas
-      className={`block aspect-square touch-pan-y text-white ${className}`}
+      className={`block aspect-square ${interactive ? "touch-none" : "touch-pan-y"} text-white ${className}`}
       ref={canvasRef}
     />
   );

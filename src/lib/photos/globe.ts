@@ -50,7 +50,27 @@ export interface GlobeCell {
  * string equality is exact grouping rather than an approximation of it.
  */
 function keyOf(row: GlobePointRow): string {
-  return `${row.coarse_lat},${row.coarse_lng}`;
+  return cellKeyOf(row.coarse_lat, row.coarse_lng);
+}
+
+/**
+ * The same key, from a bare pair of coordinates.
+ *
+ * Exported because two things now have to agree on cell identity across a
+ * cache boundary: the page, which renders cells to HTML, and `/api/globe`,
+ * which is fetched when the globe is expanded and revalidates on its own
+ * clock. Matching those two by array position would work exactly until a
+ * photograph was published between one revalidation and the other, at which
+ * point every index past it shifts by one and a thumbnail from Bali appears
+ * over Iceland — a bug that would only ever show up in production, an hour
+ * after a deploy, to whoever happened to be looking.
+ *
+ * The key is the rounded pair rather than a hash for the reason `keyOf`
+ * gives: `coarsen` returns the cell centre, so two rows from one cell carry
+ * byte-identical numbers and string equality is exact.
+ */
+export function cellKeyOf(lat: number, lng: number): string {
+  return `${lat},${lng}`;
 }
 
 /**
