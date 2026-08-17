@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GlobeStage } from "@/components/geo/GlobeStage";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LINK, META, TOUCH_LINK } from "@/components/ui/field";
 import { alternates } from "@/lib/metadata";
@@ -9,7 +10,6 @@ import { CELL_KM } from "@/lib/photos/coarsen";
 import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
-import { GlobeCanvas } from "./GlobeCanvas";
 
 export const revalidate = 3600;
 
@@ -85,28 +85,35 @@ export default async function GlobePage() {
           ) : (
             <>
               {/*
-                Said once, at the top, rather than repeated against every
-                heading. Each of these is the centre of a cell about a
-                hundred kilometres across — nothing here points at anywhere
-                in particular, and a reader deserves to know that before they
-                read a list of place names rather than after.
-              */}
-              <p className="max-w-prose text-pretty text-[0.9375rem] text-white/60 leading-relaxed">
-                Photographers mark these themselves; nothing is ever read from a
-                photograph's file. Each place below is deliberately blunt — the
-                middle of a square about {CELL_KM} kilometres across — so it
-                says roughly where somebody was and not where they stood.
-              </p>
+                Text and globe as one band, rather than a centred sphere with
+                empty columns either side of it.
 
-              {/*
-                Beside the list, not instead of it. Everything the globe shows
-                is already below in a form that works with no JavaScript, no
-                canvas and no sight — which is why it can be `aria-hidden` and
-                why nothing here waits for it.
+                A globe alone in the middle of a page is a decoration looking
+                for a caption. Set beside the sentence that qualifies it, the
+                two read as one statement: here is the world, and here is what
+                these marks do and do not mean.
               */}
-              <GlobeCanvas points={toGlobePoints(cells)} />
+              <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16">
+                <p className="max-w-prose text-pretty text-[1.0625rem] text-white/65 leading-relaxed">
+                  Photographers mark these themselves; nothing is ever read from
+                  a photograph's file. Each place is deliberately blunt: the
+                  middle of a square about {CELL_KM} kilometres across, so it
+                  says roughly where somebody was and not where they stood.
+                </p>
 
-              <ul className="mt-10 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                {/*
+                  Beside the list, never instead of it. Everything the globe
+                  shows is below in a form that works with no JavaScript, no
+                  canvas and no sight — which is why nothing on this page
+                  waits for it, and why the only thing about it that has to be
+                  reachable from a keyboard is the button that opens it.
+                */}
+                <div className="mx-auto w-full max-w-[26rem]">
+                  <GlobeStage points={toGlobePoints(cells)} />
+                </div>
+              </div>
+
+              <ul className="mt-14 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
                 {cells.map((cell) => (
                   <li key={cell.key}>
                     <h2 className="font-semibold text-[1.0625rem] text-white tracking-[-0.025em]">
