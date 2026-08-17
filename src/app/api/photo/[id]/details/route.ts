@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { getCurrentMember } from "@/lib/auth/session";
 import { recordMemberView } from "@/lib/members/repository";
 import { getMemberDetails } from "@/lib/photos/repository";
+import { memberDetailsLimiter } from "@/lib/rate-limit";
 
 /**
  * The member-only half of a photograph.
@@ -31,6 +32,26 @@ export async function GET(
      * the response the interface turns into an invitation.
      */
     return NextResponse.json({ member: false }, { status: 403 });
+  }
+
+  /*
+   * Limited, now that this returns a coordinate as well as prose.
+   *
+   * The gap was defensible while the payload was two sentences: awkward to
+   * scrape, near worthless in aggregate. An exact point is the opposite —
+   * machine-actionable and worth exactly as much as the number of them you
+   * can collect — so one member with a loop is the threat this feature
+   * introduced, and the limit is what answers it.
+   *
+   * Keyed by the member, not the address: an anonymous caller was already
+   * refused above, and a member on a shared connection should not be limited
+   * by their neighbours.
+   */
+  if (!memberDetailsLimiter.check(member.email)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again shortly." },
+      { status: 429 },
+    );
   }
 
   const { id } = await params;

@@ -1,6 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { META } from "@/components/ui/field";
@@ -10,6 +11,19 @@ interface Details {
   member: boolean;
   precise_location?: string | null;
   technique?: string | null;
+  /**
+   * The exact point, when the photographer marked one and kept it.
+   *
+   * Null both when nothing was marked and when they published the blurred
+   * dot only — from here those are the same fact: there is no point to show.
+   *
+   * Raw numbers rather than a rendered map. This response is
+   * `private, no-store` and per request, so anything precomputed on the
+   * server would be recomputed for every member for nothing; and an SVG
+   * string in JSON invites `dangerouslySetInnerHTML` into the one route that
+   * handles paid data.
+   */
+  pin?: { lat: number; lng: number } | null;
 }
 
 /*
@@ -124,6 +138,44 @@ function whatToShow(
   return sessionIsMember === false ? { member: false } : undefined;
 }
 
+/**
+ * The exact point, as numbers and a way to go there.
+ *
+ * Deliberately not a map. A member who paid to know where a photograph was
+ * taken wants to *go* there, and another small picture of the world helps
+ * with neither — the coarse dot in the panel above already answers "roughly
+ * where". Numbers and a link are more useful, cost no new bytes, and add no
+ * third party: a link somebody chooses to follow is not a request this page
+ * makes.
+ *
+ * OpenStreetMap rather than Google, and styled exactly like the outbound
+ * link to a photographer's own site a few rows up. No accent — this is the
+ * viewer, and the only colour here comes from the photograph.
+ *
+ * Five places is about a metre, which is the precision the photographer
+ * marked at and therefore the precision to show. Rounding it further would
+ * be quietly substituting a different promise for the one they agreed to.
+ */
+function ExactPoint({ pin }: { pin: { lat: number; lng: number } }) {
+  const osm = `https://www.openstreetmap.org/?mlat=${pin.lat}&mlon=${pin.lng}`;
+  return (
+    <p className="mt-1.5 text-[0.9375rem] text-white/85 leading-relaxed">
+      <span className="tabular-nums">
+        {`${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`}
+      </span>
+      <a
+        className="-my-3 ml-3 inline-flex min-h-11 items-center gap-1 rounded-sm py-3 text-sm text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80"
+        href={osm}
+        rel="noopener noreferrer nofollow"
+        target="_blank"
+      >
+        Open the map
+        <ArrowUpRight aria-hidden="true" size={13} />
+      </a>
+    </p>
+  );
+}
+
 function body(data: Details | undefined): ReactNode {
   if (data === undefined) {
     return null;
@@ -151,9 +203,10 @@ function body(data: Details | undefined): ReactNode {
 
   const location = data.precise_location?.trim() ?? "";
   const technique = data.technique?.trim() ?? "";
+  const pin = data.pin ?? null;
 
   // A member is entitled to know there is nothing to know.
-  if (location === "" && technique === "") {
+  if (location === "" && technique === "" && pin === null) {
     return (
       <div>
         <p className={META}>Where exactly, and how</p>
@@ -166,12 +219,15 @@ function body(data: Details | undefined): ReactNode {
 
   return (
     <div className="space-y-4">
-      {location === "" ? null : (
+      {location === "" && pin === null ? null : (
         <div>
           <p className={META}>Where exactly</p>
-          <p className="mt-1.5 text-[0.9375rem] text-white/85 leading-relaxed">
-            {location}
-          </p>
+          {location === "" ? null : (
+            <p className="mt-1.5 text-[0.9375rem] text-white/85 leading-relaxed">
+              {location}
+            </p>
+          )}
+          {pin === null ? null : <ExactPoint pin={pin} />}
         </div>
       )}
       {technique === "" ? null : (

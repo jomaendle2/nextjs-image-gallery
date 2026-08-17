@@ -92,6 +92,28 @@ export const signInLimiter = createLimiter();
 export const stripeLimiter = createLimiter(15);
 
 /**
+ * The member-only half of a photograph.
+ *
+ * This route had no limiter, and for as long as it returned only prose that
+ * was defensible: two sentences per photograph are awkward to scrape and
+ * close to worthless in bulk. An exact coordinate is neither. One member
+ * with a loop could pull every marked point on the site in seconds and
+ * republish the set, which is the difference between a paid feature and a
+ * dataset — and the photographs most worth protecting are exactly the ones
+ * somebody would want the set for.
+ *
+ * Keyed by member rather than by IP, because the gate upstream is a
+ * membership: an anonymous caller never reaches this, and a member behind a
+ * shared address should not be limited by their neighbours.
+ *
+ * 120 in fifteen minutes. A person browsing a gallery of fourteen
+ * photographs, or three hundred, never comes close; a sweep of the whole
+ * site does immediately. Generous on purpose — being told to come back later
+ * while reading something you paid for is its own kind of failure.
+ */
+export const memberDetailsLimiter = createLimiter(120);
+
+/**
  * Contributor invites.
  *
  * Five per window, matching sign-in rather than the more generous Stripe

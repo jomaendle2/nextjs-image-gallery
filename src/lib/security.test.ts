@@ -363,6 +363,24 @@ describe("I11 — endpoints that spend money or send mail are limited", () => {
   );
 
   /*
+   * Not money or mail, but the same shape of problem: an unlimited endpoint
+   * that hands out something worth collecting.
+   *
+   * This route was unlimited for as long as it returned prose, which was
+   * defensible — two sentences per photograph are awkward to scrape and
+   * close to worthless in bulk. An exact coordinate is neither, and its
+   * value goes up with the number of them you can gather, so one member with
+   * a loop is a different threat from one member reading.
+   */
+  it("the member route is limited, now that it returns a coordinate", () => {
+    const route = read("app", "api", "photo", "[id]", "details", "route.ts");
+    expect(route).toContain("memberDetailsLimiter.check");
+    expect(route).toContain("status: 429");
+    // Keyed by the member, not the address: a shared connection is not a bucket.
+    expect(route).toMatch(/memberDetailsLimiter\.check\(member\.email\)/);
+  });
+
+  /*
    * The other half of the same rule, which this test used to leave out.
    *
    * Naming only the two Stripe routes made I11 look enforced while the
