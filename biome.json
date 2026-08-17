@@ -11,7 +11,8 @@
       "!**/.next",
       "!**/node_modules",
       "!next-env.d.ts",
-      "!src/app/globals.css"
+      "!src/app/globals.css",
+      "!src/lib/geo/world.ts"
     ]
   },
   "formatter": {
