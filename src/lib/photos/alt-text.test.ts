@@ -17,6 +17,7 @@ function photo(
     location,
     exif: null,
     pin: null,
+    hasMemberDetails: false,
     author: { slug: "a", name: "A", siteUrl: null },
   };
 }

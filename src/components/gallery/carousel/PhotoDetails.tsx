@@ -145,10 +145,26 @@ export function PhotoDetails({ image }: { image: GalleryImage }) {
           Where exactly, and how it was made — for members. Its own request,
           so the page stays cacheable and the data never reaches somebody who
           has not paid for it.
+
+          Shown only where there is something to show. The panel used to carry
+          this row under every photograph and invite a stranger to pay for it,
+          on a gallery where the member fields were empty on all fourteen
+          published rows — an offer against a bare shelf, in the one place the
+          site asks for money. `hasMemberDetails` is a single bit the database
+          derives and the payload carries, so this decision costs no request
+          and is already correct in the statically cached HTML.
+
+          Absent rather than explained. A field saying "there are no notes for
+          this one" is still a row of furniture about nothing, and a member
+          reading a panel without the row learns the same fact faster. The
+          gate itself is untouched: this hides an offer, it does not decide
+          who may read anything.
         */}
-        <div className="border-white/[0.08] border-t pt-4">
-          <MemberDetails photoId={image.id} />
-        </div>
+        {image.hasMemberDetails ? (
+          <div className="border-white/[0.08] border-t pt-4">
+            <MemberDetails photoId={image.id} />
+          </div>
+        ) : null}
 
         {/*
           The exposure line, no longer hidden below `sm`. It was hidden there

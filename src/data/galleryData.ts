@@ -41,6 +41,21 @@ export interface GalleryImage {
   exif: PhotoExif | null;
   /** Where the photographer marked, blurred to a ~100 km cell. */
   pin: GalleryPin | null;
+  /**
+   * Whether this photograph has member-only notes behind it.
+   *
+   * One bit, and the only thing a public payload learns about the paid
+   * fields — computed by the database, never by a query naming them. It
+   * exists so the viewer can offer the membership where there is something
+   * to buy and stay quiet where there is not; before it, the offer appeared
+   * under every photograph including the ones with an empty shelf.
+   *
+   * Not a substitute for the gate. It says *that* something exists, so
+   * nothing here decides who may read it — `/api/photo/[id]/details` still
+   * does, and deleting the component that shows the content would still
+   * expose nothing.
+   */
+  hasMemberDetails: boolean;
   /** ISO timestamp of publication. What the feed orders and dates by. */
   publishedAt: string;
   author: GalleryAuthor;

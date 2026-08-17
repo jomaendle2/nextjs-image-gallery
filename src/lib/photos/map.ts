@@ -35,6 +35,7 @@ export function toGalleryImage(row: PhotoRow): GalleryImage {
       row.coarse_lat === null || row.coarse_lng === null
         ? null
         : { lat: row.coarse_lat, lng: row.coarse_lng },
+    hasMemberDetails: row.has_member_details,
     publishedAt: row.published_at,
     author: {
       slug: row.author_slug,

@@ -1,6 +1,10 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -36,14 +40,46 @@ interface Details {
  * `keepPreviousData` did not cover that case: it bridges consecutive
  * fetches of one query observer, not first visits to new photographs.
  *
- * So the flag is kept here, at module scope, written by every successful
- * fetch. While a photograph's own answer is in flight, a known non-member
- * still gets the invitation instantly; a known member gets the held blank
- * line, because their content belongs to one photograph and must not be
- * guessed. Module scope is deliberate — the value should live exactly as
- * long as the tab, same as the query cache beside it.
+ * So the flag is kept outside any one photograph's query, written by every
+ * answer the route gives. While a photograph's own details are in flight, a
+ * known non-member still gets the invitation instantly; a known member gets
+ * the held blank line, because their content belongs to one photograph and
+ * must not be guessed.
+ *
+ * It lives in the query cache rather than in a `let` at module scope, which
+ * is where it started. That version was read during render to decide
+ * `enabled`, and mutable module state read during render is the thing React's
+ * concurrent renderer is allowed to break: two components rendering in one
+ * pass can see different values, and nothing tells a component that the
+ * value changed, so a mounted panel could keep asking after the session was
+ * known to be anonymous. The cache is the same lifetime — exactly as long as
+ * the tab — and it is *subscribed*, so every panel sees one value and
+ * re-renders when it lands.
  */
-let sessionIsMember: boolean | null = null;
+const SESSION_MEMBER_KEY = ["session", "member"] as const;
+
+/**
+ * Whether this session is known to hold a membership: `true`, `false`, or
+ * `null` for "nobody has asked yet".
+ *
+ * A query that never fetches — `enabled: false` and a `queryFn` that would
+ * throw if it ever ran. It exists purely as a subscription to a value the
+ * details query writes, which is the documented way to share state that has
+ * no endpoint of its own with the cache doing the notifying.
+ */
+function useSessionIsMember(): boolean | null {
+  const { data } = useQuery<boolean | null>({
+    queryKey: SESSION_MEMBER_KEY,
+    queryFn: () => {
+      throw new Error("The session flag is written, never fetched.");
+    },
+    enabled: false,
+    initialData: null,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+  });
+  return data;
+}
 
 /**
  * Where a photograph was taken and how, for members.
@@ -59,19 +95,22 @@ let sessionIsMember: boolean | null = null;
  * carousel moves and back.
  */
 export function MemberDetails({ photoId }: { photoId: string }) {
-  const { data, isPlaceholderData } = useQuery({
+  const client = useQueryClient();
+  const sessionIsMember = useSessionIsMember();
+
+  const { data, isPlaceholderData, isError } = useQuery({
     queryKey: ["photoDetails", photoId],
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
       if (response.status === 403) {
-        sessionIsMember = false;
+        client.setQueryData(SESSION_MEMBER_KEY, false);
         return { member: false };
       }
       if (!response.ok) {
         throw new Error("Could not load the details.");
       }
       const details = (await response.json()) as Details;
-      sessionIsMember = details.member;
+      client.setQueryData(SESSION_MEMBER_KEY, details.member);
       return details;
     },
     staleTime: 5 * 60 * 1000,
@@ -84,7 +123,7 @@ export function MemberDetails({ photoId }: { photoId: string }) {
      * "403 (Forbidden)" in the console, which reads as breakage when it is
      * the gate doing its job. One refusal per session is the gate working;
      * sixteen is noise. Becoming a member goes through Stripe's redirect,
-     * which reloads the page and resets this module, so the flag cannot go
+     * which reloads the page and empties the cache, so the flag cannot go
      * stale within a session.
      */
     enabled: sessionIsMember !== false,
@@ -97,9 +136,28 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     placeholderData: keepPreviousData,
   });
 
-  const shown = whatToShow(data, isPlaceholderData);
+  /*
+   * A failure is the one state that must not be silent.
+   *
+   * `retry: false` plus a `null` render meant a paying member whose request
+   * failed — a dropped connection, a 500, a rate limit — saw the row simply
+   * not be there, indistinguishable from a photograph with no notes. They had
+   * paid for this, and the site's answer was a gap. `PhotoDetails` renders
+   * this row only where something exists, so an empty space here is now
+   * provably wrong rather than merely ambiguous.
+   */
+  if (isError) {
+    return (
+      <div>
+        <p className={META}>Where exactly, and how</p>
+        <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
+          This did not load. Reloading the page will try again.
+        </p>
+      </div>
+    );
+  }
 
-  return body(shown);
+  return body(whatToShow(data, isPlaceholderData, sessionIsMember));
 }
 
 /**
@@ -116,10 +174,15 @@ export function MemberDetails({ photoId }: { photoId: string }) {
  * Its own function because the inline version had grown into a condition
  * mixing an object with a boolean, and this file has already been the site
  * of one subtle bug that read as deliberate.
+ *
+ * The session flag arrives as an argument rather than being read from the
+ * enclosing module, which is what makes this a pure function of three values
+ * and testable as one. It used to reach out for a `let`.
  */
 function whatToShow(
   data: Details | undefined,
   isStale: boolean,
+  sessionIsMember: boolean | null,
 ): Details | undefined {
   if (data !== undefined && !isStale) {
     return data;
@@ -186,26 +249,38 @@ function body(data: Details | undefined): ReactNode {
       <div>
         <p className={META}>Where exactly, and how</p>
         {/*
-          Conditional, because this sentence used to be a claim about the
-          photograph in front of the reader — "The photographer wrote down the
-          spot and how the picture was made" — shown under every photograph
-          alike, on a gallery where `precise_location` and `technique` are
-          empty on all fourteen published rows. It described a shelf that is
-          bare, in the one place the site asks somebody for money.
-          `/membership` had already faced this: `getSpecimenPhoto()` returns
-          null and the page describes the feature rather than showing an
-          example of it. This is the same admission, one panel over.
+          A claim about the photograph in front of the reader, and now it is
+          true of that photograph.
 
-          It is not the whole fix. The right version gates the invitation on
-          this photograph actually having something behind it, which needs a
-          per-photograph boolean — the *existence* of the paid fields, never
-          their content — carried in the page payload or the gate's refusal.
-          That crosses files this change does not own; until it lands, the
-          copy at least stops asserting something that is false.
+          This sentence has been through both failures. It began as an
+          assertion — "the photographer wrote down the spot and how the picture
+          was made" — under every photograph alike, on a gallery where all
+          three member fields were empty on all fourteen published rows: an
+          offer against a bare shelf, where the site asks for money. It was
+          then softened into a claim about photographers in general, which was
+          honest but sold nothing, and was marked as the stopgap it was.
+
+          `PhotoDetails` now renders this row only where `hasMemberDetails` is
+          true, so the concrete claim is back and earns its place.
+
+          Two words are doing the work of a second bit, so that there is only
+          one. "Recorded" is true of both acts the paid fields hold — typing a
+          sentence and marking a point on a map — where "written down" was
+          prose language for what is, on every photograph published so far, a
+          coordinate. And the "or" is what one bit buys: what crosses into a
+          public payload is that *something* exists, never which of the three
+          fields it is, because a payload distinguishing them would be
+          reporting on the paid columns field by field. Naming both
+          possibilities and letting the reader find out which by joining is a
+          smaller price than that.
+
+          "Than the page shows" is there because "more" otherwise has nothing
+          to be more than. The panel above it is the comparison.
         */}
         <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
-          Where a photographer has written down the exact spot and how the
-          picture was made, members can read it.
+          The photographer recorded more about this one than the page shows:
+          where exactly it was taken, or how the picture was made. Members can
+          read it.
         </p>
         <Link
           className={glassControl(

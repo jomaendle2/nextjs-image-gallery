@@ -42,6 +42,22 @@ export interface PhotoRow {
    */
   coarse_lat: number | null;
   coarse_lng: number | null;
+  /**
+   * Whether a member would see anything under "Where exactly, and how".
+   *
+   * The exception that proves the rule above: the paid columns stay out of
+   * this type, and one derived bit about them comes in. It is generated in
+   * the table rather than computed in the feed query, so the query never
+   * names `precise_location` — and it says only that something exists, which
+   * is the least a page needs in order to stop asking for money against
+   * nothing.
+   *
+   * Never null. The column is `NOT NULL` and the feed's read coalesces a
+   * missing column to `false`, so a payload always carries a real answer;
+   * `false` is both "there is nothing here" and "we could not tell", which
+   * are the same instruction to the component.
+   */
+  has_member_details: boolean;
 }
 
 /**

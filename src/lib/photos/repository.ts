@@ -30,12 +30,41 @@ const ID_LENGTH = 12;
  * reason `precise_location` is not: this list *is* the member gate. A column
  * absent from it cannot leak by being rendered conditionally, because it was
  * never sent. `security.test.ts` asserts both halves of that sentence.
+ *
+ * `has_member_details` is the one thing about those columns that may cross:
+ * a single generated bit saying whether a member would see anything here, so
+ * `MemberDetails` can stop offering the membership under photographs that
+ * have nothing behind it. The derivation is in the table — see the migration
+ * — precisely so that this list does not have to name what it withholds.
+ *
+ * **Why the `to_jsonb` detour, and what breaks without it.** A bare
+ * `p.has_member_details` raises `42703` — undefined column — until the
+ * migration has run, and that error lands on the *feed* query: not one
+ * corner of one page, but every gallery page at once, plus the sitemap and
+ * the feeds. Preview, development and production still share one Neon
+ * database and `scripts/migrate.mts` now refuses to migrate outside
+ * production, so the window where this code is deployed and the column is
+ * not is real, expected, and lasts as long as the branch does.
+ *
+ * `to_jsonb(p)` closes it without a schema probe and without a new pattern:
+ * a row turned into jsonb has whatever keys it has, and `->>` on a missing
+ * key is null rather than an error, so the `COALESCE` reports `false` — the
+ * safe answer, which is "make no offer". No extra round trip, no cached
+ * failure, no branch.
+ *
+ * Do not simplify it back to the bare column until the migration has landed
+ * in the shared database. When it has, this line may become
+ * `p.has_member_details` and this paragraph should go with it. Its cost until
+ * then is one jsonb serialisation of each row, blur placeholder included,
+ * which is measurable at three hundred photographs and invisible at fourteen.
  */
 const FEED_COLUMNS = `
   p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
   p.coarse_lat, p.coarse_lng,
+  COALESCE((to_jsonb(p) ->> 'has_member_details')::boolean, false)
+    AS has_member_details,
   c.slug AS author_slug, c.display_name AS author_name,
   c.site_url AS author_site_url
 `;

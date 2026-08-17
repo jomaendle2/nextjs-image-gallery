@@ -116,15 +116,40 @@ describe("MIGRATIONS", () => {
    * would put `"47.3769"` behind a field declared `number`, pass `tsc`, and
    * project a dot at `NaN` on the globe with nothing anywhere reporting an
    * error. Double precision is returned as a number.
+   *
+   * Two sweeps rather than one, because one filter was doing two jobs badly.
+   * It matched any statement *mentioning* a coordinate and then asserted that
+   * statement declared a double-precision column — which held only for as
+   * long as the only statements mentioning one were the four that declare it.
+   * `has_member_details` reads `precise_lat` in a generated expression and was
+   * counted as a fifth coordinate column.
+   *
+   * Narrowing the filter to declarations would have fixed the count and given
+   * up the more valuable half: `ALTER COLUMN precise_lat TYPE NUMERIC` is not
+   * a declaration, so a declaration-only filter sails straight past the exact
+   * bug this test is named after, arriving by different syntax. So the broad
+   * sweep keeps the `NUMERIC` ban, which is a rule about the whole file, and a
+   * narrow one owns the count and the storage type, which are rules about the
+   * four declarations.
    */
-  it("stores coordinates as double precision, never numeric", () => {
-    const coordinates = MIGRATIONS.filter((statement) =>
+  it("keeps NUMERIC away from a coordinate, however it is spelled", () => {
+    const mentions = MIGRATIONS.filter((statement) =>
       /(precise|coarse)_(lat|lng)/.test(statement),
     );
-    expect(coordinates).toHaveLength(4);
-    for (const statement of coordinates) {
-      expect(statement).toContain("DOUBLE PRECISION");
+    // If this ever finds nothing, the detection has broken, not the code.
+    expect(mentions.length).toBeGreaterThan(0);
+    for (const statement of mentions) {
       expect(statement.toUpperCase()).not.toContain("NUMERIC");
+    }
+  });
+
+  it("stores coordinates as double precision, never numeric", () => {
+    const declared = MIGRATIONS.filter((statement) =>
+      /ADD COLUMN IF NOT EXISTS (precise|coarse)_(lat|lng) /.test(statement),
+    );
+    expect(declared).toHaveLength(4);
+    for (const statement of declared) {
+      expect(statement).toContain("DOUBLE PRECISION");
     }
   });
 

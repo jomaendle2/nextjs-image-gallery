@@ -374,4 +374,50 @@ export const MIGRATIONS: readonly string[] = [
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_lng DOUBLE PRECISION;",
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS coarse_lat DOUBLE PRECISION;",
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS coarse_lng DOUBLE PRECISION;",
+
+  /*
+   * Whether there is anything behind the paywall for this photograph — one
+   * bit, derived, and the only thing about the paid columns a public page is
+   * allowed to know.
+   *
+   * `MemberDetails` offered the membership under every photograph alike,
+   * including all fourteen where the three paid fields were empty, because
+   * the component had no way to tell one case from the other: the columns it
+   * would need to check are the columns `FEED_COLUMNS` exists to withhold.
+   * So it asked a stranger for money against a shelf that was bare. This is
+   * the fact that makes the offer honest, and it is deliberately the *only*
+   * fact that crosses — the existence of the fields, never a syllable of
+   * their content.
+   *
+   * Generated and `STORED` rather than computed in the feed query, because
+   * the alternative is `SELECT ... precise_location <> ''`, which puts the
+   * paid column names into the one select list that must never name them.
+   * The derivation happens once, inside the table, where Postgres keeps it
+   * true; the query reads a boolean. That is also why this cannot drift the
+   * way a flag maintained by `publishPhoto` would.
+   *
+   * `precise_lat` is in the expression, and it has to be: every published row
+   * today has an exact pin and no prose, so a bit derived from the two text
+   * columns alone would be false everywhere and would delete the offer from
+   * the whole gallery — while members went on receiving a coordinate. The
+   * question this column answers is "would a member see something here",
+   * and `ExactPoint` is something.
+   *
+   * Only immutable functions are permitted in a generation expression:
+   * `btrim`, `coalesce`, `<>` and `IS NOT NULL` all qualify, which is why
+   * the emptiness test is spelled out rather than reaching for anything
+   * fancier. `NOT NULL` is safe to declare because no branch can evaluate to
+   * null — `coalesce` guarantees text, and `IS NOT NULL` is total.
+   *
+   * A whole-row reference (`to_jsonb(p)`) is *not* available here, which is
+   * worth knowing before trying to make this tolerant of its own absence:
+   * Postgres rejects it in a generation expression. The tolerance lives on
+   * the read side, in `FEED_COLUMNS`.
+   */
+  `ALTER TABLE photos ADD COLUMN IF NOT EXISTS has_member_details BOOLEAN NOT NULL
+     GENERATED ALWAYS AS (
+       btrim(coalesce(precise_location, '')) <> ''
+       OR btrim(coalesce(technique, '')) <> ''
+       OR precise_lat IS NOT NULL
+     ) STORED;`,
 ];

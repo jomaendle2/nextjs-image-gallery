@@ -16,6 +16,7 @@ const row: PhotoRow = {
   coarse_lat: -8.7028,
   coarse_lng: 115.1637,
   published_at: "2026-04-11T08:32:10.000Z",
+  has_member_details: true,
   exif: { camera: "SONY ILCE-7M4", iso: 100 },
   author_slug: "anna-weber",
   author_name: "Anna Weber",
@@ -74,6 +75,20 @@ describe("toGalleryImage", () => {
   it("refuses half a pin rather than passing a bare number through", () => {
     expect(toGalleryImage({ ...row, coarse_lng: null }).pin).toBeNull();
     expect(toGalleryImage({ ...row, coarse_lat: null }).pin).toBeNull();
+  });
+
+  /*
+   * The one thing about the paid fields a public payload carries, and it has
+   * to survive this boundary intact: `false` here is what silences the
+   * membership offer under a photograph with an empty shelf, and dropping the
+   * field would make every photograph look empty rather than making the
+   * mapper look broken.
+   */
+  it("carries the member-details bit through, both ways", () => {
+    expect(toGalleryImage(row).hasMemberDetails).toBe(true);
+    expect(
+      toGalleryImage({ ...row, has_member_details: false }).hasMemberDetails,
+    ).toBe(false);
   });
 
   it("passes a missing site link through as null rather than dropping it", () => {
