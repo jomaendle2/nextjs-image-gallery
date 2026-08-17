@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { StructuredData } from "@/components/StructuredData";
 import { type GalleryImage, listGalleryImages } from "@/data/galleryData";
+import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographSchema } from "@/lib/structured-data";
@@ -126,7 +127,11 @@ export default async function PhotoPage({ params }: PageProps) {
   return (
     <>
       <StructuredData data={photographSchema(found.photo, siteOrigin())} />
-      <ImageCarousel images={found.images} initialIndex={found.index} />
+      <ImageCarousel
+        images={found.images}
+        initialIndex={found.index}
+        membershipOffered={membershipConfigured()}
+      />
     </>
   );
 }

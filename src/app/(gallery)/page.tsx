@@ -3,6 +3,7 @@ import { EmptyGallery } from "@/components/gallery/EmptyGallery";
 import { ImageCarousel } from "@/components/gallery/ImageCarousel";
 import { StructuredData } from "@/components/StructuredData";
 import { listGalleryImages } from "@/data/galleryData";
+import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { gallerySchema } from "@/lib/structured-data";
@@ -51,7 +52,10 @@ export default async function Home() {
       <StructuredData
         data={gallerySchema(images, siteOrigin(), "the beauty of earth.")}
       />
-      <ImageCarousel images={images} />
+      <ImageCarousel
+        images={images}
+        membershipOffered={membershipConfigured()}
+      />
     </>
   );
 }

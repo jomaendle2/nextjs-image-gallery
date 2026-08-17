@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
 import { useRecordView } from "@/hooks/useViewCount";
+import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { photoGround } from "@/lib/photo-ground";
 import { photoAltText } from "@/lib/photos/alt-text";
 import { ContributorHeader } from "./ContributorHeader";
@@ -31,6 +32,14 @@ interface ImageCarouselProps {
    * say nothing about whose work it is.
    */
   contributor?: GalleryAuthor;
+  /**
+   * Whether membership is on sale, so the top bar can offer it.
+   *
+   * Threaded from the server page rather than read here: this file is
+   * `"use client"`, and `GalleryTopBar` explains at its own top why that makes
+   * an environment read there silently wrong.
+   */
+  membershipOffered?: boolean;
   initialIndex?: number;
 }
 
@@ -38,6 +47,7 @@ export function ImageCarousel({
   images,
   contributor,
   initialIndex = 0,
+  membershipOffered = false,
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -159,12 +169,38 @@ export function ImageCarousel({
       >
         <AmbientBackdrop bgColor={currentImage.bgColor} />
 
-        {contributor === undefined ? <GalleryTopBar /> : null}
+        {contributor === undefined ? (
+          <GalleryTopBar membershipOffered={membershipOffered} />
+        ) : null}
 
         {contributor === undefined ? (
-          <h1 className="relative z-10 px-4 pt-3 text-center font-semibold text-white text-2xl sm:px-8 sm:pt-4 sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
-            the beauty of earth.
-          </h1>
+          <div className="relative z-10">
+            <h1 className="px-4 pt-3 text-center font-semibold text-white text-2xl sm:px-8 sm:pt-4 sm:text-3xl md:text-[2.125rem] tracking-[-0.045em] [text-shadow:0_1px_16px_oklch(0%_0_0_/_0.35)]">
+              the beauty of earth.
+            </h1>
+            {/*
+              One sentence saying what this is.
+
+              The front page was a wordmark and a photograph: beautiful, and
+              silent about what it is or who made it. `scrollHeight` equalled
+              `innerHeight`, so there was nothing below the fold because there
+              was no below the fold — a stranger sent this link had no way to
+              learn anything.
+
+              `SITE_DESCRIPTION` rather than a new sentence, deliberately. It
+              is already the site's own words, already the meta description and
+              the manifest's, and now lives in one place — so the page cannot
+              drift from what a search result and a shared link already say.
+
+              Hidden on short viewports, and that is not a detail: this is
+              unshrinkable chrome above a photograph stage that only just got a
+              height floor, and on a phone held sideways every line here is
+              taken straight out of the picture.
+            */}
+            <p className="hidden px-4 pt-1.5 text-center text-[0.8125rem] text-white/60 [text-shadow:0_1px_12px_oklch(0%_0_0_/_0.45)] sm:px-8 [@media(min-height:700px)]:block">
+              {SITE_DESCRIPTION}
+            </p>
+          </div>
         ) : (
           <div className="relative z-10">
             <ContributorHeader

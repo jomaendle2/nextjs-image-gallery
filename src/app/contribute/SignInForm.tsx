@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import {
+  type ChangeEvent,
+  useActionState,
+  useCallback,
+  useId,
+  useState,
+} from "react";
 import { IDLE } from "@/app/form-state";
 import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -39,6 +45,12 @@ export function SignInForm() {
    * coming is the sort of small insult that makes a site feel unfinished.
    */
   const [email, setEmail] = useState("");
+
+  // Hoisted: an arrow written inline is a fresh function every render, which
+  // is what `noJsxPropsBind` is about.
+  const remember = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setEmail(event.target.value);
+  }, []);
 
   const done = state.tone === "sent";
   const confirmation = useFocusOnSuccess<HTMLParagraphElement>(done);
@@ -97,9 +109,7 @@ export function SignInForm() {
           className={FIELD}
           id={emailId}
           name="email"
-          onChange={(event) => {
-            setEmail(event.target.value);
-          }}
+          onChange={remember}
           placeholder="you@example.com"
           required={true}
           type="email"
