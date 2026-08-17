@@ -5,6 +5,7 @@ import { TextLink } from "@/components/ui/TextLink";
 import { invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
+import { mapStyleUrl } from "@/lib/maptiler";
 import { listOwnPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { signOut } from "../actions";
@@ -66,7 +67,13 @@ export default async function PhotosPage() {
 
       <UploadForm />
 
-      <PhotoList photos={photos} />
+      {/*
+        The tile key is read here, on the server, and handed down as a prop.
+        `NEXT_PUBLIC_MAPTILER_KEY` would have been one word shorter and would
+        have compiled the key into every client bundle on the site, including
+        the ones anonymous visitors receive.
+      */}
+      <PhotoList mapStyleUrl={mapStyleUrl()} photos={photos} />
     </ContributeShell>
   );
 }

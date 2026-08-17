@@ -206,6 +206,17 @@ describe("I6 — paid content is never in a cacheable payload", () => {
        * do, which is the smallest surface this feature can have.
        */
       join("/app", "membership", "MembershipSpecimen.tsx"),
+      /*
+       * The picker, which submits the exact point as `precise_lat` and
+       * `precise_lng` because that is what those two numbers are: the paid
+       * half of a pin, on the wire under the name the column has.
+       *
+       * Being on this list is the feature rather than the cost. A file that
+       * handles an exact coordinate belongs among the files allowed to name
+       * one, and the `precise_` prefix is what lets the same regex cover the
+       * pin without a second mechanism beside this one.
+       */
+      join("/app", "contribute", "photos", "LocationPicker.tsx"),
       // Shapes and migrations.
       join("/lib", "photos", "types.ts"),
       join("/lib", "schema.ts"),

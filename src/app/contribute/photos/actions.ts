@@ -9,6 +9,7 @@ import {
   setPublished,
 } from "@/lib/photos/repository";
 import { revalidateFeeds } from "@/lib/photos/revalidate";
+import type { PublishInput } from "@/lib/photos/types";
 
 /** One shape for every form on the site. See `@/app/form-state`. */
 export type PhotoFormState = FormState;
@@ -22,6 +23,85 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 function text(formData: FormData, key: string, max: number): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+const MAX_LATITUDE = 90;
+const MAX_LONGITUDE = 180;
+
+/**
+ * One half of a coordinate: a number, `null` for absent, `NaN` for wrong.
+ *
+ * Beside `text` and following the `HEX_COLOR` precedent above. The range
+ * check lives here rather than in a `CHECK` constraint because Postgres has
+ * no `ADD CONSTRAINT IF NOT EXISTS`, and because somebody who typed 471.3
+ * should read a sentence rather than meet a 500.
+ *
+ * Three outcomes rather than two, because collapsing "absent" and "wrong"
+ * into one would tell a photographer who mistyped a longitude that their
+ * latitude was missing.
+ *
+ * **`null`, never falsy.** `lat === 0` is a real coordinate — the Gulf of
+ * Guinea is open sea off Ghana, and somebody will eventually photograph it —
+ * so every check on this result has to be `=== null`. A truthiness test
+ * would silently discard the equator and the prime meridian, for exactly the
+ * photographs nobody thinks to test with.
+ */
+function coordinate(
+  formData: FormData,
+  key: string,
+  limit: number,
+): number | null {
+  const raw = formData.get(key);
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) && Math.abs(value) <= limit
+    ? value
+    : Number.NaN;
+}
+
+/**
+ * The pin the picker submitted, or the sentence to show instead.
+ *
+ * The picker parses whatever a person typed into two numbers and sends
+ * those, so this validates a coordinate rather than re-implementing the
+ * parser on the far side of the wire — two parsers for one field is how the
+ * browser and the server end up disagreeing about what counts.
+ *
+ * `=== null` throughout, never falsy. Zero is a coordinate; a truthiness
+ * check here would drop the equator and the prime meridian, silently, for
+ * exactly the photographs nobody thinks to test with.
+ */
+function readPin(
+  formData: FormData,
+): { pin: PublishInput["pin"] } | { problem: string } {
+  const lat = coordinate(formData, "precise_lat", MAX_LATITUDE);
+  const lng = coordinate(formData, "precise_lng", MAX_LONGITUDE);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return {
+      problem:
+        "A latitude runs from -90 to 90, and a longitude from -180 to 180.",
+    };
+  }
+  if ((lat === null) !== (lng === null)) {
+    return { problem: "A location needs both a latitude and a longitude." };
+  }
+  if (lat === null || lng === null) {
+    // Cleared. `publishPhoto` writes four NULLs, so the dot really goes.
+    return { pin: null };
+  }
+  return {
+    pin: {
+      point: { lat, lng },
+      /*
+       * The photographer keeping the globe and giving up the exact point.
+       * An unchecked box sends no field at all, hence a presence test.
+       */
+      publicOnly: formData.get("pin_public_only") !== null,
+    },
+  };
 }
 
 export async function savePhoto(
@@ -55,6 +135,11 @@ export async function savePhoto(
   const preciseLocation = text(formData, "precise_location", MAX_TITLE);
   const technique = text(formData, "technique", MAX_TECHNIQUE);
 
+  const marked = readPin(formData);
+  if ("problem" in marked) {
+    return failed(marked.problem);
+  }
+
   /*
    * An unchecked box sends no field at all, which is why this is a presence
    * test rather than a comparison against "on" or "true".
@@ -86,8 +171,13 @@ export async function savePhoto(
        */
       is_specimen: isSpecimen && (preciseLocation !== "" || technique !== ""),
       bg_color: bgColor,
-      // No control writes one yet; the picker and its parsing arrive next.
-      pin: null,
+      /*
+       * One point in, two stored. `publishPhoto` runs it through `coarsen()`
+       * itself, so a caller cannot submit an exact point in the Alps with a
+       * public dot in the Atlantic — and clearing the field writes four
+       * NULLs rather than leaving the old dot on the globe.
+       */
+      pin: marked.pin,
     },
     actor,
     publish,

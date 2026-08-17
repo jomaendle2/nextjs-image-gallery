@@ -69,10 +69,13 @@ export const PhotoCard = memo(function PhotoCardRow({
   photo,
   selected,
   onSelect,
+  mapStyleUrl,
 }: {
   photo: OwnPhotoRow;
   selected?: boolean;
   onSelect?: (id: string, checked: boolean) => void;
+  /** A stable string for the life of the page, so `memo` still holds. */
+  mapStyleUrl: string | null;
 }) {
   const exif = exifLine(photo.exif);
   const untitled = (photo.title ?? "").trim() === "";
@@ -204,7 +207,7 @@ export const PhotoCard = memo(function PhotoCardRow({
                 )}
               </div>
 
-              <PhotoEditForm photo={photo} />
+              <PhotoEditForm mapStyleUrl={mapStyleUrl} photo={photo} />
             </div>
           </div>
         ) : null}

@@ -14,6 +14,7 @@ import {
   savePhoto,
   togglePublished,
 } from "./actions";
+import { LocationPicker } from "./LocationPicker";
 
 const INITIAL: PhotoFormState = IDLE;
 
@@ -26,7 +27,14 @@ const INITIAL: PhotoFormState = IDLE;
  * hooks at all, so the two things you might want to change (how a row looks,
  * and what a row can do) stop sharing a file.
  */
-export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
+export function PhotoEditForm({
+  photo,
+  mapStyleUrl,
+}: {
+  photo: OwnPhotoRow;
+  /** Null when no `MAPTILER_KEY` is set; the picker says so and still works. */
+  mapStyleUrl: string | null;
+}) {
   const [state, formAction, pending] = useActionState(savePhoto, INITIAL);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -117,6 +125,19 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
       */}
       <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] p-3.5">
         <legend className={`px-1 ${META}`}>Members only</legend>
+        {/*
+          The one consequence the "Members only" legend above does not
+          describe, said where the decision is made.
+
+          Everything else in this fieldset is member-gated end to end. A pin
+          is not: it is stored at two precisions, and the blunt one is public
+          by design, because a globe anybody can browse is the whole reason
+          the field exists. Somebody filling in this box has to be told that
+          before they fill it in, not afterwards.
+        */}
+        <p className={META}>
+          A marked spot is the one thing here with a public half
+        </p>
 
         <div className="space-y-1.5">
           <label className={LABEL} htmlFor={`precise-${photo.id}`}>
@@ -132,9 +153,11 @@ export function PhotoEditForm({ photo }: { photo: OwnPhotoRow }) {
           <p className="text-[0.75rem] text-white/55 leading-relaxed">
             Only members see this, and only if you fill it in. Nothing is ever
             read from the file — the GPS block is never opened, so whatever you
-            type here is the only location this site knows.
+            write down here is the only place this site learns about.
           </p>
         </div>
+
+        <LocationPicker photo={photo} styleUrl={mapStyleUrl} />
 
         <div className="space-y-1.5">
           <label className={LABEL} htmlFor={`technique-${photo.id}`}>

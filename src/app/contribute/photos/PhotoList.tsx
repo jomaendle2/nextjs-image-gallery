@@ -48,7 +48,18 @@ const INITIAL_ROWS = 30;
 /** Below this there is nothing to sift through, so the controls are noise. */
 const CONTROLS_APPEAR_AT = 4;
 
-export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
+export function PhotoList({
+  photos,
+  mapStyleUrl,
+}: {
+  photos: OwnPhotoRow[];
+  /**
+   * Read on the server from `MAPTILER_KEY` and drilled down rather than read
+   * in the browser, so the key never enters a public bundle. Null is a
+   * working state, not a broken one — see `lib/maptiler.ts`.
+   */
+  mapStyleUrl: string | null;
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -187,6 +198,7 @@ export function PhotoList({ photos }: { photos: OwnPhotoRow[] }) {
         <ul className="space-y-3">
           {(showAll ? visible : visible.slice(0, INITIAL_ROWS)).map((photo) => (
             <PhotoCard
+              mapStyleUrl={mapStyleUrl}
               key={photo.id}
               onSelect={toggleOne}
               photo={photo}

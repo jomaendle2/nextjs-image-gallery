@@ -31,6 +31,26 @@ export function read(...parts: string[]): string {
 }
 
 /**
+ * The same text with comments removed, for invariants that are about code.
+ *
+ * Some of these checks ask "does this file *do* X"; others ask "does this
+ * file *mention* X at all". The second kind is stricter on purpose — the
+ * allow-list of files naming the paid columns is a control, and a sentence
+ * that happens to use one of those words has to fail it so somebody rewords
+ * rather than widening the list.
+ *
+ * But the first kind is defeated by its own documentation. Two invariants
+ * were written, and failed immediately, against comments explaining why the
+ * thing they forbid is forbidden: a paragraph saying "not
+ * `NEXT_PUBLIC_MAPTILER_KEY`" reads to a regex exactly like doing it. A test
+ * that punishes explaining the rule is a test that gets the explanation
+ * deleted.
+ */
+export function code(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+}
+
+/**
  * Every `.ts`/`.tsx` file under `src`, so a new violation cannot hide in a
  * directory nobody thought to name. Test files are excluded: they quote the
  * very patterns they forbid.
