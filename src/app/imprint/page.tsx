@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
-import { TextLink } from "@/components/ui/TextLink";
 import { OPERATOR } from "@/lib/legal";
 import { alternates } from "@/lib/metadata";
 
@@ -24,7 +23,7 @@ export default function ImprintPage() {
     <LegalPage
       subtitle="Angaben gemäß §5 DDG."
       title="Imprint"
-      updated="15 August 2026"
+      updated="17 August 2026"
     >
       <Section heading="Operator">
         <address className="whitespace-pre-line not-italic">
@@ -72,16 +71,27 @@ export default function ImprintPage() {
         </p>
       </Section>
 
+      {/*
+        One sentence, and it used to be two.
+
+        The first pointed at the European Commission's online dispute
+        resolution platform. That platform was switched off on 20 July 2025
+        when Regulation (EU) 2024/3228 repealed Regulation (EU) No 524/2013,
+        and the duty to link to it went with it — German guidance is that the
+        reference must be *removed* rather than reworded, because a live
+        assertion that a dead platform exists misleads a consumer about where
+        they can complain, and is actionable on exactly that ground.
+
+        What survives is national law, not the repealed regulation: §36 VSBG
+        still requires a trader to say whether they will take part in
+        proceedings before a Verbraucherschlichtungsstelle. So the second
+        sentence stays, unchanged.
+      */}
       <Section heading="Dispute resolution">
         <p>
-          The European Commission provides a platform for online dispute
-          resolution at{" "}
-          <TextLink external={true} href="https://ec.europa.eu/consumers/odr/">
-            ec.europa.eu/consumers/odr
-          </TextLink>
-          . We are neither obliged nor willing to take part in dispute
-          resolution proceedings before a consumer arbitration board, and would
-          much rather you simply wrote to us.
+          We are neither obliged nor willing to take part in dispute resolution
+          proceedings before a consumer arbitration board, and would much rather
+          you simply wrote to us.
         </p>
       </Section>
     </LegalPage>

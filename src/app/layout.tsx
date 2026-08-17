@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import "./globals.css";
+import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 
 const geistSans = Geist({
@@ -21,14 +22,19 @@ const geistSans = Geist({
  */
 const SITE_URL = siteOrigin();
 const TITLE = "the beauty of earth.";
-const DESCRIPTION =
-  "Images from around the world. Explore the beauty of our planet 🌍";
+/*
+ * The description is `SITE_DESCRIPTION`, imported rather than typed here for
+ * the reason given on it. This layout's copy is the one every page inherits
+ * that does not set its own — the site's only piece of marketing copy — and
+ * it was the only sentence anywhere in the project written in a different
+ * voice from the site it describes.
+ */
 const OG_IMAGE = `/api/og?title=${encodeURIComponent(TITLE)}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
-  description: DESCRIPTION,
+  description: SITE_DESCRIPTION,
   /*
    * Feed autodiscovery, and deliberately no `canonical`.
    *
@@ -62,21 +68,28 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: TITLE,
-    description: DESCRIPTION,
+    description: SITE_DESCRIPTION,
     url: SITE_URL,
     images: [
       {
         url: OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: `${TITLE} - Images from around the world`,
+        /*
+         * An em dash, like every other title on this site, and the words the
+         * card actually prints — `/api/og` renders "Photographs from around
+         * the world" under the title. Alt text describes the picture; a
+         * hyphen and a different noun described neither the picture nor the
+         * site.
+         */
+        alt: `${TITLE} — Photographs from around the world`,
       },
     ],
     type: "website",
   },
   twitter: {
     title: TITLE,
-    description: DESCRIPTION,
+    description: SITE_DESCRIPTION,
     card: "summary_large_image",
     images: [OG_IMAGE],
   },

@@ -185,9 +185,27 @@ function body(data: Details | undefined): ReactNode {
     return (
       <div>
         <p className={META}>Where exactly, and how</p>
+        {/*
+          Conditional, because this sentence used to be a claim about the
+          photograph in front of the reader — "The photographer wrote down the
+          spot and how the picture was made" — shown under every photograph
+          alike, on a gallery where `precise_location` and `technique` are
+          empty on all fourteen published rows. It described a shelf that is
+          bare, in the one place the site asks somebody for money.
+          `/membership` had already faced this: `getSpecimenPhoto()` returns
+          null and the page describes the feature rather than showing an
+          example of it. This is the same admission, one panel over.
+
+          It is not the whole fix. The right version gates the invitation on
+          this photograph actually having something behind it, which needs a
+          per-photograph boolean — the *existence* of the paid fields, never
+          their content — carried in the page payload or the gate's refusal.
+          That crosses files this change does not own; until it lands, the
+          copy at least stops asserting something that is false.
+        */}
         <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
-          The photographer wrote down the spot and how the picture was made.
-          Members can read it.
+          Where a photographer has written down the exact spot and how the
+          picture was made, members can read it.
         </p>
         <Link
           className={glassControl(

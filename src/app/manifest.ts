@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_DESCRIPTION } from "@/lib/metadata";
 
 /**
  * Replaces the `public/site.webmanifest` a favicon generator left behind.
@@ -17,8 +18,13 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "the beauty of earth.",
     short_name: "beauty of earth",
-    description:
-      "Photographs from around the world, by a small group of invited photographers.",
+    /*
+     * This file had the right sentence first; the root layout had a different
+     * one. Now both read it from the same place, for the same reason the
+     * colours below are checked by a test — the same value in two files is
+     * two values with a delay.
+     */
+    description: SITE_DESCRIPTION,
     start_url: "/",
     display: "standalone",
     /*

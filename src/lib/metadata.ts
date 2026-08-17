@@ -1,6 +1,30 @@
 import type { Metadata } from "next";
 
 /**
+ * The one sentence that describes this site to anybody who has not opened it.
+ *
+ * It is the `<meta name="description">`, the `og:description`, the
+ * `twitter:description`, the web manifest's `description` and the feed's —
+ * five surfaces, none of which a visitor sees, and every one of which is
+ * read by a machine that will repeat it to somebody.
+ *
+ * It was written three times and the layout's copy had drifted furthest:
+ * "Images from around the world. Explore the beauty of our planet 🌍" was the
+ * only place on the site that said "images" rather than "photographs", the
+ * only imperative, and the only emoji — so the site's single piece of
+ * marketing copy was also the only sentence not in its voice. The manifest's
+ * was already right, and says something true that the other did not: the
+ * photographs come from a small group of invited people, which is the whole
+ * proposition.
+ *
+ * Here rather than in any of the five, because a sentence typed in five
+ * places is a sentence with five versions eventually — the same reason
+ * `--color-surface` and the manifest's colours became one value each.
+ */
+export const SITE_DESCRIPTION =
+  "Photographs from around the world, by a small group of invited photographers.";
+
+/**
  * The `alternates` block for a page, with the feed link kept attached.
  *
  * Next merges metadata from the root layout down, but a top-level field is

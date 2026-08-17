@@ -1,5 +1,6 @@
 import { listGalleryImages } from "@/data/galleryData";
 import { buildRssFeed, rssResponse } from "@/lib/feed";
+import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 
 /** Matches the pages it describes. */
@@ -10,8 +11,7 @@ export async function GET(): Promise<Response> {
 
   const xml = buildRssFeed(images, {
     title: "the beauty of earth.",
-    description:
-      "Photographs from around the world, by a small group of invited photographers.",
+    description: SITE_DESCRIPTION,
     origin: siteOrigin(),
     selfPath: "/feed.xml",
   });
