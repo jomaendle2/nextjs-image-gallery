@@ -544,10 +544,18 @@
  * padding is passed in rather than hardcoded so one utility serves the
  * bar that wants 24px and the one that wants 16px.
  */
+/*
+ * `--chrome-b` is the third contender: bottom browser chrome that floats
+ * *over* the page without shrinking the viewport or reporting itself in the
+ * safe-area inset — X's in-app browser is the one that surfaced it. It is
+ * measured by `useOverlaidChrome` from `visualViewport` and set on `<html>`;
+ * unset everywhere normal, so the fallback keeps this exactly what it was.
+ */
 @utility safe-b-* {
   padding-bottom: max(
     calc(var(--spacing) * --value(integer)),
-    env(safe-area-inset-bottom)
+    env(safe-area-inset-bottom),
+    var(--chrome-b, 0px)
   );
 }
 
