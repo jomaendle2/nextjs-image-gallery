@@ -113,7 +113,14 @@ export default function PrivacyPage() {
             description or a place name may be suggested by a model that has
             been shown the photograph — the copy that carries no metadata, not
             the original — and nothing it suggests is stored until the
-            photographer has read it and saved it themselves.
+            photographer has read it and saved it themselves. When they ask for
+            that suggestion they may also offer a hint: a few words about where
+            they think it was, and, if they mark one, a rough area on a map. The
+            area is deliberately approximate, about ten kilometres across, and
+            it is sent only because somebody marked it on purpose. Neither the
+            words nor the area is stored anywhere, here or there. It is a person
+            pointing at a map, which is the opposite of something read out of a
+            file.
           </li>
           <li>
             <strong className="font-medium text-white/85">

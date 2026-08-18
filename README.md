@@ -49,6 +49,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `RESEND_API_KEY` | **production build fails without it** | In development a missing key prints messages to the terminal, which is how you read a sign-in link locally. In production it throws. |
 | `EMAIL_FROM` | **production build fails without it** | The verified sender, e.g. `contact@thebeautyof.earth`. Required alongside the key: with either missing nothing sends. |
 | `CRON_SECRET` | for the weekly reminder | Vercel sends it as `Authorization: Bearer …` to `/api/cron/announce-reminder`. Without it the route refuses to run rather than becoming a public way to ring the owner's inbox. |
+| `AI_GATEWAY_API_KEY` | for suggested details | The Vercel AI Gateway key behind "Suggest details". **Set it explicitly in production.** Without it the code falls back to `VERCEL_OIDC_TOKEN`, which works on a linked machine and expires after hours — and the failure is silent: `aiSuggestionsConfigured()` simply stops returning true, the button stops rendering, and nobody is told the feature is gone. It is a spending credential, so set a budget on the gateway itself: the route's rate limit is per-instance and in-memory, which bounds requests per instance and not cost. |
+| `MAPTILER_KEY` | for the map picker | Tiles for the location picker and the hint map. Without it both render a "map unavailable" notice and coordinates can still be typed by hand, so it degrades honestly — but the hint map is a blank panel. Read on the server and passed down as a prop, never as `NEXT_PUBLIC_*`, so the key stays out of every client bundle. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MEMBERSHIP_PRICE_ID` | for membership | With any of them missing the membership offer is hidden and the webhook rejects events, rather than half-selling something. See `docs/launch-checklist.md` §2. |
 
 `vercel env pull .env.local` fetches the first two. Then apply the schema:
 
