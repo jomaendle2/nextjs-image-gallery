@@ -7,6 +7,7 @@ import { invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { mapStyleUrl } from "@/lib/maptiler";
+import { membershipConfigured } from "@/lib/members/offer";
 import { listOwnPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { signOut } from "../actions";
@@ -83,7 +84,9 @@ export default async function PhotosPage() {
         at the file input, and the most important of them — that nobody reviews
         any of this — was answered nowhere on the site.
       */}
-      {published.length === 0 ? <FirstRun /> : null}
+      {published.length === 0 ? (
+        <FirstRun membershipOffered={membershipConfigured()} />
+      ) : null}
 
       {/*
         The tile key is read here, on the server, and handed down as a prop.
