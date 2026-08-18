@@ -30,33 +30,48 @@ describe("MIGRATIONS", () => {
     statement.trimStart().toUpperCase().startsWith("UPDATE ");
 
   /*
-   * `DROP NOT NULL` is the third kind: idempotent by nature rather than by
-   * a guard clause, because dropping a constraint that is already absent is
-   * a no-op in Postgres. It has no `IF NOT EXISTS` form to write, so the
-   * rule recognises it rather than being relaxed — the point of this test is
-   * that every statement is safe to re-run, not that every statement carries
-   * a particular phrase.
+   * Nullability changes are the third kind: idempotent by nature rather than
+   * by a guard clause, in both directions. Dropping a constraint that is
+   * already absent is a no-op in Postgres, and so is setting one that is
+   * already present. Neither has an `IF NOT EXISTS` form to write, so the
+   * rule recognises them rather than being relaxed — the point of this test
+   * is that every statement is safe to re-run, not that every statement
+   * carries a particular phrase.
+   *
+   * `SET NOT NULL` differs from its opposite in one way worth stating: it
+   * can *fail*, on a table that holds a null. That is deliberate where it is
+   * used — the display copy is an invariant, and a deploy that discovers a
+   * photograph without one should stop rather than go on serving the camera
+   * original in its place. Failing is not the same as being unsafe to re-run.
    */
-  const isConstraintDrop = (statement: string): boolean =>
-    /ALTER COLUMN \w+ DROP NOT NULL/i.test(statement);
+  const isNullabilityChange = (statement: string): boolean =>
+    /ALTER COLUMN \w+ (?:DROP|SET) NOT NULL/i.test(statement);
 
   it("guards every schema statement so it can be re-run", () => {
     const guarded = MIGRATIONS.filter(
-      (s) => !(isBackfill(s) || isConstraintDrop(s)),
+      (s) => !(isBackfill(s) || isNullabilityChange(s)),
     );
     for (const statement of guarded) {
       expect(statement).toMatch(/IF NOT EXISTS/);
     }
   });
 
-  it("only exempts constraint drops that really are constraint drops", () => {
+  it("only exempts nullability changes that really are ones", () => {
     // The exemption is narrow on purpose: it must not become a hole through
     // which an unguarded `ALTER TABLE` of any other shape can pass.
     expect(
-      isConstraintDrop("ALTER TABLE t ALTER COLUMN c DROP NOT NULL;"),
+      isNullabilityChange("ALTER TABLE t ALTER COLUMN c DROP NOT NULL;"),
     ).toBe(true);
-    expect(isConstraintDrop("ALTER TABLE t DROP COLUMN c;")).toBe(false);
-    expect(isConstraintDrop("ALTER TABLE t ADD COLUMN c TEXT;")).toBe(false);
+    expect(
+      isNullabilityChange("ALTER TABLE t ALTER COLUMN c SET NOT NULL;"),
+    ).toBe(true);
+    expect(isNullabilityChange("ALTER TABLE t DROP COLUMN c;")).toBe(false);
+    expect(isNullabilityChange("ALTER TABLE t ADD COLUMN c TEXT;")).toBe(false);
+    // Not a nullability change at all — it adds a column that happens to be
+    // NOT NULL, and that needs its own guard.
+    expect(
+      isNullabilityChange("ALTER TABLE t ADD COLUMN c TEXT NOT NULL;"),
+    ).toBe(false);
   });
 
   it("bounds every backfill with a predicate", () => {

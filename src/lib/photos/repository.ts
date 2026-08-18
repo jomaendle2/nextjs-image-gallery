@@ -66,7 +66,7 @@ const ID_LENGTH = 12;
  * which is measurable at three hundred photographs and invisible at fourteen.
  */
 const FEED_COLUMNS = `
-  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.id, p.display_url AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
   p.coarse_lat, p.coarse_lng,
@@ -90,7 +90,7 @@ const FEED_COLUMNS = `
  * of them is the person who marked the point.
  */
 const OWN_COLUMNS = `
-  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.id, p.display_url AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
   p.is_opener, p.precise_location, p.technique, p.is_specimen,
@@ -334,7 +334,7 @@ export async function listGlobeThumbnails(): Promise<
   const rows = await sql`
     SELECT DISTINCT ON (p.coarse_lat, p.coarse_lng)
            p.coarse_lat, p.coarse_lng,
-           COALESCE(p.display_url, p.blob_url) AS url,
+           p.display_url AS url,
            p.width, p.height, p.bg_color
     FROM photos p JOIN contributors c ON c.id = p.author_id
     WHERE p.published_at IS NOT NULL AND c.revoked_at IS NULL
@@ -674,12 +674,17 @@ export interface PhotoSource {
   /**
    * The re-encoded copy, and never `blob_url` beside it.
    *
-   * Every other read in this file coalesces the two — `COALESCE(display_url,
-   * blob_url)` — because a page wants whichever image exists. This one must
-   * not: the original upload is stored exactly as the camera wrote it, GPS
-   * block included, and it is the one file here that may not be sent to a
-   * third party. Null for a row old enough to have no display copy, which
-   * the caller answers by declining rather than by falling back.
+   * Every other read in this file used to coalesce the two —
+   * `COALESCE(display_url, blob_url)` — because a page wants whichever image
+   * exists. This one never could: the original upload is stored exactly as
+   * the camera wrote it, GPS block included, and it is the one file here that
+   * may not be sent to a third party.
+   *
+   * The distinction has since become moot in the safe direction — the column
+   * is `NOT NULL` and nothing coalesces any more — but the type stays
+   * nullable and the caller still declines rather than falling back. A
+   * declining suggestion button is a small annoyance; the alternative failure
+   * is a photographer's GPS coordinates at a model provider.
    */
   display_url: string | null;
   exif: PhotoExif | null;

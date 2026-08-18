@@ -414,6 +414,28 @@ export const MIGRATIONS: readonly string[] = [
    * Postgres rejects it in a generation expression. The tolerance lives on
    * the read side, in `FEED_COLUMNS`.
    */
+  /*
+   * The display copy stops being a hopeful backfill and becomes an invariant.
+   *
+   * Four read sites used to say `COALESCE(display_url, blob_url)`, which for
+   * any row lacking a display copy quietly serves the *camera original* —
+   * the one file on this site that still carries whatever GPS the camera
+   * wrote. That is a fallback whose failure mode is the exact thing the whole
+   * derive pipeline exists to prevent, and it fails silently: the page looks
+   * right.
+   *
+   * `insertDraftPhoto` has always written the column, and production holds no
+   * null rows, so this asserts something already true. What it buys is the
+   * direction of failure. A future path that manages to insert a photograph
+   * without deriving one now breaks at the INSERT, loudly, on the row that
+   * caused it — rather than months later, in a downloaded file, in somebody
+   * else's hands.
+   *
+   * Re-running is a no-op on an already-constrained column; it raises only
+   * when a null exists, which is the one time somebody needs to know.
+   */
+  "ALTER TABLE photos ALTER COLUMN display_url SET NOT NULL;",
+
   `ALTER TABLE photos ADD COLUMN IF NOT EXISTS has_member_details BOOLEAN NOT NULL
      GENERATED ALWAYS AS (
        btrim(coalesce(precise_location, '')) <> ''

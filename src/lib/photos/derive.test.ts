@@ -152,6 +152,28 @@ describe("deriveFromBuffer", () => {
  * A separate fixture because it is expensive: mozjpeg over a 5000 px canvas
  * is not something to do once per assertion in the shared `beforeAll`.
  */
+/**
+ * Raw RGB that does not compress away.
+ *
+ * A flat fill at 5000 px encodes to a few kilobytes, which would make "the
+ * copy is smaller than the original" true for a reason that has nothing to do
+ * with the resize. Deterministic rather than random, so a failure is
+ * reproducible; `sharp`'s own `create.noise` would be simpler but is absent
+ * from its TypeScript `Create` type, and a fixture that has to be cast is a
+ * fixture that stops being checked.
+ */
+function noisy(width: number, height: number): Buffer {
+  const pixels = Buffer.allocUnsafe(width * height * 3);
+  let state = 0x25_45_f4_91;
+  for (let i = 0; i < pixels.length; i += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    pixels[i] = state & 0xff;
+  }
+  return pixels;
+}
+
 describe("the display copy", () => {
   let wide: Buffer;
   let derivedWide: Awaited<ReturnType<typeof deriveFromBuffer>>;
@@ -164,13 +186,8 @@ describe("the display copy", () => {
      * single-colour 5000 px JPEG compresses to almost nothing, which would
      * make "smaller than the original" true for uninteresting reasons.
      */
-    wide = await sharp({
-      create: {
-        width: 5000,
-        height: 2500,
-        channels: 3,
-        noise: { type: "gaussian", mean: 128, sigma: 60 },
-      },
+    wide = await sharp(noisy(5000, 2500), {
+      raw: { width: 5000, height: 2500, channels: 3 },
     })
       .jpeg({ quality: 100 })
       .toBuffer();
@@ -211,13 +228,8 @@ describe("the display copy", () => {
      * carried the tag would be rendered rotated by a browser *and* measured
      * unrotated here — the layout-shift bug the docblock describes.
      */
-    const sideways = await sharp({
-      create: {
-        width: 4200,
-        height: 2100,
-        channels: 3,
-        noise: { type: "gaussian", mean: 128, sigma: 60 },
-      },
+    const sideways = await sharp(noisy(4200, 2100), {
+      raw: { width: 4200, height: 2100, channels: 3 },
     })
       // 6 = rotate 90° clockwise, so the intended shape is portrait.
       // `withMetadata` rather than `withExif`: the orientation is a first-class

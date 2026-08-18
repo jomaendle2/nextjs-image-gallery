@@ -295,8 +295,23 @@ describe("I7 — a guard checks the value an attacker can actually obtain", () =
 
   it("the public URL comes from a column the guard knows about", () => {
     const repository = read("lib", "photos", "repository.ts");
-    // If this ever selects a third URL column, the guard needs it too.
-    expect(repository).toContain("COALESCE(p.display_url, p.blob_url)");
+    /*
+     * This used to pin `COALESCE(p.display_url, p.blob_url)`, and the
+     * fallback half is what changed. A row without a display copy served the
+     * *camera original* — the one file here that still carries whatever GPS
+     * the camera wrote — and did it silently, because the page looks right
+     * either way. `display_url` is now `NOT NULL` in the schema, so the
+     * fallback had nothing left to protect against and every reason to go.
+     *
+     * If this ever selects a URL column again, the guard needs it too.
+     */
+    expect(repository).toContain("p.display_url AS blob_url");
+    expect(repository).not.toContain("COALESCE(p.display_url");
+
+    // The invariant the removal rests on. Without it this is a regression.
+    expect(read("lib", "schema.ts")).toContain(
+      "ALTER TABLE photos ALTER COLUMN display_url SET NOT NULL;",
+    );
   });
 });
 
