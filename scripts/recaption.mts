@@ -25,9 +25,24 @@
  * run does is write every current caption to a file, and it refuses to
  * continue if it cannot.
  *
- *   npm run recaption                      # every photograph, report only
+ *   npm run recaption                      # report only
  *   npm run recaption -- --only 4,13       # just these
  *   npm run recaption -- --apply 4,13      # write these, after snapshotting
+ *   npm run recaption -- --restore FILE    # put a snapshot back
+ *
+ * **Only the owner's own photographs, unless `--everyone` is passed.** This
+ * is the second thing the script learned, and the more serious one. The
+ * gallery has more than one contributor, and a first run rewrote six
+ * photographs belonging to somebody else — whose captions are published under
+ * their name, and who was never asked. `docs/next-version.md` has stated the
+ * rule since before any of this existed: *never publish generated text under
+ * somebody's name unreviewed.* A batch script run by the site owner is
+ * exactly the path that walks around it, because the owner's credentials
+ * reach every row while their judgement covers only their own.
+ *
+ * The suggestion feature itself has never had this problem: it runs when a
+ * photographer presses a button on their own photograph, and writes nothing
+ * until they save.
  *
  * Applying writes `description` and `tags` — **never the title**, though the
  * report shows the suggested one. That asymmetry is the main thing this
@@ -53,7 +68,7 @@
  * site within the hour rather than at once. Nothing here can shorten that
  * from outside Next.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { suggestForPhotograph } from "../src/lib/ai/suggest.ts";
 import { shapeSuggestion } from "../src/lib/ai/suggestion.ts";
@@ -68,6 +83,7 @@ interface Row {
   display_url: string;
   exif: unknown;
   tags: string[];
+  author: string;
 }
 
 const args = process.argv.slice(2);
@@ -90,19 +106,68 @@ function listAfter(flag: string): string[] | null {
 
 const applying = args.includes("--apply");
 const chosen = listAfter("--apply") ?? listAfter("--only");
+const everyone = args.includes("--everyone");
+const restoreFrom = listAfter("--restore")?.[0];
 
 console.warn(`database: ${databaseHost()}`);
 console.warn(applying ? "MODE: apply (writes)" : "MODE: report only");
 
+/**
+ * Restoring is the whole point of taking a snapshot, and a snapshot you
+ * cannot put back is a comfort rather than a safety net.
+ *
+ * Descriptions and tags only, matching what an apply writes — so a restore
+ * cannot resurrect a title or a location that somebody has edited by hand
+ * since. It runs before anything else and exits: there is nothing to compare
+ * when the job is to undo a comparison.
+ */
+if (restoreFrom !== undefined) {
+  const saved = JSON.parse(readFileSync(restoreFrom, "utf8")) as {
+    id: string;
+    description: string;
+    tags: string[];
+  }[];
+  const only = chosen ?? [];
+  const rowsToPut =
+    only.length === 0 ? saved : saved.filter((row) => only.includes(row.id));
+
+  for (const row of rowsToPut) {
+    await sql`
+      UPDATE photos
+      SET description = ${row.description}, tags = ${row.tags}::text[]
+      WHERE id = ${row.id};`;
+    console.warn(`restored ${row.id}`);
+  }
+  console.warn(
+    `\n${rowsToPut.length} photographs restored from ${restoreFrom}.`,
+  );
+  process.exit(0);
+}
+
 const all = (await sql`
-  SELECT id, title, description, location, display_url, exif, tags
-  FROM photos
-  ORDER BY created_at DESC;`) as unknown as Row[];
+  SELECT p.id, p.title, p.description, p.location, p.display_url, p.exif,
+         p.tags, c.display_name AS author
+  FROM photos p JOIN contributors c ON c.id = p.author_id
+  ORDER BY p.created_at DESC;`) as unknown as Row[];
+
+const owner = process.env["OWNER_NAME"];
+const mine =
+  everyone || owner === undefined
+    ? all
+    : all.filter((row) => row.author === owner);
+
+if (!everyone && owner !== undefined && mine.length < all.length) {
+  console.warn(
+    `scope: ${mine.length} of ${all.length} — ` +
+      `${all.length - mine.length} belong to somebody else and are skipped. ` +
+      "Pass --everyone only with their say-so.",
+  );
+}
 
 const rows =
   chosen === null || chosen.length === 0
-    ? all
-    : all.filter((row) => chosen.includes(row.id));
+    ? mine
+    : mine.filter((row) => chosen.includes(row.id));
 
 if (applying) {
   if (chosen === null || chosen.length === 0) {
