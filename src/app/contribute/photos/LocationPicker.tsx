@@ -303,10 +303,18 @@ export function LocationPicker({
       ) : null}
 
       {styleUrl === null ? (
-        <Notice tone="warning">
-          The map is not available on this deployment, so there is nothing to
-          click. Typing the two numbers above does exactly the same thing.
-        </Notice>
+        /*
+          A plain line rather than a `Notice`, following `HintMap`: three
+          tones exist on this site and none of them is "by the way". A
+          warning border made the permanent state of an optional field the
+          loudest thing on the form, in engineer language — "this deployment"
+          is not a fact about the photographer or about their photograph, and
+          there is nothing here for them to do about it.
+        */
+        <p className="text-[0.75rem] text-white/55 leading-relaxed">
+          No map here — typing the two numbers above does exactly the same
+          thing.
+        </p>
       ) : (
         <>
           {mapOpen ? null : (

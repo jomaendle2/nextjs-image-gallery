@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "author": "Jo Mändle",
   "private": true,
+  "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
