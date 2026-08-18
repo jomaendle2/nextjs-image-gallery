@@ -72,10 +72,17 @@ function PanelIntro() {
 }
 
 /**
- * Land in the editor rather than beside it: the first new draft's id goes
- * into `?open=` and `PhotoList` opens that row, instead of the batch ending
- * on a refreshed list and a hunt for the row just made. The *first* of a
- * batch — the list is newest-first and editing proceeds downward.
+ * Land in the editor rather than beside it: a new draft's id goes into
+ * `?open=` and `PhotoList` opens that row, instead of the batch ending on a
+ * refreshed list and a hunt for the row just made.
+ *
+ * The **last** file uploaded, which is the **first row in the list** —
+ * `listOwnPhotos` orders by `created_at DESC`, so the batch appears newest
+ * first and the earliest file lands at the bottom. This opened that bottom
+ * row while claiming in the same breath that "editing proceeds downward",
+ * which was the opposite of what it did. Opening the top row puts the form
+ * where the eye already is and leaves the rest of the batch below it.
+ *
  * `replace`, not `push`: Back should leave the page, not step through
  * upload states.
  */
@@ -200,17 +207,18 @@ export function UploadForm() {
    */
   const runBatch = useCallback(
     async (batch: readonly Attempt[]) => {
-      let firstCreated: string | null = null;
+      let topOfList: string | null = null;
       for (const { file, index } of batch) {
         // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — see the note on the component
         const id = await runOne(file, index);
-        firstCreated ??= id ?? null;
+        // Last one wins: newest is first in the list. See `openFreshDraft`.
+        topOfList = id ?? topOfList;
       }
 
       if (inputRef.current) {
         inputRef.current.value = "";
       }
-      openFreshDraft(router, firstCreated);
+      openFreshDraft(router, topOfList);
     },
     [router, runOne],
   );

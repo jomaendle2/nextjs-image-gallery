@@ -18,6 +18,22 @@ interface Window {
 
 export interface Limiter {
   check: (key: string, now?: number) => boolean;
+  /**
+   * Undo one `check`, for work that was counted and then did not happen.
+   *
+   * Only meaningful for a limiter of one used as a deduplicator:
+   * `memberViewLimiter` consumes a member's daily slot for a photograph
+   *before* the write that the slot represents, and that write runs
+   * detached in `after()` with its error swallowed. One transient database
+   * failure would otherwise cost that view for twenty-five hours — in the
+   * numbers that divide a revenue pool, where an undercount nobody can
+   * detect is the failure the route's own comments care most about.
+   *
+   * Deliberately forgets the whole window rather than decrementing: for a
+   * limit of one those are the same thing, and for a real rate limit
+   * decrementing would be a way to launder attempts.
+   */
+  forget: (key: string) => void;
 }
 
 export function createLimiter(
@@ -27,6 +43,10 @@ export function createLimiter(
   const windows = new Map<string, Window>();
 
   return {
+    forget(key: string): void {
+      windows.delete(key);
+    },
+
     /** True if the attempt is allowed. Counts the attempt when it is. */
     check(key: string, now: number = Date.now()): boolean {
       const existing = windows.get(key);

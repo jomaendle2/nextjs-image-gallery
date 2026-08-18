@@ -291,8 +291,17 @@ export function PhotoList({
    * Only grows, and only ever holds rows somebody actually opened, so the
    * `INITIAL_ROWS` window still does its job for the untouched hundred.
    */
-  const [everOpened, setEverOpened] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  /*
+   * Seeded with the auto-opened row, rather than waiting to be told about it.
+   *
+   * `PhotoCard` reports a *clicked*-open row through `noteOpened`, because
+   * the list cannot know about a click. It can know about this one — it is
+   * the list that decided which row `?open=` names — so an effect in the
+   * child telling the parent a fact the parent supplied would be a round
+   * trip through the tree for nothing, and one that lands a render late.
+   */
+  const [everOpened, setEverOpened] = useState<ReadonlySet<string>>(() =>
+    autoOpenId === null ? new Set() : new Set([autoOpenId]),
   );
 
   /* Stable, or `PhotoCard`'s `memo` stops holding. */

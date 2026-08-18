@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OUR_FAULT_MESSAGE, type SuggestionRecord } from "@/lib/ai/stream";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 import {
-  type FillableField,
+  fieldElement,
   fillsFrom,
   locationToFill,
   type SuggestionStage,
@@ -34,29 +34,6 @@ import { openSuggestion } from "./suggestRequest";
  * controlled inside `LocationPicker`, so it is changed by handing that
  * component a value rather than by writing to the element.
  */
-
-/** The id prefix the coordinate field uses, which is not its field name. */
-const PIN_PREFIX = "pin";
-
-/**
- * The inputs, found by id — the same mechanism `PhotoEditForm` uses to move
- * the cursor to a refused field.
- *
- * The `instanceof` pair is not ceremony. `getElementById` will happily return
- * whatever else has claimed that id, and writing `.value` onto an element
- * with no such property fails silently and for ever.
- */
-function fieldElement(
-  field: TouchedField,
-  photoId: string,
-): HTMLInputElement | HTMLTextAreaElement | null {
-  const prefix = field === "pin" ? PIN_PREFIX : field;
-  const element = document.getElementById(`${prefix}-${photoId}`);
-  return element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement
-    ? element
-    : null;
-}
 
 /** A line off the wire, once we have decided it is one of ours. */
 function asRecord(value: unknown): SuggestionRecord | null {
@@ -165,7 +142,7 @@ export function useSuggestion(
    * done since it was last pressed. A place somebody accepted from a chip
    * two runs ago belongs to the second answer and not to the first.
    */
-  const touched = useRef(new Set<FillableField>());
+  const touched = useRef(new Set<TouchedField>());
 
   /** Remember what a field held, the first time this feature changes it. */
   const remember = useCallback((field: TouchedField, current: string) => {
@@ -210,7 +187,7 @@ export function useSuggestion(
             }
           }
           before.current.delete(field);
-          touched.current.delete(field as FillableField);
+          touched.current.delete(field);
         }
       }
       setCanUndo(before.current.size > 0);
@@ -240,20 +217,27 @@ export function useSuggestion(
        */
       setAnswered(!salvaged);
 
-      const kept = new Set(fillsFrom(final).map(([field]) => field));
+      const kept = new Set<TouchedField>(
+        fillsFrom(final).map(([field]) => field),
+      );
       putBack([...touched.current].filter((field) => !kept.has(field)));
 
-      /*
-       * A place the model is sure of fills an empty Location field by
-       * itself — the decision lives in `locationToFill`, where it is
-       * testable; this is only the write. Undo covers it like every other
-       * write, through the same `remember`.
-       */
+      // A sure place fills an empty Location field; `locationToFill` holds
+      // the decision, this is only the write. Undo covers it like the rest.
       const location = fieldElement("location", photoId);
       if (location !== null) {
         const name = locationToFill(final.places, location.value);
         if (name !== null) {
           remember("location", location.value);
+          /*
+           * Recorded as this run's, so the failure path sweeps it. A stream
+           * dying after this write would otherwise restore title and
+           * description — under a message promising nothing changed — and
+           * leave the guess in the Location field with its chips cleared.
+           * `touched` was `Set<FillableField>`, which could not hold
+           * "location" at all; `TouchedField` is what lets it be swept.
+           */
+          touched.current.add("location");
           location.value = name;
         }
       }

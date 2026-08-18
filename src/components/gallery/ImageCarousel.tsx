@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GalleryAuthor, GalleryImage } from "@/data/galleryData";
-import { useOverlaidChrome } from "@/hooks/useOverlaidChrome";
 import { useRecordView } from "@/hooks/useViewCount";
 import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { photoGround } from "@/lib/photo-ground";
@@ -61,14 +60,6 @@ export function ImageCarousel({
   initialIndex = 0,
   membershipOffered,
 }: ImageCarouselProps) {
-  /*
-   * The carousel is `fixed inset-0`, sized by the layout viewport — so an
-   * in-app browser floating its bottom bar over the page put the filmstrip
-   * and caption underneath chrome the layout could not see. The hook
-   * measures the shortfall and the `safe-b-*` paddings pick it up.
-   */
-  useOverlaidChrome();
-
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
 

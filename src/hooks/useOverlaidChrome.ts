@@ -34,23 +34,60 @@ export function useOverlaidChrome(): void {
       return;
     }
 
+    /*
+     * One measurement per frame, and only written when it changes.
+     *
+     * `scroll` on the visual viewport fires as fast as a finger moves, and
+     * `measure` reads layout (`innerHeight`, `viewport.height`) and then
+     * writes a custom property — a read/write pair per event is how a smooth
+     * scroll becomes a janky one. `requestAnimationFrame` collapses a burst
+     * into a single measurement; the `last` check means a scroll that does
+     * not change the chrome — which is most of them — writes nothing at all
+     * and invalidates no style.
+     */
+    let frame = 0;
+    let last: string | null = null;
+
     const measure = () => {
-      const bottom = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop,
-      );
-      document.documentElement.style.setProperty(
-        "--chrome-b",
-        `${Math.round(bottom)}px`,
-      );
+      frame = 0;
+      /*
+       * Pinched-in pages report nothing.
+       *
+       * `visualViewport.height` shrinks under pinch-zoom exactly as it does
+       * under an overlaid bar — at 2× the difference is half a viewport, and
+       * reading that as chrome threw the filmstrip and the caption up the
+       * screen mid-gesture. `scale` is what tells the two apart, and it is
+       * `1` in every case this hook exists for: browser chrome does not zoom
+       * the page. A small tolerance because `scale` is fractional and a
+       * pinch that settles back to 1 can land a hair off.
+       */
+      const zoomed = Math.abs(viewport.scale - 1) > 0.01;
+      const bottom = zoomed
+        ? 0
+        : Math.max(
+            0,
+            window.innerHeight - viewport.height - viewport.offsetTop,
+          );
+      const next = `${Math.round(bottom)}px`;
+      if (next !== last) {
+        last = next;
+        document.documentElement.style.setProperty("--chrome-b", next);
+      }
+    };
+
+    const schedule = () => {
+      frame ||= requestAnimationFrame(measure);
     };
 
     measure();
-    viewport.addEventListener("resize", measure);
-    viewport.addEventListener("scroll", measure);
+    viewport.addEventListener("resize", schedule);
+    viewport.addEventListener("scroll", schedule);
     return () => {
-      viewport.removeEventListener("resize", measure);
-      viewport.removeEventListener("scroll", measure);
+      if (frame !== 0) {
+        cancelAnimationFrame(frame);
+      }
+      viewport.removeEventListener("resize", schedule);
+      viewport.removeEventListener("scroll", schedule);
       document.documentElement.style.removeProperty("--chrome-b");
     };
   }, []);

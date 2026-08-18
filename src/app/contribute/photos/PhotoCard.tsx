@@ -7,7 +7,6 @@ import {
   memo,
   type SyntheticEvent,
   useCallback,
-  useEffect,
   useState,
 } from "react";
 import { exifLine } from "@/lib/photos/exif-line";
@@ -405,6 +404,13 @@ export const PhotoCard = memo(function PhotoCardRow({
    * there on first paint instead of unfolding a frame after. Read once, on
    * mount: a stale `?open=` in the URL after the row was closed by hand must
    * not wrench it open again on the next unrelated re-render.
+   *
+   * "Once" holds because the row never unmounts. `PhotoList` seeds
+   * `everOpened` with this id, so the row stays in the tree — hidden, not
+   * removed — even when the search box stops matching it. Without that seed,
+   * closing the row, filtering it away and clearing the filter would remount
+   * it and the stale parameter would spring it open again. Verified by doing
+   * exactly that.
    */
   autoOpen?: boolean;
   /**
@@ -445,23 +451,6 @@ export const PhotoCard = memo(function PhotoCardRow({
    */
   const [opened, setOpened] = useState(autoOpen);
   const [showing, setShowing] = useState(autoOpen);
-
-  /*
-   * The list is told about an auto-opened row the same way it is told about
-   * a clicked-open one, or the filter would unmount the fresh draft — and
-   * the caption being typed into it — the moment somebody touched the
-   * search box.
-   */
-  /*
-   * All three dependencies are stable for the row's life — `autoOpen` is
-   * initial-state-only by contract, `onOpen` must be stable or `memo` stops
-   * holding, and `photo.id` is the key — so this still fires exactly once.
-   */
-  useEffect(() => {
-    if (autoOpen) {
-      onOpen?.(photo.id);
-    }
-  }, [autoOpen, onOpen, photo.id]);
 
   const handleToggle = useCallback(
     (event: SyntheticEvent<HTMLDetailsElement>) => {

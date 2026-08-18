@@ -160,3 +160,32 @@ export function locationToFill(
     ? top.name
     : null;
 }
+
+/** The id prefix the coordinate field uses, which is not its field name. */
+const PIN_PREFIX = "pin";
+
+/**
+ * One of the edit form's inputs, found by id — the same mechanism
+ * `PhotoEditForm` uses to move the cursor to a refused field.
+ *
+ * Here rather than in `useSuggestion`, because the mapping from a
+ * `TouchedField` to an element id is the same knowledge as the `TouchedField`
+ * union itself, and that lives here. The hook is left holding the part with a
+ * shape worth reading on its own: a stream arriving into boxes somebody may
+ * already have typed in.
+ *
+ * The `instanceof` pair is not ceremony. `getElementById` will happily return
+ * whatever else has claimed that id, and writing `.value` onto an element
+ * with no such property fails silently and for ever.
+ */
+export function fieldElement(
+  field: TouchedField,
+  photoId: string,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const prefix = field === "pin" ? PIN_PREFIX : field;
+  const element = document.getElementById(`${prefix}-${photoId}`);
+  return element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement
+    ? element
+    : null;
+}
