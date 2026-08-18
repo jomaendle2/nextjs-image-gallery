@@ -25,6 +25,11 @@
 import process from "node:process";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
+
+confirmDestructive(
+  "create and delete hundreds of synthetic photographs, then a contributor and its session, in this database",
+);
 
 const counts = [50, 150, 300, 600];
 const email = `scale-probe-${process.pid}@example.invalid`;
@@ -72,12 +77,19 @@ try {
   for (const target of counts) {
     await sql`
       INSERT INTO photos
-        (id, blob_url, blob_pathname, width, height, blur_data_url,
+        (id, blob_url, blob_pathname, display_url, display_pathname,
+         width, height, blur_data_url,
          bg_color, title, description, author_id)
       SELECT
         'probe-' || ${author} || '-' || g,
         ${seed["blob_url"]},
         'probe/' || ${author} || '/' || g || '.jpg',
+        -- `display_url` is NOT NULL and is what every page now renders from.
+        -- These rows exist to be counted, not looked at, so they point at the
+        -- same borrowed URL; the pathname is still per-row because it is
+        -- uniquely indexed.
+        ${seed["blob_url"]},
+        'probe/' || ${author} || '/' || g || '-display.jpg',
         1200, 800,
         ${seed["blur_data_url"]},
         '#101418',

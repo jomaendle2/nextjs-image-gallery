@@ -17,7 +17,10 @@ import { del, put } from "@vercel/blob";
 import sharp from "sharp";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
 import { check, finish } from "./harness.mts";
+
+confirmDestructive("create and delete photographs and blobs in this database");
 
 const [, , originArg] = process.argv;
 const origin = originArg ?? "http://localhost:3000";

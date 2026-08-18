@@ -25,7 +25,10 @@ import process from "node:process";
 import Stripe from "stripe";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
 import { check, finish, RUN_IP } from "./harness.mts";
+
+confirmDestructive("create and delete members and sessions in this database");
 
 const origin = "http://localhost:3000";
 const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"] as string);

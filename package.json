@@ -27,6 +27,7 @@
     "mint-link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts",
     "db:backfill-pins": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/backfill-pins.mts",
     "db:import-assets": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
+    "db:erase-contributor": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/erase-contributor.mts",
     "auth:link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"
   },
   "dependencies": {

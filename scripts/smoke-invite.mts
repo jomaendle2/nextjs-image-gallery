@@ -21,7 +21,10 @@ import {
   listInvitees,
 } from "../src/lib/auth/contributors.ts";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
 import { check, finish } from "./harness.mts";
+
+confirmDestructive("create and delete contributors in this database");
 
 const tag = `smoke-invite-${process.pid}`;
 const inviterId = `${tag}-inviter`;

@@ -4,6 +4,11 @@ import { put } from "@vercel/blob";
 import { sql } from "../src/lib/database.ts";
 import { deriveFromBuffer } from "../src/lib/photos/derive.ts";
 import { exifParam } from "../src/lib/photos/types.ts";
+import { confirmDestructive } from "./guard.mts";
+
+confirmDestructive(
+  "upload blobs and insert the seed contributor and photographs into this database",
+);
 
 /**
  * Moves the original gallery out of `src/assets` and into Blob + Postgres.
@@ -189,13 +194,33 @@ async function main(): Promise<void> {
       contentType: "image/jpeg",
     });
 
+    /*
+     * The display copy, which this script never wrote.
+     *
+     * It predates the derived copy, and the reads that followed papered over
+     * the gap with `COALESCE(display_url, blob_url)` — so a seeded row
+     * rendered by serving the *original*, metadata and all. That fallback is
+     * gone and `display_url` is `NOT NULL`, which is what turns this from a
+     * quiet inconsistency into an insert that fails.
+     *
+     * Same shape as the ingest route and `backfill-display.mts`: a second
+     * blob under `photos/display/`, and both of its columns recorded.
+     */
+    const display = await put(
+      `photos/display/${seed.id}-${seed.file}`,
+      derived.display,
+      { access: "public", addRandomSuffix: true, contentType: "image/jpeg" },
+    );
+
     const publishedAt = new Date(base - index * MINUTE_MS).toISOString();
 
     await sql`
-      INSERT INTO photos (id, blob_url, blob_pathname, width, height,
+      INSERT INTO photos (id, blob_url, blob_pathname,
+                          display_url, display_pathname, width, height,
                           blur_data_url, bg_color, title, description, exif,
                           author_id, published_at, is_opener)
-      VALUES (${seed.id}, ${blob.url}, ${blob.pathname}, ${derived.width},
+      VALUES (${seed.id}, ${blob.url}, ${blob.pathname},
+              ${display.url}, ${display.pathname}, ${derived.width},
               ${derived.height}, ${derived.blur_data_url}, ${seed.bgColor},
               ${seed.title}, ${seed.description},
               ${exifParam(derived.exif)}::jsonb, ${authorId},

@@ -19,7 +19,12 @@
 import { createHmac } from "node:crypto";
 import process from "node:process";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
 import { check, finish, RUN_IP } from "./harness.mts";
+
+confirmDestructive(
+  "create and delete members, sessions and contributors in this database",
+);
 
 const [, , secretArg, originArg] = process.argv;
 const webhookSecret = secretArg ?? process.env["STRIPE_WEBHOOK_SECRET"];
