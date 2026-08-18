@@ -261,6 +261,13 @@ list and disagree with a few — the whole design of the feature is that the
 person who took the photograph decides, and a batch run is the one path that
 bypasses them.
 
+**There is no way to add a tag without asking the model.** The chips are
+built from a run's suggestions, so a deployment with no gateway key — or a
+photographer who never presses the button — can remove subjects but never add
+one. Places do not have this problem, because the Location field can always
+be typed into. Worth fixing when somebody hits it; the honest fix is probably
+the full vocabulary behind a "show all" rather than thirty chips by default.
+
 Five of the vocabulary's thirty entries went unused (`canyon`, `forest`,
 `night`, `snow`, `wildlife`), which is the deletion trigger at the bottom of
 this section, not yet met.
