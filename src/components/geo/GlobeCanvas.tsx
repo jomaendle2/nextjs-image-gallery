@@ -458,7 +458,7 @@ export function GlobeCanvas({
    * from them.
    */
   const resetsSeen = useRef(resetCount);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the counter is the whole trigger; the refs it writes are not reactive
+  /* The counter is the whole trigger; the refs it writes are not reactive. */
   useEffect(() => {
     if (resetsSeen.current === resetCount) {
       return;
