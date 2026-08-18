@@ -68,15 +68,15 @@ describe("focusedView", () => {
     lng: number,
   ) => project(lat, lng, { ...view, radius: PORTHOLE * zoom });
 
+  /** What the caller would have captured by pointing at `lat`/`lng`. */
+  const aim = (lat: number, lng: number) => ({ lat, lng });
+
   it("brings the point under the pointer to the centre at full zoom", () => {
     // Somewhere off-centre and unmistakably on the disc.
     const target = { lat: -20, lng: 35 };
-    const at = screen(from, from.zoom, target.lat, target.lng);
-
     const aimed = focusedView({
-      at,
       from,
-      porthole: PORTHOLE,
+      target,
       tiltLimit: TILT_LIMIT,
       to: MAX_ZOOM,
     });
@@ -93,9 +93,8 @@ describe("focusedView", () => {
     const before = Math.hypot(at.x, at.y);
 
     const aimed = focusedView({
-      at,
       from,
-      porthole: PORTHOLE,
+      target,
       tiltLimit: TILT_LIMIT,
       to: 1.5,
     });
@@ -115,26 +114,23 @@ describe("focusedView", () => {
   it("does not steer when zooming out", () => {
     // Pulling back is a request to see more; turning at the same time moves
     // what the reader is trying to get their bearings on.
-    const at = screen(from, from.zoom, -20, 35);
     expect(
       focusedView({
-        at,
         from: { ...from, zoom: 2.5 },
-        porthole: PORTHOLE,
+        target: aim(-20, 35),
         tiltLimit: TILT_LIMIT,
         to: 1.5,
       }),
     ).toBeNull();
   });
 
-  it("ignores a pointer past the limb", () => {
+  it("does nothing when the magnification does not change", () => {
     expect(
       focusedView({
-        at: { x: PORTHOLE * 2, y: 0 },
         from,
-        porthole: PORTHOLE,
+        target: aim(-20, 35),
         tiltLimit: TILT_LIMIT,
-        to: MAX_ZOOM,
+        to: from.zoom,
       }),
     ).toBeNull();
   });
@@ -142,11 +138,9 @@ describe("focusedView", () => {
   it("never leans past the caller's tilt limit", () => {
     // A pointer near the pole would otherwise ask for a tilt of ±90, where
     // the globe is edge-on to its own axis.
-    const at = screen(from, from.zoom, 88, 0);
     const aimed = focusedView({
-      at,
       from,
-      porthole: PORTHOLE,
+      target: aim(88, 0),
       tiltLimit: TILT_LIMIT,
       to: MAX_ZOOM,
     });
@@ -161,14 +155,73 @@ describe("focusedView", () => {
      * round.
      */
     const start = { spin: 170, tilt: 0, zoom: 1 };
-    const at = screen(start, start.zoom, 0, -175);
     const aimed = focusedView({
-      at,
       from: start,
-      porthole: PORTHOLE,
+      target: aim(0, -175),
       tiltLimit: TILT_LIMIT,
       to: MAX_ZOOM,
     });
     expect(Math.abs((aimed?.spin ?? 0) - start.spin)).toBeLessThan(180);
+  });
+});
+
+/**
+ * The sequence a real wheel produces, which is where the first version was
+ * wrong.
+ *
+ * A single call from 1 to `MAX_ZOOM` was tested and passed; a wheel does not
+ * do that. It sends a stream of small notches, and the earlier design read
+ * the point under the pointer afresh on each one — so every step, having
+ * just rotated the globe, aimed at a *different* place. It chased a moving
+ * point. Ten notches over a fixed pointer left the original target 231
+ * pixels off centre, further out than five had.
+ *
+ * Anchoring the target for the gesture is what fixes it, and this is the
+ * test that tells the two designs apart.
+ */
+describe("focusedView over a run of notches", () => {
+  const WHEEL_NOTCH = Math.exp(120 * 0.0015);
+
+  /** Wheel `notches` times towards one fixed target, as `gestures` does. */
+  const wheelTowards = (
+    target: { lat: number; lng: number },
+    notches: number,
+  ) => {
+    const view = { spin: 0, tilt: 20, zoom: 1 };
+    for (let i = 0; i < notches; i += 1) {
+      const to = Math.min(MAX_ZOOM, view.zoom * WHEEL_NOTCH);
+      const aimed = focusedView({
+        from: view,
+        target,
+        tiltLimit: TILT_LIMIT,
+        to,
+      });
+      if (aimed !== null) {
+        view.spin = aimed.spin;
+        view.tilt = aimed.tilt;
+      }
+      view.zoom = to;
+    }
+    return view;
+  };
+
+  it("converges: more notches never leave the target further out", () => {
+    const target = { lat: -35, lng: -60 };
+    const offsets = [1, 5, 10, 20, 40].map((notches) => {
+      const view = wheelTowards(target, notches);
+      const at = project(target.lat, target.lng, {
+        ...view,
+        radius: PORTHOLE * view.zoom,
+      });
+      return Math.hypot(at.x, at.y);
+    });
+
+    for (const [i, offset] of offsets.entries()) {
+      if (i > 0) {
+        expect(offset).toBeLessThanOrEqual((offsets[i - 1] ?? 0) + 0.001);
+      }
+    }
+    // And it actually arrives, rather than merely not getting worse.
+    expect(offsets.at(-1)).toBeCloseTo(0, 6);
   });
 });

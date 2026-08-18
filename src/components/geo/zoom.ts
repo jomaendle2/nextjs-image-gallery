@@ -89,16 +89,25 @@ export function previousZoomStop(from: number): number {
  *
  * A globe cannot pan the way a map does, because the sphere stays centred. So
  * the analogue of "zoom towards the cursor" is to *rotate* towards it: the
- * point under the pointer is unprojected, and the view turns a share of the
- * way there. The share is the share of the *remaining* range this step
- * consumed, so a wheel run from 1 to `MAX_ZOOM` arrives with the target
- * centred and a single notch moves it a little.
+ * view turns a share of the way to `target`, and the share is the share of
+ * the *remaining* range this step consumed. A wheel run from 1 to `MAX_ZOOM`
+ * therefore arrives with the target centred, and a single notch moves it a
+ * little.
+ *
+ * **`target` is passed in rather than unprojected here, and that is the
+ * whole of what makes the sentence above true.** This function used to take
+ * a pointer and read the point under it each time, which is correct for one
+ * step and wrong for the sequence a real wheel produces: every step rotates
+ * the globe, so the next step read a *different* place under the same pixel
+ * and aimed at that instead. It chased a moving point. Measured over a fixed
+ * pointer, ten notches left the original target 231 pixels off centre —
+ * further out than five notches had. Anchoring it once per gesture converges
+ * to nothing: the caller captures the target when a zoom begins and holds it
+ * until the gesture ends.
  *
  * Returns null, and the caller leaves the view alone, when there is nothing
- * to aim at: zooming out (pulling back is a request to see more, and turning
- * at the same time moves what somebody is trying to get their bearings on),
- * or a pointer past the limb, where a wheel over the corner of the canvas
- * must not drag the globe somewhere arbitrary.
+ * to aim at: zooming out is a request to see more, and turning at the same
+ * time moves what somebody is trying to get their bearings on.
  *
  * Pure, and separated from the gesture plumbing that calls it, because it is
  * the only part with arithmetic worth checking on its own.
@@ -106,31 +115,19 @@ export function previousZoomStop(from: number): number {
 export function focusedView({
   from,
   to,
-  at,
-  porthole,
+  target,
   tiltLimit,
 }: {
   /** The view as it stands, and the magnification it stands at. */
   from: { spin: number; tilt: number; zoom: number };
   /** The magnification being moved to. */
   to: number;
-  /** The pointer, in centre-relative canvas pixels. */
-  at: { x: number; y: number };
-  /** The sphere's radius at zoom 1, which is what `at` was measured against. */
-  porthole: number;
+  /** Where the gesture is aimed, fixed for its whole duration. */
+  target: { lat: number; lng: number };
   /** How far from the equator the view may lean, from the caller's own rule. */
   tiltLimit: number;
 }): { spin: number; tilt: number } | null {
   if (to <= from.zoom) {
-    return null;
-  }
-
-  const target = unproject(at.x, at.y, {
-    spin: from.spin,
-    tilt: from.tilt,
-    radius: porthole * from.zoom,
-  });
-  if (target === null) {
     return null;
   }
 
@@ -160,5 +157,87 @@ export function focusedView({
   return {
     spin: from.spin + delta * share,
     tilt: from.tilt + (wantTilt - from.tilt) * share,
+  };
+}
+
+/**
+ * How far a pointer may wander and still count as the same zoom gesture.
+ *
+ * A wheel has no beginning or end to hook onto, so "still aiming at the same
+ * place" is decided by the pointer not having moved. A few pixels of slack
+ * covers a hand resting on a trackpad; past that the reader has chosen
+ * somewhere else and the aim is recaptured.
+ */
+const ANCHOR_SLACK = 6;
+
+/**
+ * Remembers what a zoom gesture is aimed at, so a run of notches converges.
+ *
+ * The state is the whole point, and it is why this is a factory rather than a
+ * function. `focusedView` turns the view a share of the way towards a target;
+ * if that target is re-read from under the pointer on every notch, each step
+ * aims at whatever the *previous* step rotated into place, and the gesture
+ * chases a moving point instead of arriving at one. Measured over a fixed
+ * pointer, that left the original target 231 pixels off centre after ten
+ * notches — further out than after five.
+ *
+ * One anchor per gesture fixes it. There is no event that marks a wheel
+ * gesture ending, so the anchor is kept while the pointer stays within
+ * `ANCHOR_SLACK` and recaptured when it does not; `forget` covers the cases
+ * that have an event — a drag, which moves the globe out from under the
+ * anchor and makes its coordinates describe the wrong pixel.
+ */
+export function createAim(): {
+  /**
+   * The view to move to, or null to leave it alone. One call rather than
+   * "find the target, then focus on it", because the two only ever happen
+   * together and splitting them left the caller juggling two nullables.
+   */
+  towards: (input: {
+    pointer: { x: number; y: number };
+    from: { spin: number; tilt: number; zoom: number };
+    to: number;
+    porthole: number;
+    tiltLimit: number;
+  }) => { spin: number; tilt: number } | null;
+  forget: () => void;
+} {
+  let anchor: {
+    at: { x: number; y: number };
+    lat: number;
+    lng: number;
+  } | null = null;
+
+  return {
+    towards({ pointer, from, to, porthole, tiltLimit }) {
+      const held =
+        anchor !== null &&
+        Math.hypot(pointer.x - anchor.at.x, pointer.y - anchor.at.y) <=
+          ANCHOR_SLACK;
+
+      if (!held) {
+        const found = unproject(pointer.x, pointer.y, {
+          radius: porthole * from.zoom,
+          spin: from.spin,
+          tilt: from.tilt,
+        });
+        anchor =
+          found === null
+            ? null
+            : { at: pointer, lat: found.lat, lng: found.lng };
+      }
+
+      return anchor === null
+        ? null
+        : focusedView({
+            from,
+            target: { lat: anchor.lat, lng: anchor.lng },
+            tiltLimit,
+            to,
+          });
+    },
+    forget() {
+      anchor = null;
+    },
   };
 }

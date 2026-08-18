@@ -1,6 +1,12 @@
-import { HOVER_RADIUS, type Mark, markNear, TAP_RADIUS } from "./marks";
+import {
+  HOVER_RADIUS,
+  type Mark,
+  markNear,
+  onSphere,
+  TAP_RADIUS,
+} from "./marks";
 import { FILL } from "./sphere";
-import { clampZoom, focusedView, LINE_HEIGHT, WHEEL_ZOOM } from "./zoom";
+import { clampZoom, createAim, LINE_HEIGHT, WHEEL_ZOOM } from "./zoom";
 
 /**
  * Every way a hand can move the globe: drag, pinch, wheel, point.
@@ -94,44 +100,12 @@ export function attachGestures(
       : Math.hypot(a.x - b.x, a.y - b.y);
   };
 
-  /**
-   * A client point in the centre-relative pixels everything about the sphere
-   * works in.
-   *
-   * `project`, `unproject` and `markNear` all measure from the middle of the
-   * canvas, because that is where the sphere is; the DOM measures from the
-   * top left of the viewport. The three places that cross that boundary —
-   * the hit test, the wheel and the pinch — wrote the same four terms out
-   * each time, which is three chances to drop a `/ 2`.
-   */
-  const onSphere = (clientX: number, clientY: number) => {
-    const box = canvas.getBoundingClientRect();
-    return {
-      x: clientX - box.left - box.width / 2,
-      y: clientY - box.top - box.height / 2,
-      /*
-       * Handed back with the point, for the one caller that also converts
-       * the other way — the hover card is positioned in canvas-local pixels
-       * against a mark measured in centre-relative ones. Sharing the single
-       * measurement keeps a layout read off every `pointermove`, and means
-       * the two directions cannot disagree about a box that changed between
-       * them.
-       */
-      box,
-    };
-  };
-
-  /**
-   * The point between two fingers — what a reader is pinching *at*.
-   *
-   * `pointers` holds client coordinates, because that is what a pinch's
-   * distance needs and distance does not care where the origin is.
-   */
+  /** The point between two fingers — what a reader is pinching *at*. */
   const midpoint = (): { x: number; y: number } | undefined => {
     const [a, b] = [...pointers.values()];
     return a === undefined || b === undefined
       ? undefined
-      : onSphere((a.x + b.x) / 2, (a.y + b.y) / 2);
+      : onSphere(canvas, (a.x + b.x) / 2, (a.y + b.y) / 2);
   };
 
   /**
@@ -153,6 +127,8 @@ export function attachGestures(
     }
   };
 
+  const aim = createAim();
+
   const applyZoom = (next: number, at?: { x: number; y: number }) => {
     const clamped = clampZoom(next);
     if (clamped === refs.zoomed.current) {
@@ -166,13 +142,13 @@ export function attachGestures(
      */
     if (at !== undefined) {
       const box = canvas.getBoundingClientRect();
-      const aimed = focusedView({
-        at,
+      const aimed = aim.towards({
         from: {
           spin: refs.dragged.current,
           tilt: refs.tilted.current,
           zoom: refs.zoomed.current,
         },
+        pointer: at,
         porthole: (Math.min(box.width, box.height) / 2) * FILL,
         tiltLimit: TILT_LIMIT,
         to: clamped,
@@ -225,7 +201,7 @@ export function attachGestures(
    * render per mark entered rather than one per pixel moved.
    */
   const selectAt = (event: PointerEvent, clearing: boolean) => {
-    const { box, ...at } = onSphere(event.clientX, event.clientY);
+    const { box, ...at } = onSphere(canvas, event.clientX, event.clientY);
     const near = markNear(
       refs.marks.current,
       at.x,
@@ -274,6 +250,9 @@ export function attachGestures(
 
     if (event.clientX !== fromX || event.clientY !== fromY) {
       dropSelection();
+      // A drag moves the globe out from under the zoom's anchor, so the
+      // next zoom recaptures rather than aiming at a stale place.
+      aim.forget();
     }
 
     refs.dragged.current += (event.clientX - fromX) * step;
@@ -425,7 +404,7 @@ export function attachGestures(
     // rather than towards the middle of the ocean.
     applyZoom(
       refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM),
-      onSphere(event.clientX, event.clientY),
+      onSphere(canvas, event.clientX, event.clientY),
     );
   };
 

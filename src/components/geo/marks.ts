@@ -95,3 +95,33 @@ export function markNear(
 
   return best;
 }
+
+/**
+ * A client point in the centre-relative pixels the sphere works in.
+ *
+ * `project`, `unproject` and `markNear` all measure from the middle of the
+ * canvas, because that is where the sphere is; the DOM measures from the top
+ * left of the viewport. Three gestures cross that boundary — the hit test,
+ * the wheel and the pinch — and each used to write the same four terms out,
+ * which is three chances to drop a `/ 2`.
+ *
+ * Here rather than beside them because the conversion is the same knowledge
+ * as `markNear`'s coordinate space, which this file already owns.
+ *
+ * The measured box comes back with the point, for the one caller that also
+ * converts the other way: the hover card is positioned in canvas-local
+ * pixels against a mark measured in centre-relative ones. Sharing the single
+ * measurement keeps a second layout read off every `pointermove`.
+ */
+export function onSphere(
+  canvas: HTMLElement,
+  clientX: number,
+  clientY: number,
+): { x: number; y: number; box: DOMRect } {
+  const box = canvas.getBoundingClientRect();
+  return {
+    box,
+    x: clientX - box.left - box.width / 2,
+    y: clientY - box.top - box.height / 2,
+  };
+}
