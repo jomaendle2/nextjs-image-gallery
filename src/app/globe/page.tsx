@@ -15,7 +15,6 @@ import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
-import { CELL_KM } from "@/lib/photos/coarsen";
 import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
 import { photoTitle } from "@/lib/photos/title";
@@ -98,32 +97,21 @@ export default async function GlobePage() {
           ) : (
             <>
               {/*
-                Text and globe as one band, rather than a centred sphere with
-                empty columns either side of it.
+                The globe alone, centred. A paragraph used to sit beside it
+                explaining what the marks do and do not mean; the first test
+                user read it as defensive noise, and the substance — marked by
+                photographers, deliberately approximate — already lives in
+                /privacy for anybody who wonders. The heading, the count and
+                the place list below say everything a visitor needs.
 
-                A globe alone in the middle of a page is a decoration looking
-                for a caption. Set beside the sentence that qualifies it, the
-                two read as one statement: here is the world, and here is what
-                these marks do and do not mean.
+                Everything the globe shows is below in a form that works with
+                no JavaScript, no canvas and no sight — which is why nothing
+                on this page waits for it, and why the only thing about it
+                that has to be reachable from a keyboard is the button that
+                opens it.
               */}
-              <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16">
-                <p className={`max-w-prose text-pretty ${BODY}`}>
-                  Photographers mark these themselves; nothing is ever read from
-                  a photograph's file. Each place is deliberately blunt: the
-                  middle of a square about {CELL_KM} kilometres across, so it
-                  says roughly where somebody was and not where they stood.
-                </p>
-
-                {/*
-                  Beside the list, never instead of it. Everything the globe
-                  shows is below in a form that works with no JavaScript, no
-                  canvas and no sight — which is why nothing on this page
-                  waits for it, and why the only thing about it that has to be
-                  reachable from a keyboard is the button that opens it.
-                */}
-                <div className="mx-auto w-full max-w-[26rem]">
-                  <GlobeStage points={toGlobePoints(cells)} />
-                </div>
+              <div className="mx-auto w-full max-w-[26rem]">
+                <GlobeStage points={toGlobePoints(cells)} />
               </div>
 
               <ul className="mt-14 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
