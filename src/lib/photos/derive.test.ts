@@ -161,15 +161,18 @@ describe("deriveFromBuffer", () => {
  * reproducible; `sharp`'s own `create.noise` would be simpler but is absent
  * from its TypeScript `Create` type, and a fixture that has to be cast is a
  * fixture that stops being checked.
+ *
+ * A plain linear congruential generator, arithmetic rather than bitwise. The
+ * numbers only have to be incompressible, not statistically sound, and biome
+ * forbids bitwise operators here for the good reason that everywhere else in
+ * this codebase they would be a mistake.
  */
 function noisy(width: number, height: number): Buffer {
   const pixels = Buffer.allocUnsafe(width * height * 3);
-  let state = 0x25_45_f4_91;
+  let state = 12_345;
   for (let i = 0; i < pixels.length; i += 1) {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    pixels[i] = state & 0xff;
+    state = (state * 1_103_515_245 + 12_345) % 2_147_483_648;
+    pixels[i] = Math.floor(state / 65_536) % 256;
   }
   return pixels;
 }

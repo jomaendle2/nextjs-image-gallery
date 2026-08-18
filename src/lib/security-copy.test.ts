@@ -117,8 +117,11 @@ describe("the upload cap is stated from MAX_UPLOAD_BYTES", () => {
   it("the two messages a person reads derive the number", () => {
     // Not a literal, or the sentence and the limit drift the way the sign-in
     // link's expiry did — six sentences wrong for months.
-    expect(read("app", "api", "photos", "draft", "route.ts")).toContain(
-      "${MAX_UPLOAD_MB} MB",
+    // A regex, not a literal: a string containing a template placeholder is
+    // what biome's `noTemplateCurlyInString` exists to catch, and it cannot
+    // tell an assertion about one from an accidental one.
+    expect(read("app", "api", "photos", "draft", "route.ts")).toMatch(
+      /\$\{MAX_UPLOAD_MB\} MB/,
     );
     expect(read("app", "contribute", "photos", "UploadForm.tsx")).toContain(
       "MAX_UPLOAD_MB",

@@ -10,7 +10,7 @@
  * `contributors(id)` with no `ON DELETE`, so a raw DELETE in the Neon console
  * is refused until the photographs go; and deleting the photographs by hand
  * orphans their blobs permanently, because `deletePhoto` deletes the row and
- * *returns* the two pathnames for its caller to clean up. The one function
+ * _returns_ the two pathnames for its caller to clean up. The one function
  * that does clean them up, `deleteBlobs`, is module-private inside a
  * `"use server"` file, so nothing outside that file can call it.
  *
@@ -29,7 +29,7 @@ import { sql } from "../src/lib/database.ts";
 import { databaseHost } from "./guard.mts";
 import { check, finish, section } from "./harness.mts";
 
-const emailArg = process.argv[2];
+const [, , emailArg] = process.argv;
 const apply = process.argv.includes("--apply");
 
 if (emailArg === undefined || emailArg.startsWith("--")) {
@@ -49,7 +49,7 @@ const found = await sql`
   SELECT id, slug, display_name, revoked_at
   FROM contributors WHERE email = ${address};
 `;
-const contributor = found[0];
+const [contributor] = found;
 
 /*
  * Refusing rather than reporting nothing is the point. "No such address"

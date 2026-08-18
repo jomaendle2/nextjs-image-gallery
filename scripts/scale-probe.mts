@@ -84,10 +84,11 @@ try {
         'probe-' || ${author} || '-' || g,
         ${seed["blob_url"]},
         'probe/' || ${author} || '/' || g || '.jpg',
-        -- `display_url` is NOT NULL and is what every page now renders from.
+        -- display_url is NOT NULL and is what every page now renders from.
         -- These rows exist to be counted, not looked at, so they point at the
         -- same borrowed URL; the pathname is still per-row because it is
-        -- uniquely indexed.
+        -- uniquely indexed. (No backticks in here: this is inside a tagged
+        -- template, and one would end the literal.)
         ${seed["blob_url"]},
         'probe/' || ${author} || '/' || g || '-display.jpg',
         1200, 800,

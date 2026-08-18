@@ -279,6 +279,62 @@ function ExactPoint({ pin }: { pin: { lat: number; lng: number } }) {
   );
 }
 
+/**
+ * The offer, for a reader who is entitled to none of it.
+ *
+ * Its own component rather than a branch inside `body`, which had grown past
+ * what one function should decide: three refusals and two shapes of content,
+ * with the longest comment in the file sitting in the middle of it.
+ */
+function Teaser(): ReactNode {
+  return (
+    <div>
+      <p className={META}>Where exactly, and how</p>
+      {/*
+      A claim about the photograph in front of the reader, and now it is
+      true of that photograph.
+
+      This sentence has been through both failures. It began as an
+      assertion — "the photographer wrote down the spot and how the picture
+      was made" — under every photograph alike, on a gallery where all
+      three member fields were empty on all fourteen published rows: an
+      offer against a bare shelf, where the site asks for money. It was
+      then softened into a claim about photographers in general, which was
+      honest but sold nothing, and was marked as the stopgap it was.
+
+      `PhotoDetails` now renders this row only where `hasMemberDetails` is
+      true, so the concrete claim is back and earns its place.
+
+      Two words are doing the work of a second bit, so that there is only
+      one. "Recorded" is true of both acts the paid fields hold — typing a
+      sentence and marking a point on a map — where "written down" was
+      prose language for what is, on every photograph published so far, a
+      coordinate. And the "or" is what one bit buys: what crosses into a
+      public payload is that *something* exists, never which of the three
+      fields it is, because a payload distinguishing them would be
+      reporting on the paid columns field by field. Naming both
+      possibilities and letting the reader find out which by joining is a
+      smaller price than that.
+
+      "Than the page shows" is there because "more" otherwise has nothing
+      to be more than. The panel above it is the comparison.
+    */}
+      <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
+        The photographer recorded more about this one than the page shows: where
+        exactly it was taken, or how the picture was made. Members can read it.
+      </p>
+      <Link
+        className={glassControl(
+          "mt-3 inline-flex min-h-11 items-center px-4 py-2 text-sm text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
+        )}
+        href="/membership"
+      >
+        See what a membership shows
+      </Link>
+    </div>
+  );
+}
+
 function body(data: Details | undefined, offered: boolean): ReactNode {
   if (data === undefined) {
     return null;
@@ -294,57 +350,7 @@ function body(data: Details | undefined, offered: boolean): ReactNode {
      * to a page reading "Not open yet". The flag was already threaded into
      * this carousel and stopped at the top bar.
      */
-    if (!showsTeaser(data.access, offered)) {
-      return null;
-    }
-
-    return (
-      <div>
-        <p className={META}>Where exactly, and how</p>
-        {/*
-          A claim about the photograph in front of the reader, and now it is
-          true of that photograph.
-
-          This sentence has been through both failures. It began as an
-          assertion — "the photographer wrote down the spot and how the picture
-          was made" — under every photograph alike, on a gallery where all
-          three member fields were empty on all fourteen published rows: an
-          offer against a bare shelf, where the site asks for money. It was
-          then softened into a claim about photographers in general, which was
-          honest but sold nothing, and was marked as the stopgap it was.
-
-          `PhotoDetails` now renders this row only where `hasMemberDetails` is
-          true, so the concrete claim is back and earns its place.
-
-          Two words are doing the work of a second bit, so that there is only
-          one. "Recorded" is true of both acts the paid fields hold — typing a
-          sentence and marking a point on a map — where "written down" was
-          prose language for what is, on every photograph published so far, a
-          coordinate. And the "or" is what one bit buys: what crosses into a
-          public payload is that *something* exists, never which of the three
-          fields it is, because a payload distinguishing them would be
-          reporting on the paid columns field by field. Naming both
-          possibilities and letting the reader find out which by joining is a
-          smaller price than that.
-
-          "Than the page shows" is there because "more" otherwise has nothing
-          to be more than. The panel above it is the comparison.
-        */}
-        <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
-          The photographer recorded more about this one than the page shows:
-          where exactly it was taken, or how the picture was made. Members can
-          read it.
-        </p>
-        <Link
-          className={glassControl(
-            "mt-3 inline-flex min-h-11 items-center px-4 py-2 text-sm text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
-          )}
-          href="/membership"
-        >
-          See what a membership shows
-        </Link>
-      </div>
-    );
+    return showsTeaser(data.access, offered) ? <Teaser /> : null;
   }
 
   const location = data.precise_location?.trim() ?? "";
@@ -363,6 +369,30 @@ function body(data: Details | undefined, offered: boolean): ReactNode {
     );
   }
 
+  return <Written location={location} pin={pin} technique={technique} />;
+}
+
+/**
+ * What the photographer actually wrote, in whichever combination they wrote
+ * it.
+ *
+ * Separated from `body` for the same reason `Teaser` is: `body` decides *who
+ * sees what*, and once a third reason to see something was added, mixing that
+ * decision with four independent "did they fill this one in" checks put the
+ * whole thing past what one function should hold.
+ *
+ * Every field is optional and independent — a pin with no words, words with
+ * no pin, a technique alone — so each renders or does not on its own.
+ */
+function Written({
+  location,
+  technique,
+  pin,
+}: {
+  location: string;
+  technique: string;
+  pin: { lat: number; lng: number } | null;
+}): ReactNode {
   return (
     <div className="space-y-4">
       {location === "" && pin === null ? null : (

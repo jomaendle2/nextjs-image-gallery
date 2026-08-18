@@ -150,9 +150,12 @@ describe("the author branch is disjoint, not a disjunct", () => {
   });
 
   it("the author query asks about ownership and nothing else", () => {
-    expect(slice).toContain("p.author_id = ${asAuthor.contributorId}");
+    // Regexes rather than literals: a string holding a template placeholder
+    // is exactly what `noTemplateCurlyInString` is looking for, and it cannot
+    // tell an assertion about one from an accident.
+    expect(slice).toMatch(/p\.author_id = \$\{asAuthor\.contributorId\}/);
     // Postgres will not infer a boolean parameter's type inside an OR.
-    expect(slice).toContain("${asAuthor.isOwner}::boolean");
+    expect(slice).toMatch(/\$\{asAuthor\.isOwner\}::boolean/);
   });
 
   it("keeps one exported name, so the caller census still works", () => {

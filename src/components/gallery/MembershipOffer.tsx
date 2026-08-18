@@ -33,7 +33,12 @@ import { createContext, type ReactNode, useContext } from "react";
  */
 const MembershipOfferContext = createContext(false);
 
-export function MembershipOfferProvider({
+/**
+ * Named for the file rather than suffixed `Provider`, which biome's filename
+ * rule requires and which reads better at the call site anyway: the carousel
+ * wraps itself in `<MembershipOffer offered={…}>`.
+ */
+export function MembershipOffer({
   children,
   offered,
 }: {
