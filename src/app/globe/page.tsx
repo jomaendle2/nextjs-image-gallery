@@ -97,35 +97,27 @@ export default async function GlobePage() {
           ) : (
             <>
               {/*
-                The globe alone, centred. A paragraph used to sit beside it
-                explaining what the marks do and do not mean; the first test
-                user read it as defensive noise, and the substance — marked by
-                photographers, deliberately approximate — already lives in
-                /privacy for anybody who wonders. The heading, the count and
-                the place list below say everything a visitor needs.
+                The globe alone, centred, and sized to the space it now has.
 
-                Everything the globe shows is below in a form that works with
-                no JavaScript, no canvas and no sight — which is why nothing
-                on this page waits for it, and why the only thing about it
-                that has to be reachable from a keyboard is the button that
-                opens it.
-              */}
-              {/*
-                Sized to the space the paragraph used to occupy, rather than
-                left at the width it had beside one.
-                
-                26rem was correct while a column of text sat next to it. Alone
-                on a full-width page it read as a small decoration adrift in
-                whitespace — the failure the old layout comment warned about
-                from the other direction.
+                A paragraph used to sit beside it explaining what the marks do
+                and do not mean; the first test user read it as defensive
+                noise, and the substance — marked by photographers,
+                deliberately approximate — already lives in /privacy for
+                anybody who wonders.
 
-                It stops at 32rem, and the ceiling is the list rather than the
-                sphere. At 40rem the globe filled a laptop viewport on its own
-                and pushed every place below the fold — and the list is the
-                content here, the part that works with no JavaScript and no
-                canvas, while the globe is the decoration. Leaving the first
-                row of places just showing is what says there is something to
-                scroll to.
+                26rem was the right width while a column of text sat next to
+                it. Alone on a full-width page it read as a small decoration
+                adrift in whitespace, so it grows to 32rem — and the ceiling
+                is the *list* rather than the sphere. At 40rem the globe
+                filled a laptop viewport on its own and pushed every place
+                below the fold; the list is the content here, the part that
+                works with no JavaScript, no canvas and no sight, while the
+                globe is the decoration. Leaving the first row of places just
+                showing is what says there is something to scroll to.
+
+                That is also why nothing on this page waits for the canvas,
+                and why the only thing about it that has to be reachable from
+                a keyboard is the button that opens it.
               */}
               <div className="mx-auto w-full max-w-[26rem] lg:max-w-[32rem]">
                 <GlobeStage points={toGlobePoints(cells)} />

@@ -15,12 +15,19 @@ import { unproject } from "./projection";
  *
  * `MAX_ZOOM` is where the finer data runs out rather than where the
  * arithmetic does, and the number is measured rather than assumed. This
- * paragraph used to claim a vertex every 0.07 degrees; counting them says
- * the median gap in `world-fine` is nearer **0.26 degrees**, so the data is
- * four times coarser than it was credited with. At 2.5x on the expanded
- * overlay — about 640px square on a laptop, so a radius near 800px — that
- * median gap lands about 3.7 device pixels apart. Past this the globe
+ * paragraph used to claim a vertex every 0.07 degrees. Counting all 28,622
+ * of them puts the median gap in `world-fine` at **0.264 degrees**, so the
+ * data is nearly four times coarser than it was credited with.
+ *
+ * The overlay is `min(96vw, 74dvh)` and the sphere fills `FILL` of it, so on
+ * a 1512x787 laptop the radius at 2.5x is about 640 CSS pixels — and that
+ * median gap lands a little under **3 CSS pixels** apart. Past this the globe
  * magnifies a polygon rather than a coast.
+ *
+ * Both numbers are measured rather than reasoned about, which is the point:
+ * the figure they replaced was wrong for long enough to be quoted as a
+ * constraint, and a constraint nobody can reproduce is a guess with a
+ * decimal point.
  *
  * That is why "more zoom" is not the answer to wanting a closer look: more
  *range* would show the reader the seams. What helps is more *stops* inside

@@ -129,7 +129,20 @@ export function unproject(
   const py = -y / view.radius;
   const rho = Math.hypot(px, py);
 
-  if (rho > 1) {
+  /*
+   * `!(rho <= 1)` rather than `rho > 1`, and the difference is NaN.
+   *
+   * A NaN fails every comparison, so `rho > 1` waves it straight through —
+   * and then `asin(NaN)` is NaN, and the caller writes NaN into the spin and
+   * tilt it keeps between frames. The globe renders nothing from that point
+   * on, for the rest of the session, with no error and no way back.
+   *
+   * `radius` is zero whenever the canvas is measured mid-layout — the
+   * overlay animates open from nothing — and a pointer exactly on the centre
+   * line then makes `0 / 0`. Rare, permanent, and silent, which is the worst
+   * combination; the fix is one character of logic.
+   */
+  if (!(rho <= 1)) {
     return null;
   }
   if (rho < 1e-9) {
