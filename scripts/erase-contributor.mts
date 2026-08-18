@@ -19,8 +19,8 @@
  *
  * Dry run by default, following `name-photographs.mts` and the guard.
  *
- *   npm run erase-contributor -- someone@example.com
- *   npm run erase-contributor -- someone@example.com --apply
+ *   npm run db:erase-contributor -- someone@example.com
+ *   npm run db:erase-contributor -- someone@example.com --apply
  */
 import process from "node:process";
 import { del } from "@vercel/blob";
@@ -34,7 +34,7 @@ const apply = process.argv.includes("--apply");
 
 if (emailArg === undefined || emailArg.startsWith("--")) {
   console.error(
-    "Usage: npm run erase-contributor -- someone@example.com [--apply]",
+    "Usage: npm run db:erase-contributor -- someone@example.com [--apply]",
   );
   process.exit(1);
 }
@@ -84,10 +84,23 @@ const invitees = await sql`
  */
 const opener = photos.find((row) => row["is_opener"] === true);
 
-for (const photo of photos) {
-  const paths = [photo["blob_pathname"], photo["display_pathname"]].filter(
+/**
+ * The stored files behind one photograph: the original, and the display copy.
+ *
+ * One function because the dry run and the erase must list exactly the same
+ * set — a filter written out twice is a filter that eventually disagrees with
+ * itself, and here the disagreement would mean reporting a blob and then not
+ * deleting it. `display_pathname` is nullable on rows old enough to predate
+ * the column, so both are narrowed rather than assumed.
+ */
+function blobPathsOf(photo: Record<string, unknown>): string[] {
+  return [photo["blob_pathname"], photo["display_pathname"]].filter(
     (path): path is string => typeof path === "string" && path !== "",
   );
+}
+
+for (const photo of photos) {
+  const paths = blobPathsOf(photo);
   console.log(
     `  photo ${photo["id"]}: ${paths.length} blob(s) — ${paths.join(", ")}`,
   );
@@ -119,10 +132,7 @@ section("Erasing");
  * one whose failure is recoverable.
  */
 for (const photo of photos) {
-  const paths = [photo["blob_pathname"], photo["display_pathname"]].filter(
-    (path): path is string => typeof path === "string" && path !== "",
-  );
-  for (const path of paths) {
+  for (const path of blobPathsOf(photo)) {
     try {
       await del(path);
       check(`blob ${path}`, true);
@@ -171,8 +181,57 @@ check("deleted sessions and login tokens", true);
 const gone = await sql`DELETE FROM contributors WHERE id = ${id} RETURNING id;`;
 check("deleted the contributor row", gone.length === 1);
 
-const left = await sql`SELECT 1 FROM contributors WHERE email = ${address};`;
-check("the address is no longer in contributors", left.length === 0);
+/*
+ * The other three tables that hold an address, none of them FK-linked to
+ * this row, so nothing cascades and nothing complained.
+ *
+ * Erasing only `contributors` and calling it done is the failure mode this
+ * script's own docblock warns about: the one thing worse than failing to
+ * erase somebody is believing you have. `applications` keeps a year of
+ * history, `subscribers` is the mailing list, and `members` is a payment
+ * record — and a photographer who applied, subscribed and later paid is in
+ * all three under the same address.
+ *
+ * `members` is deliberately the loudest of the three. A membership row is
+ * also a tax record, and German law wants the invoice kept for ten years —
+ * which is exactly the tension GDPR Article 17(3)(b) exists for. So the row
+ * is reported rather than deleted, and the operator decides. Deleting a
+ * payment record because a script found an email in it would be the wrong
+ * default in the one place where a legal obligation points the other way.
+ */
+const applications = await sql`
+  DELETE FROM applications WHERE email = ${address} RETURNING id;
+`;
+check(`deleted ${applications.length} application(s)`, true);
+
+const subscriptions = await sql`
+  DELETE FROM subscribers WHERE email = ${address} RETURNING email;
+`;
+check(`deleted ${subscriptions.length} mailing-list subscription(s)`, true);
+
+const membership = await sql`SELECT 1 FROM members WHERE email = ${address};`;
+if (membership.length > 0) {
+  console.log(
+    "\n  ** This address also has a membership row. **\n" +
+      "  Not deleted: it is a payment record, and the invoice behind it is\n" +
+      "  kept for ten years under German tax law — the retention GDPR\n" +
+      "  Article 17(3)(b) preserves. Decide deliberately, and cancel the\n" +
+      "  subscription in Stripe if it is still live.",
+  );
+}
+
+const left = await sql`
+  SELECT 'contributors' AS t FROM contributors WHERE email = ${address}
+  UNION ALL SELECT 'applications' FROM applications WHERE email = ${address}
+  UNION ALL SELECT 'subscribers' FROM subscribers WHERE email = ${address}
+  UNION ALL SELECT 'sessions' FROM sessions WHERE email = ${address}
+  UNION ALL SELECT 'login_tokens' FROM login_tokens WHERE email = ${address};
+`;
+check(
+  "the address is gone from every table but members",
+  left.length === 0,
+  left.map((row) => row["t"] as string).join(", "),
+);
 
 if (opener !== undefined) {
   const openers = await sql`SELECT 1 FROM photos WHERE is_opener = true;`;
@@ -182,5 +241,22 @@ if (opener !== undefined) {
     "choose one from /contribute/admin",
   );
 }
+
+/*
+ * What this script cannot do, said out loud rather than left to be noticed.
+ *
+ * `revalidatePath` needs a Next request context and there is none here, so a
+ * plain node script cannot clear the caches. `/by/[slug]`, its slideshow and
+ * `/globe` are all ISR on an hour — so for up to an hour after an erasure the
+ * gallery goes on serving the person's name, titles and locations, now with
+ * broken images, which is the most visible possible version of it.
+ *
+ * A redeploy clears it immediately, and a redeploy is a button.
+ */
+console.log(
+  "\n  Cached pages still hold this work for up to an hour.\n" +
+    "  Redeploy from Vercel to clear /by/<slug>, its slideshow and /globe\n" +
+    "  now, or wait for the hourly revalidation.\n",
+);
 
 finish();

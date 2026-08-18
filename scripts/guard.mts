@@ -53,7 +53,26 @@ export function confirmDestructive(what: string): void {
   console.log(`\n  Target database: ${host}`);
   console.log(`  This will ${what}.\n`);
 
-  if (!process.argv.includes("--apply")) {
+  /*
+   * Consumed, not merely read.
+   *
+   * Three of these scripts take positional arguments — an origin, a webhook
+   * secret — with `const [, , originArg] = process.argv`. Leaving `--apply`
+   * in place meant `npm run smoke:pages -- --apply` set `origin` to the
+   * string "--apply" and every fetch failed, and `smoke:membership` signed
+   * its fake webhooks with the HMAC key "--apply" and reported signature
+   * failures that had nothing to do with what it tests.
+   *
+   * Removing it here rather than teaching five scripts to skip flags: the
+   * flag belongs to this function, so this function is what should eat it,
+   * and the next destructive script gets the fix without knowing about it.
+   */
+  const flag = process.argv.indexOf("--apply");
+  if (flag !== -1) {
+    process.argv.splice(flag, 1);
+  }
+
+  if (flag === -1) {
     console.error(
       "  Refusing to run without --apply.\n" +
         "  Check the host above. If it is production, stop and point\n" +

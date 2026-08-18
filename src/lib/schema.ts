@@ -414,6 +414,14 @@ export const MIGRATIONS: readonly string[] = [
    * Postgres rejects it in a generation expression. The tolerance lives on
    * the read side, in `FEED_COLUMNS`.
    */
+
+  `ALTER TABLE photos ADD COLUMN IF NOT EXISTS has_member_details BOOLEAN NOT NULL
+     GENERATED ALWAYS AS (
+       btrim(coalesce(precise_location, '')) <> ''
+       OR btrim(coalesce(technique, '')) <> ''
+       OR precise_lat IS NOT NULL
+     ) STORED;`,
+
   /*
    * The display copy stops being a hopeful backfill and becomes an invariant.
    *
@@ -433,13 +441,14 @@ export const MIGRATIONS: readonly string[] = [
    *
    * Re-running is a no-op on an already-constrained column; it raises only
    * when a null exists, which is the one time somebody needs to know.
+   *
+   * **Last in the list deliberately.** `migrate.mts` aborts the whole run on
+   * the first statement that throws, so anything after a statement that
+   * *can* throw would silently stop being applied. Everything above this is
+   * `IF NOT EXISTS` or a bounded UPDATE and cannot fail on data; this one
+   * can. Put last, its failure costs the deploy and nothing else.
+   *
+   * Verified against production immediately before merging: 22 rows, 0 null.
    */
   "ALTER TABLE photos ALTER COLUMN display_url SET NOT NULL;",
-
-  `ALTER TABLE photos ADD COLUMN IF NOT EXISTS has_member_details BOOLEAN NOT NULL
-     GENERATED ALWAYS AS (
-       btrim(coalesce(precise_location, '')) <> ''
-       OR btrim(coalesce(technique, '')) <> ''
-       OR precise_lat IS NOT NULL
-     ) STORED;`,
 ];

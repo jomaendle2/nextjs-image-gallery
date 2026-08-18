@@ -122,31 +122,56 @@ export function MemberDetails({ photoId }: { photoId: string }) {
   const sessionIsMember = useSessionIsMember();
   const membershipOffered = useMembershipOffered();
 
+  /**
+   * Records what one answer settled about the session, if anything.
+   *
+   * Both exits from the query wrote this, and a rule applied in two places is
+   * a rule that eventually differs between them — which here would mean the
+   * refusal path and the success path disagreeing about whether a signed-in
+   * reader's "no" is final. `nextSessionAccess` returns null for "still
+   * unknown", and null must leave the cached value alone rather than
+   * overwrite it.
+   */
+  const settle = (answer: PhotoAccess, signedIn: boolean) => {
+    const known = nextSessionAccess(answer, signedIn);
+    if (known !== null) {
+      client.setQueryData(SESSION_MEMBER_KEY, known);
+    }
+  };
+
   const { data, isPlaceholderData, isError } = useQuery({
     queryKey: ["photoDetails", photoId],
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
       if (response.status === 403) {
-        const refusal = (await response.json()) as Details;
+        /*
+         * A 403 that carries no JSON body is still a refusal.
+         *
+         * This used to return a fixed object and could not fail. Reading the
+         * body is what `signedIn` needs, but Deployment Protection, a
+         * firewall rule and an edge-level block all answer 403 with HTML —
+         * and a rejected `json()` lands in `isError` with `retry: false`,
+         * which would show "This did not load." to every reader instead of
+         * the membership invitation. Unparseable means "refused, and nothing
+         * learned about the session", which is the safe reading of both.
+         */
+        const refusal = await response
+          .json()
+          .then((parsed: unknown) => parsed as Details)
+          .catch(() => ({ access: "none" }) as Details);
         /*
          * A refusal, and whether it is final. `nextSessionAccess` returns
          * null for a signed-in reader, which leaves the flag unknown and the
          * query enabled — the next photograph may be one of theirs.
          */
-        const settled = nextSessionAccess("none", refusal.signedIn === true);
-        if (settled !== null) {
-          client.setQueryData(SESSION_MEMBER_KEY, settled);
-        }
+        settle("none", refusal.signedIn === true);
         return { access: "none" };
       }
       if (!response.ok) {
         throw new Error("Could not load the details.");
       }
       const details = (await response.json()) as Details;
-      const settled = nextSessionAccess(details.access, true);
-      if (settled !== null) {
-        client.setQueryData(SESSION_MEMBER_KEY, settled);
-      }
+      settle(details.access, true);
       return details;
     },
     staleTime: 5 * 60 * 1000,
@@ -182,21 +207,39 @@ export function MemberDetails({ photoId }: { photoId: string }) {
    * this row only where something exists, so an empty space here is now
    * provably wrong rather than merely ambiguous.
    */
-  if (isError) {
-    return (
-      <div>
-        <p className={META}>Where exactly, and how</p>
-        <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
-          This did not load. Reloading the page will try again.
-        </p>
-      </div>
-    );
-  }
-
-  return body(
-    whatToShow(data, isPlaceholderData, sessionIsMember),
-    membershipOffered,
+  const content = isError ? (
+    <div>
+      <p className={META}>Where exactly, and how</p>
+      <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
+        This did not load. Reloading the page will try again.
+      </p>
+    </div>
+  ) : (
+    body(
+      whatToShow(data, isPlaceholderData, sessionIsMember),
+      membershipOffered,
+    )
   );
+
+  /*
+   * The rule above the row, owned by the thing that decides whether there is
+   * a row.
+   *
+   * `PhotoDetails` used to draw it, around this component, whenever the
+   * photograph had member details at all — so when this renders nothing, a
+   * bare hairline and sixteen pixels of dead space were left at the bottom of
+   * the panel. That was always visible for a moment while a member's request
+   * was in flight, and became the *resting* state the moment hiding the
+   * teaser was possible: membership is not on sale, so every photograph with
+   * notes showed an anonymous reader a line under nothing.
+   *
+   * A separator is a statement that two things are separate. Only the
+   * component that knows whether the second thing exists can make it.
+   */
+  if (content === null) {
+    return null;
+  }
+  return <div className="border-white/[0.08] border-t pt-4">{content}</div>;
 }
 
 /**

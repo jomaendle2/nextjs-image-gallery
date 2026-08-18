@@ -29,36 +29,19 @@ export async function GET(
    * Member first, author only if that fails, and the order is a cost
    * decision rather than a preference.
    *
-   * Anonymous: `getCurrentContributor` early-returns on the absent cookie,
-   * so no query is added. A member: identical to before, because the second
-   * lookup never happens. Only a signed-in non-member — the photographer,
-   * the population this branch exists for — pays one extra round trip.
+   * The member branch returns before `getCurrentContributor` is reached, so
+   * a member never pays for a second session lookup — and an anonymous
+   * reader pays nothing for it either, because that function early-returns
+   * on the absent cookie. Only a signed-in non-member, the photographer this
+   * branch exists for, pays the extra round trip. Written as early returns
+   * rather than as a comment claiming the same thing: the shape is the
+   * guarantee.
    *
    * A combined `getSessionCapabilities()` join was considered and rejected:
    * it would make every anonymous 403 pay for two joins, and would add a
    * third way to resolve a session to a codebase that already has two.
    */
   const member = await getCurrentMember();
-  const contributor = member === null ? await getCurrentContributor() : null;
-
-  if (member === null && contributor === null) {
-    /*
-     * 403 rather than 404: the photograph exists and the reader can see it.
-     * What is missing is a membership, and saying so is the point — this is
-     * the response the interface turns into an invitation.
-     *
-     * `signedIn` is what stops the client's "one refusal ends the asking"
-     * optimisation from resurrecting the bug this route is fixing. See
-     * `nextSessionAccess` in `lib/members/access.ts` — membership is a fact
-     * about the session, authorship is a fact about the photograph, and only
-     * the first may be settled by a single no.
-     */
-    return NextResponse.json(
-      { access: "none", signedIn: false },
-      { status: 403 },
-    );
-  }
-
   const { id } = await params;
 
   /*
@@ -157,9 +140,26 @@ export async function GET(
    * reaching here, so the counter is reachable only from the branch where
    * somebody actually paid.
    *
-   * `contributor` is non-null here: the pair `member === null && contributor
-   * === null` returned 403 above, and `member !== null` returned just now.
+   * The guarantee is exactly that and no more. A contributor who *also* holds
+   * a membership takes the member branch on their own photographs and does
+   * record a view — correctly, because they paid for one. What bounds it
+   * there is `memberViewLimiter`: one per member per photograph per day, in
+   * memory, so a cold start under Fluid Compute forgets. Somebody determined
+   * could add a handful a day to their own row. That is a rounding error
+   * against a pool; a refresh key was not.
+   *
+   * Nobody signed in at all gets the same refusal an anonymous reader has
+   * always had. 403 rather than 404: the photograph exists and the reader
+   * can see it; what is missing is a membership, and saying so is the point,
+   * because that is the response the interface turns into an invitation.
+   *
+   * `signedIn: false` is what stops the client's "one refusal ends the
+   * asking" optimisation from resurrecting the bug this route fixes. See
+   * `nextSessionAccess` in `lib/members/access.ts` — membership is a fact
+   * about the session, authorship is a fact about the photograph, and only
+   * the first may be settled by a single no.
    */
+  const contributor = await getCurrentContributor();
   if (contributor === null) {
     return NextResponse.json(
       { access: "none", signedIn: false },

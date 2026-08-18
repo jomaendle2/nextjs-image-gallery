@@ -60,7 +60,9 @@ console.log(
  * to show the layout repeating without filling an inbox.
  */
 const photos = (await sql`
-  SELECT p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  -- display_url is NOT NULL now; the coalesce that used to be here could
+  -- serve the camera original, GPS and all. See repository.ts.
+  SELECT p.id, p.display_url AS blob_url,
          p.title, p.description, p.location,
          c.display_name AS author_name, c.slug AS author_slug
   FROM photos p JOIN contributors c ON c.id = p.author_id
