@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  mayDisplayStale,
-  nextSessionAccess,
-  type PhotoAccess,
-  showsTeaser,
-} from "./access";
+import { mayDisplayStale, nextSessionAccess, type PhotoAccess } from "./access";
 
 /**
  * The three decisions that used to live inside a client component.
@@ -45,21 +40,6 @@ describe("nextSessionAccess", () => {
      * would hold a blank line waiting for content that never arrives.
      */
     expect(nextSessionAccess("author", true)).toBeNull();
-  });
-});
-
-describe("showsTeaser", () => {
-  it("offers a membership only when one can actually be bought", () => {
-    expect(showsTeaser("none", true)).toBe(true);
-    // The bug: a teaser leading to a page that reads "Not open yet".
-    expect(showsTeaser("none", false)).toBe(false);
-  });
-
-  it("never replaces content somebody is entitled to", () => {
-    for (const access of ["member", "author"] as const) {
-      expect(showsTeaser(access, true)).toBe(false);
-      expect(showsTeaser(access, false)).toBe(false);
-    }
   });
 });
 

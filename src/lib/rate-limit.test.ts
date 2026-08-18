@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLimiter } from "./rate-limit";
+import { createLimiter, memberViewLimiter } from "./rate-limit";
 
 const WINDOW = 1000;
 
@@ -61,50 +61,53 @@ describe("createLimiter", () => {
 /**
  * The dedup that keeps a refresh key out of the revenue split.
  *
- * `memberViewLimiter` is a limiter of one rather than new machinery, because
- * "at most once per key per window" is what a limiter of one already is —
- * and because reusing it means the dedup stores nothing. `photo_member_views`
- * is aggregated per photograph per day on purpose; an exact dedup would need
- * a durable per-person record of what was looked at, which is precisely what
- * that table was designed not to be.
+ * These drive the **exported instance**, not a local `createLimiter(1, …)`
+ * built to match it. The first version did the latter, which made them
+ * worthless in the one way that matters: changing `memberViewLimiter` to
+ * `createLimiter(5, ...)` would have left every assertion green while the
+ * guard on the numbers that divide money between photographers quietly
+ * stopped working. A test that reconstructs its subject tests the
+ * reconstruction.
+ *
+ * `check` takes `now`, so the window can be crossed without waiting and
+ * without a fake clock. Keys are distinct per test because the instance is
+ * shared across this file for the life of the module — which is the same
+ * reason it works in production.
  */
 describe("memberViewLimiter", () => {
   it("counts a member's view of one photograph once", () => {
-    const limiter = createLimiter(1, 25 * 60 * 60 * 1000);
-    expect(limiter.check("anna@example.test:photo-1")).toBe(true);
+    expect(memberViewLimiter.check("anna@example.test:photo-a")).toBe(true);
     // The refresh key, which used to add a view per press.
-    expect(limiter.check("anna@example.test:photo-1")).toBe(false);
-    expect(limiter.check("anna@example.test:photo-1")).toBe(false);
+    expect(memberViewLimiter.check("anna@example.test:photo-a")).toBe(false);
+    expect(memberViewLimiter.check("anna@example.test:photo-a")).toBe(false);
   });
 
   it("counts each photograph separately", () => {
-    const limiter = createLimiter(1, 25 * 60 * 60 * 1000);
-    expect(limiter.check("anna@example.test:photo-1")).toBe(true);
-    expect(limiter.check("anna@example.test:photo-2")).toBe(true);
+    expect(memberViewLimiter.check("bo@example.test:photo-b")).toBe(true);
+    expect(memberViewLimiter.check("bo@example.test:photo-c")).toBe(true);
   });
 
   it("counts each member separately", () => {
-    // Two members reading the same photograph is two views, which is the
-    // whole thing the number is supposed to measure.
-    const limiter = createLimiter(1, 25 * 60 * 60 * 1000);
-    expect(limiter.check("anna@example.test:photo-1")).toBe(true);
-    expect(limiter.check("bo@example.test:photo-1")).toBe(true);
+    // Two members reading one photograph is two views, which is the whole
+    // thing the number is supposed to measure.
+    expect(memberViewLimiter.check("cass@example.test:photo-d")).toBe(true);
+    expect(memberViewLimiter.check("dev@example.test:photo-d")).toBe(true);
   });
 
-  it("counts again the next day", () => {
-    const limiter = createLimiter(1, 25 * 60 * 60 * 1000);
+  it("counts again the next day, with a window that overlaps midnight", () => {
     const now = 1_000_000;
-    expect(limiter.check("anna@example.test:photo-1", now)).toBe(true);
-    expect(limiter.check("anna@example.test:photo-1", now + 60_000)).toBe(
-      false,
-    );
+    const key = "eli@example.test:photo-e";
+    expect(memberViewLimiter.check(key, now)).toBe(true);
+    expect(memberViewLimiter.check(key, now + 60_000)).toBe(false);
+
     /*
-     * Twenty-five hours, not twenty-four: the window is rolling per key while
-     * `recordMemberView` buckets by `CURRENT_DATE`, and the overlap is what
-     * stops a view just before midnight being re-counted just after it.
+     * Still refused a full day later. The window is rolling per key while
+     * `recordMemberView` buckets by `CURRENT_DATE`, and that hour of overlap
+     * is what stops a view taken just before midnight being counted again
+     * just after it. Asserting both sides of the hour pins the choice: at 24
+     * hours exactly this would already have reset.
      */
-    expect(
-      limiter.check("anna@example.test:photo-1", now + 25 * 60 * 60 * 1000),
-    ).toBe(true);
+    expect(memberViewLimiter.check(key, now + 24 * 60 * 60 * 1000)).toBe(false);
+    expect(memberViewLimiter.check(key, now + 25 * 60 * 60 * 1000)).toBe(true);
   });
 });

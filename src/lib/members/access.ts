@@ -4,8 +4,14 @@
  * Pure, and deliberately so: no JSX, no environment, no imports. The route
  * decides access against a database and the panel decides display against a
  * cache, and the two used to agree only by both being written carefully. The
- * decisions themselves are three small functions, so they can be tested under
+ * decisions themselves are two small functions, so they can be tested under
  * the `node` environment rather than only by clicking.
+ *
+ * There was a third, `showsTeaser(access, offered)`. It read well and meant
+ * nothing: its only call site sits inside `if (access === "none")`, so it was
+ * `offered && true` behind a name, an import and a block of tests. The rule
+ * it was meant to carry — never offer what nobody can buy — is held by the
+ * context defaulting to false, which is somewhere a caller cannot forget it.
  */
 
 /**
@@ -55,11 +61,6 @@ export function nextSessionAccess(
     return null;
   }
   return signedIn ? null : false;
-}
-
-/** Whether this answer should be replaced by an offer to subscribe. */
-export function showsTeaser(answer: PhotoAccess, offered: boolean): boolean {
-  return answer === "none" && offered;
 }
 
 /**

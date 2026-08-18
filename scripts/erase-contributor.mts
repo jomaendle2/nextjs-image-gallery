@@ -26,13 +26,25 @@ import process from "node:process";
 import { del } from "@vercel/blob";
 import { normaliseEmail } from "../src/lib/auth/slug.ts";
 import { sql } from "../src/lib/database.ts";
-import { databaseHost } from "./guard.mts";
+import { consumeApplyFlag, databaseHost } from "./guard.mts";
 import { check, finish, section } from "./harness.mts";
 
+/*
+ * The flag first, so it cannot be mistaken for the address.
+ *
+ * `consumeApplyFlag` removes it from `process.argv`, which is why the
+ * positional read below needs no defence against flag order — the same
+ * function the smoke scripts get their `--apply` from, because the ways to
+ * get flag parsing subtly wrong are the same everywhere.
+ *
+ * `confirmDestructive` is deliberately not used: it refuses before printing
+ * anything but the target, and a dry run here is the feature — somebody
+ * needs to read the list of what would go before deciding.
+ */
+const apply = consumeApplyFlag();
 const [, , emailArg] = process.argv;
-const apply = process.argv.includes("--apply");
 
-if (emailArg === undefined || emailArg.startsWith("--")) {
+if (emailArg === undefined) {
   console.error(
     "Usage: npm run db:erase-contributor -- someone@example.com [--apply]",
   );

@@ -53,17 +53,25 @@ export const DISPLAY_QUALITY = 85;
  * original, libvips' decode of it, the display copy, and a second pipeline
  * over that.
  *
- * 268 megapixels is roughly a 16000 × 16000 square: far above any camera a
- * photographer here will be using, and far below the point where a file
- * shaped like a decompression bomb takes the function down. Exceeding it
- * throws, which the route already turns into a 422 with the blob deleted —
- * a clean refusal instead of an OOM, which is the whole difference.
+ * The number is chosen against memory rather than against cameras, which is
+ * where the first attempt at it went wrong. It was sharp's own default,
+ * 0x3FFF², or 268 megapixels — about 805 MB once decoded to RGB, which is
+ * not "far below" the point where this function dies on a default Fluid
+ * instance holding four buffers. It is roughly *at* it. A limit whose
+ * docblock promises to prevent an OOM should be derived from the memory,
+ * not from a constant that happened to be there.
  *
- * sharp's own default is 0x3FFF × 0x3FFF; this is stated rather than
- * inherited so that a change to that default cannot silently change what
- * this site accepts.
+ * 150 megapixels is ~450 MB decoded. It sits above every production camera —
+ * the largest medium-format backs are around 150 MP and ordinary bodies are
+ * 24 to 60 — while a file claiming more than that from under 50 MB on disk
+ * is describing a canvas nobody photographed. Exceeding it throws, which the
+ * route already turns into a 422 with the blob deleted: a clean refusal
+ * instead of an OOM, which is the whole difference.
+ *
+ * Stated rather than inherited, so that a change to sharp's default cannot
+ * silently change what this site accepts.
  */
-const MAX_INPUT_PIXELS = 268_402_689;
+const MAX_INPUT_PIXELS = 150_000_000;
 const RGB_MAX = 255;
 const HEX_RADIX = 16;
 const ONE_SECOND = 1;

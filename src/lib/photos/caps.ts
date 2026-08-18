@@ -47,9 +47,15 @@ export const MAX_LOCATION = 120;
  *
  * Raising the cap changes nothing about what a visitor receives. A 60 MB
  * original becomes exactly one 3840 px q85 mozjpeg either way
- * (`DISPLAY_MAX_EDGE` in `derive.ts`); what it changes is peak memory during
- * ingest, which is why the draft route carries an explicit memory and
- * duration budget in `vercel.json`.
+ * (`DISPLAY_MAX_EDGE` in `derive.ts`); what it changes is peak work during
+ * ingest, which is why the draft route carries an explicit `maxDuration` in
+ * `vercel.json` and why `derive.ts` states `limitInputPixels`.
+ *
+ * There is no memory setting to go with it: this project is on the Hobby
+ * plan, which offers no per-function memory override, so the function gets
+ * the platform default and the only lever left is refusing absurd input
+ * early. An earlier version of this paragraph claimed a memory budget that
+ * `vercel.json` does not contain.
  */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 

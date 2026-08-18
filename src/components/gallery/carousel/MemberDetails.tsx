@@ -14,7 +14,6 @@ import {
   mayDisplayStale,
   nextSessionAccess,
   type PhotoAccess,
-  showsTeaser,
 } from "@/lib/members/access";
 import { useMembershipOffered } from "../MembershipOffer";
 
@@ -267,11 +266,9 @@ function whatToShow(
   isStale: boolean,
   sessionIsMember: boolean | null,
 ): Details | undefined {
-  if (data !== undefined && !isStale) {
-    return data;
-  }
-  // Stale: safe for a non-member's invitation, never for a member's location.
-  if (data !== undefined && mayDisplayStale(data.access)) {
+  // The second half is the stale case: safe for a non-member's invitation,
+  // never for a member's or an author's location.
+  if (data !== undefined && (!isStale || mayDisplayStale(data.access))) {
     return data;
   }
   /*
@@ -393,7 +390,7 @@ function body(data: Details | undefined, offered: boolean): ReactNode {
      * to a page reading "Not open yet". The flag was already threaded into
      * this carousel and stopped at the top bar.
      */
-    return showsTeaser(data.access, offered) ? <Teaser /> : null;
+    return offered ? <Teaser /> : null;
   }
 
   const location = data.precise_location?.trim() ?? "";

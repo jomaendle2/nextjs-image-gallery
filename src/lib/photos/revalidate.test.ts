@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 const revalidatePath = vi.fn();
-vi.mock("next/cache", () => ({
-  revalidatePath: (path: string, type?: string) => revalidatePath(path, type),
-}));
+// The mock is the spy, not a wrapper around it. A wrapper forwarding
+// `(path, type)` would record a second argument on every call, so every
+// expected tuple below would carry a trailing `undefined` that says nothing.
+vi.mock("next/cache", () => ({ revalidatePath }));
 
 const { revalidateFeeds } = await import("./revalidate");
 
@@ -27,17 +28,17 @@ describe("revalidateFeeds", () => {
     revalidateFeeds("anna");
 
     expect(revalidatePath.mock.calls).toEqual([
-      ["/", undefined],
-      ["/by/anna", undefined],
-      ["/by/anna/slideshow", undefined],
+      ["/"],
+      ["/by/anna"],
+      ["/by/anna/slideshow"],
       // A route pattern and a type: one concrete URL would clear one of the
       // many entries, and it is the URL people actually share.
       ["/photo/[id]", "page"],
-      ["/photographers", undefined],
-      ["/globe", undefined],
+      ["/photographers"],
+      ["/globe"],
       // The globe is two caches: the page draws the dots, this answers the
       // card. Until they are one cache, they expire together.
-      ["/api/globe", undefined],
+      ["/api/globe"],
     ]);
   });
 });

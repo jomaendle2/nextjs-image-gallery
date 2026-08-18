@@ -48,31 +48,37 @@ export function databaseHost(): string {
  * Called at the top of anything that writes. `what` is one short phrase
  * describing the damage, e.g. "create and delete contributors and photos".
  */
+/**
+ * Whether `--apply` was passed, removing it from `process.argv` on the way.
+ *
+ * Consumed, not merely read, and that is the whole point of it being a
+ * function. Several of these scripts take positional arguments — an origin, a
+ * webhook secret, an email address — with `const [, , arg] = process.argv`.
+ * Leaving the flag in place meant `npm run smoke:pages -- --apply` set the
+ * origin to the string "--apply" and every fetch failed, and
+ * `smoke:membership` signed its fake webhooks with the HMAC key "--apply"
+ * and reported signature failures that had nothing to do with what it tests.
+ *
+ * Shared rather than repeated because it is the part that was got wrong. The
+ * two callers want different behaviour around it — one refuses immediately,
+ * the other prints what it would do first — but both have to agree on what
+ * the flag is and that it must not survive into the positionals.
+ */
+export function consumeApplyFlag(): boolean {
+  const at = process.argv.indexOf("--apply");
+  if (at === -1) {
+    return false;
+  }
+  process.argv.splice(at, 1);
+  return true;
+}
+
 export function confirmDestructive(what: string): void {
   const host = databaseHost();
   console.log(`\n  Target database: ${host}`);
   console.log(`  This will ${what}.\n`);
 
-  /*
-   * Consumed, not merely read.
-   *
-   * Three of these scripts take positional arguments — an origin, a webhook
-   * secret — with `const [, , originArg] = process.argv`. Leaving `--apply`
-   * in place meant `npm run smoke:pages -- --apply` set `origin` to the
-   * string "--apply" and every fetch failed, and `smoke:membership` signed
-   * its fake webhooks with the HMAC key "--apply" and reported signature
-   * failures that had nothing to do with what it tests.
-   *
-   * Removing it here rather than teaching five scripts to skip flags: the
-   * flag belongs to this function, so this function is what should eat it,
-   * and the next destructive script gets the fix without knowing about it.
-   */
-  const flag = process.argv.indexOf("--apply");
-  if (flag !== -1) {
-    process.argv.splice(flag, 1);
-  }
-
-  if (flag === -1) {
+  if (!consumeApplyFlag()) {
     console.error(
       "  Refusing to run without --apply.\n" +
         "  Check the host above. If it is production, stop and point\n" +
