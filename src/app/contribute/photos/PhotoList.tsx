@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import {
   type ChangeEvent,
   type ReactNode,
@@ -121,6 +122,17 @@ export function PhotoList({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PhotoFilter>("all");
+
+  /*
+   * The draft a finished upload asks to have opened, from `?open=`.
+   *
+   * `UploadForm` writes the first new draft's id there so the photographer
+   * lands *in* the editor rather than beside it — the batch used to end on
+   * a refreshed list and a hunt for the row you just made. A stale or
+   * made-up id matches no row and opens nothing; `PhotoCard` reads the flag
+   * once, on mount, so closing the row by hand is not fought by the URL.
+   */
+  const autoOpenId = useSearchParams().get("open");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
@@ -433,6 +445,7 @@ export function PhotoList({
         {shown.map(({ photo, hidden }) => (
           <PhotoCard
             aiOffered={aiOffered}
+            autoOpen={photo.id === autoOpenId}
             hidden={hidden}
             layout={layout}
             mapStyleUrl={mapStyleUrl}

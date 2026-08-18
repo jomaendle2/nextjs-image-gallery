@@ -7,6 +7,7 @@ import {
   memo,
   type SyntheticEvent,
   useCallback,
+  useEffect,
   useState,
 } from "react";
 import { exifLine } from "@/lib/photos/exif-line";
@@ -380,6 +381,7 @@ export const PhotoCard = memo(function PhotoCardRow({
   layout,
   onOpen,
   hidden = false,
+  autoOpen = false,
 }: {
   photo: OwnPhotoRow;
   selected?: boolean;
@@ -396,6 +398,15 @@ export const PhotoCard = memo(function PhotoCardRow({
    * Must be stable, like `onSelect`, or `memo` stops holding.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Open this row on arrival — the draft an upload just created.
+   *
+   * Initial state rather than an effect that opens it later, so the form is
+   * there on first paint instead of unfolding a frame after. Read once, on
+   * mount: a stale `?open=` in the URL after the row was closed by hand must
+   * not wrench it open again on the next unrelated re-render.
+   */
+  autoOpen?: boolean;
   /**
    * Rendered, but not shown — an opened row the filter no longer matches.
    *
@@ -432,8 +443,25 @@ export const PhotoCard = memo(function PhotoCardRow({
    * at all. `showing` follows the element's real `open` property, and
    * `hidden` does the hiding that `<details>` cannot do from out here.
    */
-  const [opened, setOpened] = useState(false);
-  const [showing, setShowing] = useState(false);
+  const [opened, setOpened] = useState(autoOpen);
+  const [showing, setShowing] = useState(autoOpen);
+
+  /*
+   * The list is told about an auto-opened row the same way it is told about
+   * a clicked-open one, or the filter would unmount the fresh draft — and
+   * the caption being typed into it — the moment somebody touched the
+   * search box.
+   */
+  /*
+   * All three dependencies are stable for the row's life — `autoOpen` is
+   * initial-state-only by contract, `onOpen` must be stable or `memo` stops
+   * holding, and `photo.id` is the key — so this still fires exactly once.
+   */
+  useEffect(() => {
+    if (autoOpen) {
+      onOpen?.(photo.id);
+    }
+  }, [autoOpen, onOpen, photo.id]);
 
   const handleToggle = useCallback(
     (event: SyntheticEvent<HTMLDetailsElement>) => {
