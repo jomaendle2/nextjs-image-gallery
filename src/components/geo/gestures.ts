@@ -1,5 +1,6 @@
 import { HOVER_RADIUS, type Mark, markNear, TAP_RADIUS } from "./marks";
-import { clampZoom, LINE_HEIGHT, WHEEL_ZOOM } from "./zoom";
+import { FILL } from "./sphere";
+import { clampZoom, focusedView, LINE_HEIGHT, WHEEL_ZOOM } from "./zoom";
 
 /**
  * Every way a hand can move the globe: drag, pinch, wheel, point.
@@ -94,6 +95,27 @@ export function attachGestures(
   };
 
   /**
+   * The point between two fingers, in the centre-relative pixels the
+   * projection works in — what a reader is pinching *at*.
+   *
+   * `pointers` holds client coordinates, because that is what a pinch's
+   * distance needs and distance does not care where the origin is. Anything
+   * that has to land on the sphere does, so the conversion happens here
+   * rather than at the two call sites that would each have to remember it.
+   */
+  const midpoint = (): { x: number; y: number } | undefined => {
+    const [a, b] = [...pointers.values()];
+    if (a === undefined || b === undefined) {
+      return undefined;
+    }
+    const box = canvas.getBoundingClientRect();
+    return {
+      x: (a.x + b.x) / 2 - box.left - box.width / 2,
+      y: (a.y + b.y) / 2 - box.top - box.height / 2,
+    };
+  };
+
+  /**
    * Drops the selection, because whatever is about to happen moves the mark
    * it points at.
    *
@@ -112,11 +134,36 @@ export function attachGestures(
     }
   };
 
-  const applyZoom = (next: number) => {
+  const applyZoom = (next: number, at?: { x: number; y: number }) => {
     const clamped = clampZoom(next);
     if (clamped === refs.zoomed.current) {
       return;
     }
+
+    /*
+     * Turn towards whatever the reader pointed at, so magnifying arrives
+     * somewhere rather than filling the porthole with the ocean that happened
+     * to be in the middle. `focusedView` decides; this only applies it.
+     */
+    if (at !== undefined) {
+      const box = canvas.getBoundingClientRect();
+      const aimed = focusedView({
+        at,
+        from: {
+          spin: refs.dragged.current,
+          tilt: refs.tilted.current,
+          zoom: refs.zoomed.current,
+        },
+        porthole: (Math.min(box.width, box.height) / 2) * FILL,
+        tiltLimit: TILT_LIMIT,
+        to: clamped,
+      });
+      if (aimed !== null) {
+        refs.dragged.current = aimed.spin;
+        refs.tilted.current = aimed.tilt;
+      }
+    }
+
     refs.zoomed.current = clamped;
     dropSelection();
     refs.reportZoom.current?.(clamped);
@@ -132,7 +179,9 @@ export function attachGestures(
   const pinchTo = (from: { distance: number; zoom: number }) => {
     const distance = spread();
     if (distance > 0 && from.distance > 0) {
-      applyZoom((from.zoom * distance) / from.distance);
+      // The midpoint between the fingers is the pinch's "pointer", which is
+      // what a reader is pinching *at*.
+      applyZoom((from.zoom * distance) / from.distance, midpoint());
     }
   };
 
@@ -353,7 +402,16 @@ export function attachGestures(
     refs.settled.current = true;
     const delta =
       event.deltaMode === 1 ? event.deltaY * LINE_HEIGHT : event.deltaY;
-    applyZoom(refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM));
+    /*
+     * The pointer's place on the canvas, so the wheel zooms towards whatever
+     * it is over rather than towards the middle of the ocean. Centre-relative,
+     * which is the frame `project` and `unproject` both work in.
+     */
+    const box = canvas.getBoundingClientRect();
+    applyZoom(refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM), {
+      x: event.clientX - box.left - box.width / 2,
+      y: event.clientY - box.top - box.height / 2,
+    });
   };
 
   /*

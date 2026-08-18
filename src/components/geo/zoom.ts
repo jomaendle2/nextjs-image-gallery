@@ -1,5 +1,7 @@
+import { unproject } from "./projection";
+
 /**
- * The magnification, and the two stops it moves between.
+ * The magnification, and the stops it moves between.
  *
  * Its own file because three places need it and none of them is the other's
  * parent: the canvas clamps a wheel and a pinch with it, the chrome around
@@ -11,23 +13,31 @@
 /**
  * The two magnifications, and the ceiling the wheel and the pinch stop at.
  *
- * Two rather than a continuum of named steps because there are two things to
- * look at: the whole earth, and a coastline. `MAX_ZOOM` is where the finer
- * data runs out rather than where the arithmetic does — the fine coastline
- * carries a vertex every 0.07 degrees, which on the largest display anyone
- * is likely to use lands about three device pixels apart at 2.5x. Past that
- * the globe would magnify a polygon rather than a coast.
+ * `MAX_ZOOM` is where the finer data runs out rather than where the
+ * arithmetic does, and the number is measured rather than assumed. This
+ * paragraph used to claim a vertex every 0.07 degrees; counting them says
+ * the median gap in `world-fine` is nearer **0.26 degrees**, so the data is
+ * four times coarser than it was credited with. At 2.5x on the expanded
+ * overlay — about 640px square on a laptop, so a radius near 800px — that
+ * median gap lands about 3.7 device pixels apart. Past this the globe
+ * magnifies a polygon rather than a coast.
  *
- * **Three stops, not two, and the middle one is not decoration.** With only
- * 1 and 2.5, one press of `+` took the whole sphere to maximum magnification
- * — and since zoom magnifies whatever happens to sit at the centre, and the
- * centre is usually open ocean, the result was a featureless near-black disc
- * with every mark and most of the graticule off frame. The most discoverable
- * control on the overlay made the page look broken in one click. A step to
- * 1.6 keeps a recognisable amount of coastline on screen, so each press reads
- * as getting closer to something rather than as a fault.
+ * That is why "more zoom" is not the answer to wanting a closer look: more
+ *range* would show the reader the seams. What helps is more *stops* inside
+ * the same range, and arriving somewhere worth looking at — see
+ * `zoomFocus` in `gestures.ts`, which turns the point under the pointer
+ * toward the middle as the sphere grows.
+ *
+ * **Four stops, evenly spaced.** With only 1 and 2.5, one press of `+` took
+ * the whole sphere to maximum magnification — and since zoom magnifies
+ * whatever sits at the centre, and the centre is usually open ocean, the
+ * result was a featureless near-black disc with every mark off frame. The
+ * most discoverable control on the overlay made the page look broken in one
+ * click. Three intermediate presses of half a step each read as getting
+ * closer to something, and give the focus drift somewhere to happen
+ * gradually rather than all at once.
  */
-export const ZOOM_STOPS = [1, 1.6, 2.5] as const;
+export const ZOOM_STOPS = [1, 1.5, 2, 2.5] as const;
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 2.5;
 
@@ -57,4 +67,91 @@ export function nextZoomStop(from: number): number {
 export function previousZoomStop(from: number): number {
   const below = ZOOM_STOPS.filter((stop) => stop < from - 0.01);
   return below.at(-1) ?? ZOOM_STOPS[0];
+}
+
+/**
+ * Where to turn the globe so that magnifying arrives at what the reader
+ * pointed at.
+ *
+ * Zoom on this globe scales the sphere about its own centre — the porthole is
+ * fixed, so magnifying fills the same circle with more earth. That makes the
+ * centre pixel the only thing anybody can actually zoom *into*, and the
+ * centre is usually open ocean: wheeling over South America magnified the
+ * Atlantic and pushed South America off the frame. The gesture pointed at one
+ * thing and the sphere delivered another.
+ *
+ * A globe cannot pan the way a map does, because the sphere stays centred. So
+ * the analogue of "zoom towards the cursor" is to *rotate* towards it: the
+ * point under the pointer is unprojected, and the view turns a share of the
+ * way there. The share is the share of the *remaining* range this step
+ * consumed, so a wheel run from 1 to `MAX_ZOOM` arrives with the target
+ * centred and a single notch moves it a little.
+ *
+ * Returns null, and the caller leaves the view alone, when there is nothing
+ * to aim at: zooming out (pulling back is a request to see more, and turning
+ * at the same time moves what somebody is trying to get their bearings on),
+ * or a pointer past the limb, where a wheel over the corner of the canvas
+ * must not drag the globe somewhere arbitrary.
+ *
+ * Pure, and separated from the gesture plumbing that calls it, because it is
+ * the only part with arithmetic worth checking on its own.
+ */
+export function focusedView({
+  from,
+  to,
+  at,
+  porthole,
+  tiltLimit,
+}: {
+  /** The view as it stands, and the magnification it stands at. */
+  from: { spin: number; tilt: number; zoom: number };
+  /** The magnification being moved to. */
+  to: number;
+  /** The pointer, in centre-relative canvas pixels. */
+  at: { x: number; y: number };
+  /** The sphere's radius at zoom 1, which is what `at` was measured against. */
+  porthole: number;
+  /** How far from the equator the view may lean, from the caller's own rule. */
+  tiltLimit: number;
+}): { spin: number; tilt: number } | null {
+  if (to <= from.zoom) {
+    return null;
+  }
+
+  const target = unproject(at.x, at.y, {
+    spin: from.spin,
+    tilt: from.tilt,
+    radius: porthole * from.zoom,
+  });
+  if (target === null) {
+    return null;
+  }
+
+  /*
+   * How much of what was left of the range this step used. At the top there
+   * is nothing left to consume, so the share is forced to one and the last
+   * step lands the target dead centre rather than asymptotically near it.
+   */
+  const remaining = MAX_ZOOM - from.zoom;
+  const share =
+    remaining <= 0.001 ? 1 : Math.min(1, (to - from.zoom) / remaining);
+
+  /*
+   * Spin is cyclic, and the way round matters: +350 degrees and -10 put the
+   * same place in the middle, and one of them spins the earth almost all the
+   * way round on a scroll notch.
+   */
+  let delta = (-target.lng - from.spin) % 360;
+  if (delta > 180) {
+    delta -= 360;
+  }
+  if (delta < -180) {
+    delta += 360;
+  }
+
+  const wantTilt = Math.max(-tiltLimit, Math.min(tiltLimit, target.lat));
+  return {
+    spin: from.spin + delta * share,
+    tilt: from.tilt + (wantTilt - from.tilt) * share,
+  };
 }

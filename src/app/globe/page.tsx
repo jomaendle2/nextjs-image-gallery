@@ -110,7 +110,24 @@ export default async function GlobePage() {
                 that has to be reachable from a keyboard is the button that
                 opens it.
               */}
-              <div className="mx-auto w-full max-w-[26rem]">
+              {/*
+                Sized to the space the paragraph used to occupy, rather than
+                left at the width it had beside one.
+                
+                26rem was correct while a column of text sat next to it. Alone
+                on a full-width page it read as a small decoration adrift in
+                whitespace — the failure the old layout comment warned about
+                from the other direction.
+
+                It stops at 32rem, and the ceiling is the list rather than the
+                sphere. At 40rem the globe filled a laptop viewport on its own
+                and pushed every place below the fold — and the list is the
+                content here, the part that works with no JavaScript and no
+                canvas, while the globe is the decoration. Leaving the first
+                row of places just showing is what says there is something to
+                scroll to.
+              */}
+              <div className="mx-auto w-full max-w-[26rem] lg:max-w-[32rem]">
                 <GlobeStage points={toGlobePoints(cells)} />
               </div>
 

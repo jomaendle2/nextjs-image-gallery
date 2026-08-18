@@ -99,3 +99,54 @@ export function cameraDirection(view: View): {
   const spin = view.spin * TO_RADIANS;
   return { x: cos * Math.cos(spin), y: -cos * Math.sin(spin), z: sin };
 }
+
+/**
+ * The reverse of `project`: which point on the sphere sits under a pixel.
+ *
+ * Orthographic projection is invertible in closed form, which is the whole
+ * reason the zoom can aim at something. `rho` is the distance from the centre
+ * in sphere radii, so anything past 1 is off the disc entirely and the
+ * function says so with `null` rather than returning a nearby lie — a wheel
+ * turned over the corner of the canvas must not drag the globe somewhere.
+ *
+ * `x` and `y` are relative to the centre of the sphere, in the same screen
+ * pixels `project` returns, with `y` growing downward.
+ *
+ * The formulae are the standard inverse orthographic. `c` is the angular
+ * distance from the point facing the camera; at `rho` of exactly zero that
+ * angle is zero and the point under the pointer is the camera's own, so the
+ * division guards against the degenerate centre pixel rather than trusting
+ * `atan2` to produce something usable there.
+ */
+export function unproject(
+  x: number,
+  y: number,
+  view: View,
+): { lat: number; lng: number } | null {
+  const px = x / view.radius;
+  // Screen y grows downward; latitude grows upward — the same flip `project`
+  // applies on the way out, undone here on the way in.
+  const py = -y / view.radius;
+  const rho = Math.hypot(px, py);
+
+  if (rho > 1) {
+    return null;
+  }
+  if (rho < 1e-9) {
+    return { lat: view.tilt, lng: -view.spin };
+  }
+
+  const c = Math.asin(rho);
+  const cosC = Math.cos(c);
+  const sinC = Math.sin(c);
+  const { cos: cosPhi0, sin: sinPhi0 } = tiltTrig(view.tilt);
+
+  const lat =
+    Math.asin(cosC * sinPhi0 + (py * sinC * cosPhi0) / rho) / TO_RADIANS;
+  const lng =
+    Math.atan2(px * sinC, rho * cosC * cosPhi0 - py * sinC * sinPhi0) /
+    TO_RADIANS;
+
+  // `project` adds the spin before rotating, so the inverse takes it back out.
+  return { lat, lng: lng - view.spin };
+}
