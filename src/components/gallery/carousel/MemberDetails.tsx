@@ -10,9 +10,32 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { META } from "@/components/ui/field";
 import { glassControl } from "@/components/ui/glass-button";
+import {
+  mayDisplayStale,
+  nextSessionAccess,
+  type PhotoAccess,
+  showsTeaser,
+} from "@/lib/members/access";
+import { useMembershipOffered } from "../MembershipOffer";
 
 interface Details {
-  member: boolean;
+  /**
+   * Why this reader is seeing what they are seeing.
+   *
+   * This was `member: boolean` and could not stay one. A photographer
+   * reading their own notes is not a member, and answering `true` would have
+   * been a lie the client then cached as a *session* fact — one look at
+   * their own photograph and every other photograph in the tab would hold a
+   * blank line waiting for content that was never coming.
+   */
+  access: PhotoAccess;
+  /**
+   * Whether anybody is signed in at all, sent with a refusal.
+   *
+   * Only meaningful on a 403. See `nextSessionAccess`: a refusal settles the
+   * session only for somebody who is not signed in.
+   */
+  signedIn?: boolean;
   precise_location?: string | null;
   technique?: string | null;
   /**
@@ -97,20 +120,33 @@ function useSessionIsMember(): boolean | null {
 export function MemberDetails({ photoId }: { photoId: string }) {
   const client = useQueryClient();
   const sessionIsMember = useSessionIsMember();
+  const membershipOffered = useMembershipOffered();
 
   const { data, isPlaceholderData, isError } = useQuery({
     queryKey: ["photoDetails", photoId],
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
       if (response.status === 403) {
-        client.setQueryData(SESSION_MEMBER_KEY, false);
-        return { member: false };
+        const refusal = (await response.json()) as Details;
+        /*
+         * A refusal, and whether it is final. `nextSessionAccess` returns
+         * null for a signed-in reader, which leaves the flag unknown and the
+         * query enabled — the next photograph may be one of theirs.
+         */
+        const settled = nextSessionAccess("none", refusal.signedIn === true);
+        if (settled !== null) {
+          client.setQueryData(SESSION_MEMBER_KEY, settled);
+        }
+        return { access: "none" };
       }
       if (!response.ok) {
         throw new Error("Could not load the details.");
       }
       const details = (await response.json()) as Details;
-      client.setQueryData(SESSION_MEMBER_KEY, details.member);
+      const settled = nextSessionAccess(details.access, true);
+      if (settled !== null) {
+        client.setQueryData(SESSION_MEMBER_KEY, settled);
+      }
       return details;
     },
     staleTime: 5 * 60 * 1000,
@@ -157,7 +193,10 @@ export function MemberDetails({ photoId }: { photoId: string }) {
     );
   }
 
-  return body(whatToShow(data, isPlaceholderData, sessionIsMember));
+  return body(
+    whatToShow(data, isPlaceholderData, sessionIsMember),
+    membershipOffered,
+  );
 }
 
 /**
@@ -165,9 +204,10 @@ export function MemberDetails({ photoId }: { photoId: string }) {
  * photograph.
  *
  * The two cases differ because the two fields differ in what they describe.
- * Membership is a property of the session, so a stale `member` flag is still
- * true or false for this photograph and the invitation can stay put rather
- * than blinking on every swipe. A location belongs to one photograph, and
+ * Membership is a property of the session, so a stale refusal is still a
+ * refusal for this photograph and the invitation can stay put rather than
+ * blinking on every swipe. `mayDisplayStale` draws that line, and it holds an
+ * author's answer back exactly like a member's: both belong to one photograph. A location belongs to one photograph, and
  * showing the previous one's under the next — even for a tenth of a second —
  * would be quietly wrong in the one place this site promises precision.
  *
@@ -188,7 +228,7 @@ function whatToShow(
     return data;
   }
   // Stale: safe for a non-member's invitation, never for a member's location.
-  if (data !== undefined && !data.member) {
+  if (data !== undefined && mayDisplayStale(data.access)) {
     return data;
   }
   /*
@@ -198,7 +238,7 @@ function whatToShow(
    * depend on the photograph at all, so it renders immediately instead of
    * blinking out for a round trip on every first visit.
    */
-  return sessionIsMember === false ? { member: false } : undefined;
+  return sessionIsMember === false ? { access: "none" } : undefined;
 }
 
 /**
@@ -239,12 +279,25 @@ function ExactPoint({ pin }: { pin: { lat: number; lng: number } }) {
   );
 }
 
-function body(data: Details | undefined): ReactNode {
+function body(data: Details | undefined, offered: boolean): ReactNode {
   if (data === undefined) {
     return null;
   }
 
-  if (!data.member) {
+  if (data.access === "none") {
+    /*
+     * Nothing on sale, nothing to sell.
+     *
+     * A photographer filling in "Where you stood" — the field `FirstRun`
+     * spends a paragraph teaching them about — turned their own photograph
+     * into an advertisement for a tier that does not exist, whose button led
+     * to a page reading "Not open yet". The flag was already threaded into
+     * this carousel and stopped at the top bar.
+     */
+    if (!showsTeaser(data.access, offered)) {
+      return null;
+    }
+
     return (
       <div>
         <p className={META}>Where exactly, and how</p>

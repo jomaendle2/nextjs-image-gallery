@@ -186,18 +186,60 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
  * Returns nulls rather than nothing for a photograph whose photographer has
  * filled in none of them: a member is entitled to know there is nothing to
  * know, which is different from being told they cannot see it.
+ *
+ * `asAuthor` is the second way in, and it is an optional parameter rather
+ * than a second exported function on purpose: `security.test.ts` enumerates
+ * every caller of these columns by matching the substring `getMemberDetails(`,
+ * and a name like `getOwnMemberDetails` would not contain it — it would slip
+ * past the exact test that exists to notice a new reader of the paid columns.
+ * One name keeps the census honest.
  */
-export async function getMemberDetails(id: string): Promise<{
+export async function getMemberDetails(
+  id: string,
+  asAuthor: { contributorId: string; isOwner: boolean } | null = null,
+): Promise<{
   precise_location: string | null;
   technique: string | null;
   pin: Pin | null;
 } | null> {
-  const rows = await sql`
-    SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
-    FROM photos p JOIN contributors c ON c.id = p.author_id
-    WHERE p.id = ${id} AND p.published_at IS NOT NULL
-      AND c.revoked_at IS NULL;
-  `;
+  /*
+   * Two disjoint queries, and the separation is the security property.
+   *
+   * The tempting version adds ownership as a disjunct to the existing
+   * WHERE — `(published AND not revoked) OR author`. That would mean any
+   * signed-in contributor could read the paid columns of every published
+   * photograph on the site, because the first half is true for all of them
+   * regardless of who is asking. It would silently widen access from
+   * "members" to "anyone holding a contributor session": the exact opposite
+   * of this change, wearing its clothes.
+   *
+   * So the author branch drops the public conditions entirely and asks a
+   * different question — *is this row mine* — and a non-owner contributor
+   * gets zero rows and falls through to the route's 403.
+   *
+   * `published_at IS NOT NULL` is deliberately absent from it. A photographer
+   * expects "my own writing, always", and the first thing anybody invited
+   * here does is preview a draft before publishing it.
+   *
+   * The owner reads any row for the same reason they can edit any row: the
+   * `isOwner` cast is explicit because Postgres will not infer a boolean
+   * parameter's type from its use inside an `OR`.
+   */
+  const rows =
+    asAuthor === null
+      ? await sql`
+          SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
+          FROM photos p JOIN contributors c ON c.id = p.author_id
+          WHERE p.id = ${id} AND p.published_at IS NOT NULL
+            AND c.revoked_at IS NULL;
+        `
+      : await sql`
+          SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
+          FROM photos p
+          WHERE p.id = ${id}
+            AND (p.author_id = ${asAuthor.contributorId}
+                 OR ${asAuthor.isOwner}::boolean);
+        `;
   const [row] = rows;
   if (row === undefined) {
     return null;

@@ -15,6 +15,7 @@ import { GalleryTopBar } from "./carousel/GalleryTopBar";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 import { useCarouselScroll } from "./carousel/useCarouselScroll";
+import { MembershipOfferProvider } from "./MembershipOffer";
 
 /** How many images to keep mounted on each side of the current one. */
 const BUFFER_SIZE = 2;
@@ -148,7 +149,19 @@ export function ImageCarousel({
   const end = Math.min(images.length - 1, currentIndex + BUFFER_SIZE);
 
   return (
-    <>
+    /*
+      The one producer of the flag for everything below.
+
+      `GalleryTopBar` takes it as a prop a few lines down and always did.
+      What could not reach it was `MemberDetails`, four hops away and inside a
+      module-level helper — so a photograph with a member-only note advertised
+      a paid tier that leads to a page saying "Not open yet".
+
+      Wrapping the whole fragment rather than only `<main>`: the modal is a
+      sibling of `<main>`, not a child, and there is no reason for the one
+      subtree that renders over the photograph to be the one that cannot ask.
+    */
+    <MembershipOfferProvider offered={membershipOffered}>
       {/*
         No backdrop-blur on this layer. It used to blur the whole viewport
         behind an opaque fill: full-frame compositing work every frame for
@@ -377,6 +390,6 @@ export function ImageCarousel({
       {isModalOpen ? (
         <ImageModal image={currentImage} onClose={handleModalClose} />
       ) : null}
-    </>
+    </MembershipOfferProvider>
   );
 }
