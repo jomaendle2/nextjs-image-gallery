@@ -30,12 +30,19 @@ export function MemberFields({
   marks,
   open,
   onToggle,
+  proposed = null,
 }: {
   photo: OwnPhotoRow;
   mapStyleUrl: string | null;
   marks: Marks;
   open: boolean;
   onToggle: (event: SyntheticEvent<HTMLDetailsElement>) => void;
+  /**
+   * A coordinate offered from the public half of the form, passed straight
+   * through to the picker. Nothing here reads it — this component is the
+   * corridor between a chip somebody clicked and the field it lands in.
+   */
+  proposed?: { text: string; at: number } | null;
 }) {
   return (
     <details
@@ -87,6 +94,7 @@ export function MemberFields({
           invalid={marks.field === "pin"}
           messageId={marks.messageId}
           photo={photo}
+          proposed={proposed}
           styleUrl={mapStyleUrl}
         />
 

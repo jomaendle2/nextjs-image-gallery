@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { SECTION_HEADING } from "@/components/ui/field";
+import { Notice } from "@/components/ui/Notice";
 import { BatchSummary, UploadList } from "./UploadList";
 import {
   type Attempt,
@@ -40,6 +41,14 @@ export function UploadForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [percent, setPercent] = useState(0);
+  /**
+   * The files we would not take, by name, so the refusal can be read.
+   *
+   * A photographer works in whatever their camera and phone produce, and
+   * `.HEIC` off an iPhone and `.CR3`/`.NEF`/`.DNG` off a body are the obvious
+   * things to drag in first. They were being discarded in silence.
+   */
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   const busy = items.some(
     (item) => item.status === "waiting" || item.status === "uploading",
@@ -166,9 +175,28 @@ export function UploadForm() {
     [runBatch],
   );
 
+  /**
+   * The one place a file is judged uploadable, for both doors.
+   *
+   * The drop zone hands over everything now, and the picker's `accept` is a
+   * hint the operating system is free to ignore — so this runs on the way in
+   * from either, and whatever it turns away is named rather than dropped on
+   * the floor.
+   */
   const start = useCallback(
     (files: File[]) => {
-      handleFiles(files).catch((error: unknown) => {
+      const usable = files.filter((file) => ACCEPTED_TYPES.has(file.type));
+      setSkipped(
+        files
+          .filter((file) => !ACCEPTED_TYPES.has(file.type))
+          .map((f) => f.name),
+      );
+
+      if (usable.length === 0) {
+        return;
+      }
+
+      handleFiles(usable).catch((error: unknown) => {
         console.error("Upload failed:", error);
       });
     },
@@ -183,13 +211,13 @@ export function UploadForm() {
   );
 
   const { isDraggingOver, handlers } = useDropZone({
-    accept: ACCEPTED_TYPES,
     busy,
     onFiles: start,
   });
 
   const dismiss = useCallback(() => {
     setItems([]);
+    setSkipped([]);
   }, []);
 
   const failures = items.filter((item) => item.status === "failed");
@@ -269,6 +297,32 @@ export function UploadForm() {
         ref={inputRef}
         type="file"
       />
+
+      {/*
+        Named, and said out loud.
+
+        `Notice` rather than a hand-rolled panel: it already carries the tone
+        colours, the icon and the `aria-live` region, and a second spelling of
+        "a faint bordered box" is how the surface vocabulary drifts apart.
+        Its warning tone announces politely, which is what this is — nothing
+        failed, some files were simply not taken.
+      */}
+      {skipped.length > 0 ? (
+        <Notice className="mt-3" tone="warning">
+          {skipped.length === 1
+            ? `“${skipped[0]}” was not added. `
+            : `${skipped.length} files were not added. `}
+          The gallery takes JPEG, PNG, WebP and AVIF — camera RAW and HEIC have
+          to be exported first, which most photo apps call “Export” or “Save a
+          copy”.
+          {/* /55 is the AA floor on this ground; `design.test.ts` enforces it. */}
+          {skipped.length > 1 ? (
+            <span className="mt-1.5 block text-white/55">
+              {skipped.join(", ")}
+            </span>
+          ) : null}
+        </Notice>
+      ) : null}
 
       <UploadList
         announcement={announce(items, busy)}

@@ -2,7 +2,6 @@
 
 import { ExternalLink, Trash2 } from "lucide-react";
 import {
-  type ReactNode,
   type SyntheticEvent,
   useActionState,
   useCallback,
@@ -11,16 +10,11 @@ import {
 } from "react";
 import { IDLE } from "@/app/form-state";
 import { ActionError } from "@/components/ui/ActionError";
-import {
-  FIELD,
-  LABEL,
-  LABEL_HINT,
-  META,
-  TOUCH_LINK,
-} from "@/components/ui/field";
+import { TOUCH_LINK } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { useServerAction } from "@/hooks/useServerAction";
+import type { PlaceGuess } from "@/lib/ai/suggestion";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import {
   type PhotoField,
@@ -30,8 +24,12 @@ import {
   togglePublished,
 } from "./actions";
 import { MemberFields } from "./MemberFields";
-import { type Marks, marksFor } from "./marks";
+import type { Marks } from "./marks";
+import { PlaceChoices } from "./PlaceChoices";
+import { PublicFields } from "./PublicFields";
 import { SuggestDetails } from "./SuggestDetails";
+import { setUnsaved } from "./unsaved";
+import { useSuggestion } from "./useSuggestion";
 
 const INITIAL: PhotoFormState = IDLE;
 
@@ -50,111 +48,6 @@ const ELEMENT_PREFIX: Record<PhotoField, string> = {
   bg_color: "color",
   pin: "pin",
 };
-
-/**
- * Everything anybody who visits the site can read.
- *
- * Grouped and labelled, which it was not. The four public fields used to sit
- * either side of the "Members only" fieldset — title and description above it,
- * location and the backdrop colour below — so the only marked group was the
- * private one, and the comment above that group claimed an ordering the form
- * did not have. Two named groups in the order somebody fills them in: what
- * everybody sees, then what only members do.
- */
-function PublicFields({
-  photo,
-  marks,
-  suggest,
-}: {
-  photo: OwnPhotoRow;
-  marks: Marks;
-  /**
-   * The "Suggest details" control, or nothing at all.
-   *
-   * Passed in rather than decided here, because whether a model can be asked
-   * anything is a fact about the deployment's environment and this component
-   * runs in a browser. `aiSuggestionsConfigured()` is read on the server and
-   * drilled down, the same way the map key is.
-   *
-   * Inside this fieldset and not beside the buttons at the foot of the form:
-   * the three fields it writes into are all here, and it belongs where its
-   * effect is rather than where the other actions happen to live.
-   */
-  suggest: ReactNode;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className={`mb-1.5 ${META}`}>Public — everyone</legend>
-
-      {suggest}
-
-      <div className="space-y-1.5">
-        <label className={LABEL} htmlFor={`title-${photo.id}`}>
-          Title
-        </label>
-        <input
-          className={FIELD}
-          defaultValue={photo.title}
-          id={`title-${photo.id}`}
-          name="title"
-          placeholder="Uluwatu, Bali, Indonesia"
-          required={true}
-          {...marksFor(marks, "title")}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <label className={LABEL} htmlFor={`description-${photo.id}`}>
-          Description
-        </label>
-        <textarea
-          className={FIELD}
-          defaultValue={photo.description}
-          id={`description-${photo.id}`}
-          name="description"
-          placeholder="Teal waves crash against rocky cliffs."
-          required={true}
-          rows={2}
-          {...marksFor(marks, "description")}
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <label className={LABEL} htmlFor={`location-${photo.id}`}>
-            Location <span className={LABEL_HINT}>(optional)</span>
-          </label>
-          <input
-            className={FIELD}
-            defaultValue={photo.location ?? ""}
-            id={`location-${photo.id}`}
-            name="location"
-            placeholder="Nusa Penida"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className={LABEL} htmlFor={`color-${photo.id}`}>
-            Backdrop
-          </label>
-          {/*
-            Derived from the photo's dominant colour, but editable: the
-            viewer tints the whole screen with it, and a chosen colour beats
-            an averaged one.
-          */}
-          <input
-            className="h-11 w-16 cursor-pointer rounded-xl border border-white/15 bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
-            defaultValue={photo.bg_color}
-            id={`color-${photo.id}`}
-            name="bg_color"
-            type="color"
-            {...marksFor(marks, "bg_color")}
-          />
-        </div>
-      </div>
-    </fieldset>
-  );
-}
 
 /**
  * What the last save said, in the tone it said it in.
@@ -268,6 +161,54 @@ export function PhotoEditForm({
   const awaitMessage = useCallback(() => setStale(false), []);
 
   /*
+   * `stale` already means "changed since the last save", which is exactly the
+   * question `UnsavedGuard` asks — so it is reported rather than tracked a
+   * second time. Cleared on the way out too: a row that unmounts has taken
+   * its text with it whatever we do, and leaving the id behind would warn
+   * about a form that no longer exists.
+   */
+  useEffect(() => {
+    setUnsaved(photo.id, stale);
+    return () => {
+      setUnsaved(photo.id, false);
+    };
+  }, [photo.id, stale]);
+
+  /*
+   * The suggestion run lives here rather than inside the button.
+   *
+   * It used to live in `SuggestDetails`, which was right while everything it
+   * touched was in one fieldset. It is not any more: the button is in the
+   * public group, the chips it produces belong under the Location field, and
+   * a coordinate somebody accepts has to reach the picker inside the
+   * members-only section. Three separated places, one run — so the run is
+   * owned by the only component that contains all three.
+   *
+   * Called unconditionally, because hooks are. `aiOffered` decides whether
+   * anything is *rendered*, which is the honest shape of "this deployment
+   * has no gateway credentials": nothing on screen, nothing asked for, and
+   * no branch in the middle of a hook list.
+   */
+  const suggesting = useSuggestion(photo.id, retireMessage);
+
+  /*
+   * Accepting a coordinate opens the section it lands in.
+   *
+   * A pin applied behind a closed disclosure is a change nobody consented
+   * to seeing, which is the whole difference between this and a feature that
+   * fills a field. The same argument the refused-save handler below makes
+   * about the cursor: something that happens where it cannot be seen has not
+   * happened to the person.
+   */
+  const takePoint = useCallback(
+    (place: PlaceGuess) => {
+      setMembersOpen(true);
+      suggesting.takePoint(place);
+    },
+    [suggesting],
+  );
+
+  /*
    * Server actions called from an event handler rather than through
    * formAction, so these buttons do not submit the surrounding edit form and
    * discard the contributor's unsaved title.
@@ -359,11 +300,30 @@ export function PhotoEditForm({
       </div>
 
       <PublicFields
+        /*
+          Not gated on `aiOffered`, unlike the button. With no gateway
+          credentials nothing is ever asked for, so there are never any
+          places and this renders nothing on its own — a second guard here
+          would be a condition that can only agree with the first.
+        */
+        choices={
+          <PlaceChoices
+            answered={suggesting.answered}
+            onName={suggesting.takeName}
+            onPoint={takePoint}
+            photoId={photo.id}
+            places={suggesting.places}
+          />
+        }
         marks={marks}
         photo={photo}
         suggest={
           aiOffered ? (
-            <SuggestDetails onFilled={retireMessage} photoId={photo.id} />
+            <SuggestDetails
+              mapStyleUrl={mapStyleUrl}
+              photoId={photo.id}
+              suggesting={suggesting}
+            />
           ) : null
         }
       />
@@ -374,6 +334,7 @@ export function PhotoEditForm({
         onToggle={toggleMembers}
         open={membersOpen}
         photo={photo}
+        proposed={suggesting.proposed}
       />
 
       <div className="flex flex-wrap items-center gap-3 pt-1">

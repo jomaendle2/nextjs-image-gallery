@@ -4,10 +4,9 @@ import type { PhotoSuggestion } from "@/lib/ai/suggestion";
  * What a suggestion does to a form, decided away from the form.
  *
  * The route already returns text that is safe to show — `shapeSuggestion`
- * clamps every string to its column's cap and drops a place the model was
- * unsure of. What is left is the interface's own question: given that answer
- * and a form that may already have writing in it, which boxes are written
- * into, and what is the person told.
+ * clamps every string to its column's cap. What is left is the interface's
+ * own question: given that answer and a form that may already have writing
+ * in it, which boxes are written into, and what is the person told.
  *
  * Pure, and in its own file for the same reason `filter.ts` is: the component
  * that uses this reaches into the DOM by element id, which is untestable
@@ -15,30 +14,44 @@ import type { PhotoSuggestion } from "@/lib/ai/suggestion";
  */
 
 /**
- * The three fields a model is allowed to touch.
+ * The two fields a model is allowed to write into by itself.
+ *
+ * It was three. The place has left this list, and that is the change this
+ * feature is: candidates arrive as chips under the Location field and go
+ * nowhere until one is clicked, so nothing writes a place except a person.
+ * That also deletes the rule this file used to be mostly about — a `null`
+ * location had to be distinguished from an empty one so that a declined
+ * guess could not blank a location somebody had typed, and there is no
+ * declined guess to handle any more.
  *
  * Not the backdrop colour, which is measured from the pixels rather than
- * guessed at, and nothing inside the members-only fieldset: "where you stood"
- * and "how you made it" are the photographer's account of being somewhere,
- * and a model that was not there has nothing to say about either. The point
- * of that fieldset is that a person wrote it.
+ * guessed at, and nothing inside the members-only fieldset: "where you
+ * stood" and "how you made it" are the photographer's account of being
+ * somewhere, and a model that was not there has nothing to say about either.
  *
- * Each name is also the id prefix its input uses in `PhotoEditForm`, which is
- * how the component finds them. `bg_color` is the field where those two
- * differ, and it is not in this list.
+ * Each name is also the id prefix its input uses in `PublicFields`, which is
+ * how the component finds them.
  */
-export type FillableField = "title" | "description" | "location";
+export type FillableField = "title" | "description";
+
+/**
+ * Everything this feature can change, which is more than it fills.
+ *
+ * Undo has to cover a place a photographer accepted from a chip and a pin
+ * they let it drop, neither of which is written automatically. `pin` is the
+ * coordinate field inside the picker, which is controlled and therefore put
+ * back through a prop rather than through the DOM — the one entry here that
+ * is not an element id.
+ */
+export type TouchedField = FillableField | "location" | "pin";
 
 /**
  * The writes to make, in the order the fields appear on screen.
  *
- * Empty strings are left out rather than written, and that is the rule that
- * matters: `shapeSuggestion` returns `location: null` whenever the model
- * hedged about the place, and blanking a location the photographer had
- * already typed — because a model declined to guess it — would be the worst
- * thing this feature could do. A suggestion adds; it does not erase.
+ * Empty strings are left out rather than written. A suggestion adds; it does
+ * not erase.
  */
-const FILLABLE: readonly FillableField[] = ["title", "description", "location"];
+const FILLABLE: readonly FillableField[] = ["title", "description"];
 
 export function fillsFrom(
   suggestion: Partial<PhotoSuggestion>,
@@ -47,17 +60,17 @@ export function fillsFrom(
 
   for (const field of FILLABLE) {
     const value = suggestion[field];
-    /*
-     * A string and not an empty one. Three states arrive here and only one is
-     * a write: a field the model has not reached is `undefined`, a place it
-     * declined to name is `null`, and both mean leave the box alone.
-     */
     if (typeof value === "string" && value !== "") {
       writes.push([field, value]);
     }
   }
 
   return writes;
+}
+
+/** Whether a field is one the stream writes on its own. */
+export function isFillable(field: TouchedField): field is FillableField {
+  return FILLABLE.includes(field as FillableField);
 }
 
 /**
@@ -73,7 +86,14 @@ export function fillsFrom(
 export type SuggestionStage = "looking" | "title" | "description" | "location";
 
 export function stageOf(partial: Partial<PhotoSuggestion>): SuggestionStage {
-  if (typeof partial.location === "string" && partial.location !== "") {
+  /*
+   * The stage survives the change, and its meaning moves with the feature:
+   * it used to mean "writing a place into the field" and now means "listing
+   * the places it can offer". Either way it is the last thing that happens,
+   * and either way the label under the button is describing what is
+   * appearing on screen at that moment.
+   */
+  if (partial.places !== undefined && partial.places.length > 0) {
     return "location";
   }
   if (partial.description !== undefined) {
@@ -89,32 +109,27 @@ const STAGE_LABEL: Record<SuggestionStage, string> = {
   looking: "Looking at the photograph…",
   title: "Naming it…",
   description: "Describing what is in the frame…",
-  location: "Placing it…",
+  location: "Working out where…",
 };
 
 export function stageLabel(stage: SuggestionStage): string {
   return STAGE_LABEL[stage];
 }
 
-/** Every suggestion says this, because it is the thing worth being sure of. */
+/**
+ * Every suggestion says this, because it is the thing worth being sure of.
+ *
+ * It is now the whole of what is said. The sentence that used to follow it —
+ * reporting that a place had been withheld — has gone, because nothing is
+ * withheld any more: what the model found is on screen as chips, including
+ * the guesses it is unsure of, and an empty row of chips says "nothing in
+ * this frame points anywhere" without needing a caption to explain a
+ * silence.
+ */
 const NOTHING_SAVED =
   "Suggested by a model that looked at the photograph. Edit anything you " +
   "disagree with — nothing is saved until you press Save changes.";
 
-/**
- * A blank location, said out loud rather than left to look like a failure.
- *
- * `shapeSuggestion` drops a place the model was not confident about, and its
- * comment explains why: `/globe` is built from these strings, and a wrong dot
- * is put on the map by the one person who knows it is wrong. But a field that
- * simply stays empty is indistinguishable from the feature half-working, so
- * the deliberate silence has to be reported as a decision.
- */
-const NO_PLACE =
-  " It would not guess where this was taken, so the location is untouched.";
-
-export function suggestionNote(suggestion: PhotoSuggestion): string {
-  return suggestion.locationConfidence === "high"
-    ? NOTHING_SAVED
-    : NOTHING_SAVED + NO_PLACE;
+export function suggestionNote(): string {
+  return NOTHING_SAVED;
 }

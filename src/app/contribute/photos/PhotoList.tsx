@@ -266,6 +266,54 @@ export function PhotoList({
     setSelected((current) => toggleAll(current, visible));
   }, [visible]);
 
+  /**
+   * Rows that have been opened at least once, and must not be unmounted.
+   *
+   * This list renders `visible`, so a keystroke in the search box used to
+   * take an open row out of the tree — and with it the uncontrolled inputs
+   * that *are* where a half-written caption lives. `PhotoCard` was careful
+   * about this in the small (collapsing a row hides it rather than unmounting
+   * it, and says so at length) and the list threw the same work away in the
+   * large.
+   *
+   * Only grows, and only ever holds rows somebody actually opened, so the
+   * `INITIAL_ROWS` window still does its job for the untouched hundred.
+   */
+  const [everOpened, setEverOpened] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  /* Stable, or `PhotoCard`'s `memo` stops holding. */
+  const noteOpened = useCallback((id: string) => {
+    setEverOpened((current) =>
+      current.has(id) ? current : new Set(current).add(id),
+    );
+  }, []);
+
+  /**
+   * What actually goes in the list: the matching window, plus any opened row
+   * the filter would otherwise have thrown away.
+   *
+   * The extras are rendered `hidden` rather than in place — the photographer
+   * asked to see a narrower list and should get one. They stay in the DOM so
+   * that clearing the search brings their text back exactly as it was.
+   */
+  const shown = useMemo(() => {
+    const window = showAll ? visible : visible.slice(0, INITIAL_ROWS);
+    if (everOpened.size === 0) {
+      /* The ordinary case: nothing has been opened, so nothing to carry. */
+      return window.map((photo) => ({ photo, hidden: false }));
+    }
+
+    const inWindow = new Set(window.map((photo) => photo.id));
+    return [
+      ...window.map((photo) => ({ photo, hidden: false })),
+      ...photos
+        .filter((photo) => everOpened.has(photo.id) && !inWindow.has(photo.id))
+        .map((photo) => ({ photo, hidden: true })),
+    ];
+  }, [showAll, visible, photos, everOpened]);
+
   /*
    * The two things you do to a list, kept together and kept beside it.
    *
@@ -369,21 +417,33 @@ export function PhotoList({
         <p className="rounded-2xl bg-white/[0.03] px-4 py-8 text-center text-sm text-white/55">
           Nothing matches{query.trim() === "" ? " that filter" : ` “${query}”`}.
         </p>
-      ) : (
-        <ul className={listClassName(layout)}>
-          {(showAll ? visible : visible.slice(0, INITIAL_ROWS)).map((photo) => (
-            <PhotoCard
-              aiOffered={aiOffered}
-              layout={layout}
-              mapStyleUrl={mapStyleUrl}
-              key={photo.id}
-              onSelect={selecting ? toggleOne : undefined}
-              photo={photo}
-              selected={selected.has(photo.id)}
-            />
-          ))}
-        </ul>
-      )}
+      ) : null}
+
+      {/*
+        One list, always rendered, with the hiding done per row.
+
+        Two lists was the obvious shape and it was wrong: React reconciles by
+        position, so a row moving from a "visible" `<ul>` to a "kept" one is a
+        different parent — it unmounts and remounts, taking the uncontrolled
+        inputs with it and destroying the very text this exists to protect.
+        Moving *within* one list keeps the same instance and React just moves
+        the DOM node. `hidden` on the `<li>` is what the filter does now.
+      */}
+      <ul className={listClassName(layout)}>
+        {shown.map(({ photo, hidden }) => (
+          <PhotoCard
+            aiOffered={aiOffered}
+            hidden={hidden}
+            layout={layout}
+            mapStyleUrl={mapStyleUrl}
+            key={photo.id}
+            onOpen={noteOpened}
+            onSelect={selecting ? toggleOne : undefined}
+            photo={photo}
+            selected={selected.has(photo.id)}
+          />
+        ))}
+      </ul>
 
       {!showAll && visible.length > INITIAL_ROWS ? (
         <button

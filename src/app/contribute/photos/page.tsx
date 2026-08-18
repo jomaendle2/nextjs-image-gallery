@@ -11,8 +11,10 @@ import { listOwnPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { signOut } from "../actions";
 import { ContributeWorkspace } from "../ContributeShell";
+import { WorkspaceNav } from "../WorkspaceNav";
 import { FirstRun } from "./FirstRun";
 import { PhotoList } from "./PhotoList";
+import { UnsavedGuard } from "./UnsavedGuard";
 import { UploadForm } from "./UploadForm";
 
 export const metadata: Metadata = {
@@ -41,6 +43,7 @@ export default async function PhotosPage() {
 
   return (
     <ContributeWorkspace
+      nav={<WorkspaceNav current="photographs" owner={isOwner(contributor)} />}
       action={
         <form action={signOut}>
           <GlassButton size="sm" type="submit">
@@ -57,20 +60,20 @@ export default async function PhotosPage() {
             View your public page
           </TextLink>
         ) : null}
-        {isOwner(contributor) ? (
-          <TextLink href="/contribute/admin" standalone={true}>
-            Manage contributors
-          </TextLink>
-        ) : null}
         {/*
-          Hidden once spent, rather than shown as a dead "0 left". The count
-          is the whole message: somebody who has three is being told they can
-          bring people in, and somebody who has none has nothing to act on.
+          `invite` and `contributors` used to be here too, and are now in
+          `WorkspaceNav` above — a row of links that only existed on the
+          dashboard is not navigation, it is a dead end everywhere else.
+
+          The count stays behind, because it is news rather than a
+          destination, and it is hidden once spent rather than shown as a dead
+          "0 left": somebody who has three is being told they can bring people
+          in, and somebody who has none has nothing to act on.
         */}
         {invites > 0 ? (
-          <TextLink href="/contribute/invite" standalone={true}>
-            Invite a photographer ({count(invites, "invitation")} left)
-          </TextLink>
+          <p className="text-sm text-white/55">
+            {count(invites, "invitation")} left to give.
+          </p>
         ) : null}
       </div>
 
@@ -98,6 +101,8 @@ export default async function PhotosPage() {
         still rendered by this page, so a batch in flight is not at the mercy
         of the list re-rendering around it.
       */}
+      <UnsavedGuard />
+
       <PhotoList
         aiOffered={aiSuggestionsConfigured()}
         mapStyleUrl={mapStyleUrl()}

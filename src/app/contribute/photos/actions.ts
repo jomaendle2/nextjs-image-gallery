@@ -3,6 +3,7 @@
 import { del } from "@vercel/blob";
 import { type FormState, failed, formText, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
+import { MAX_DESCRIPTION, MAX_TECHNIQUE, MAX_TITLE } from "@/lib/photos/caps";
 import {
   deletePhoto,
   listOwnPhotos,
@@ -44,10 +45,6 @@ function invalid(field: PhotoField, message: string): PhotoFormState {
   return { ...failed(message), field };
 }
 
-const MAX_TITLE = 120;
-const MAX_DESCRIPTION = 300;
-/* Room for a paragraph about how a photograph was made, not an essay. */
-const MAX_TECHNIQUE = 600;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 const MAX_LATITUDE = 90;

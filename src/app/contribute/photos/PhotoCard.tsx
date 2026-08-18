@@ -378,6 +378,8 @@ export const PhotoCard = memo(function PhotoCardRow({
   mapStyleUrl,
   aiOffered,
   layout,
+  onOpen,
+  hidden = false,
 }: {
   photo: OwnPhotoRow;
   selected?: boolean;
@@ -388,6 +390,19 @@ export const PhotoCard = memo(function PhotoCardRow({
   aiOffered: boolean;
   /** Which shape this row takes while it is closed. */
   layout: PhotoLayout;
+  /**
+   * That this row has been opened, so the list can stop unmounting it.
+   *
+   * Must be stable, like `onSelect`, or `memo` stops holding.
+   */
+  onOpen?: (id: string) => void;
+  /**
+   * Rendered, but not shown — an opened row the filter no longer matches.
+   *
+   * The list decides this; see the note on the `<li>` below and the longer
+   * one in `PhotoList`.
+   */
+  hidden?: boolean;
 }) {
   const exif = exifLine(photo.exif);
   const untitled = photo.title.trim() === "";
@@ -426,9 +441,19 @@ export const PhotoCard = memo(function PhotoCardRow({
       setShowing(isOpen);
       if (isOpen) {
         setOpened(true);
+        /*
+         * The list is told, once, that this row now holds a form.
+         *
+         * It keeps such rows mounted even when the search box or the filter
+         * tabs stop matching them — see `PhotoList`. Reported on open rather
+         * than on every keystroke because the question it answers is "could
+         * there be unsaved text in here", and from the first open onwards the
+         * answer is yes.
+         */
+        onOpen?.(photo.id);
       }
     },
-    [],
+    [onOpen, photo.id],
   );
 
   /* Stable, so ticking one box does not re-render every other row. */
@@ -463,6 +488,14 @@ export const PhotoCard = memo(function PhotoCardRow({
   return (
     <li
       className={`glass-thin overflow-hidden rounded-3xl ${spansRow ? "col-span-full" : ""}`}
+      /*
+        Hidden, never unmounted, when the filter stops matching an open row.
+        `hidden` also takes it out of the accessibility tree and out of tab
+        order, so a row the photographer cannot see cannot be reached by
+        keyboard either — which is what makes keeping it in the DOM honest
+        rather than a trap. See `PhotoList`.
+      */
+      hidden={hidden}
     >
       {asTile ? (
         /*

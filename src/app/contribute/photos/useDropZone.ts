@@ -18,13 +18,24 @@ import { type DragEvent, useCallback, useRef, useState } from "react";
  */
 export function useDropZone({
   busy,
-  accept,
   onFiles,
 }: {
   /** While true, a drop is ignored — a batch is already going up. */
   busy: boolean;
-  /** The MIME types to keep. A drop bypasses the input's `accept` entirely. */
-  accept: ReadonlySet<string>;
+  /**
+   * Everything that was dropped, unfiltered.
+   *
+   * This hook used to drop anything outside an `accept` set before the caller
+   * ever saw it, which is how a photographer dragging in a folder of `.HEIC`
+   * or `.CR3` got the zone highlighting and then nothing at all — no row, no
+   * count, no refusal. Silence is the worst answer available: it is
+   * indistinguishable from the feature being broken.
+   *
+   * Deciding what is uploadable belongs to the caller now, because the file
+   * picker has exactly the same problem — `accept` on an input is a filter in
+   * the dialog, not a guarantee, and anybody who switches it to "All Files"
+   * arrives here by the other door. One rule, applied to both.
+   */
   onFiles: (files: File[]) => void;
 }) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -57,14 +68,9 @@ export function useDropZone({
       if (busy) {
         return;
       }
-      /*
-       * Filtered by type here as well as by the input's `accept`, because a
-       * drop bypasses the file picker entirely — without this, dragging a
-       * folder of RAWs in would start twenty uploads the server will refuse.
-       */
-      onFiles([...event.dataTransfer.files].filter((f) => accept.has(f.type)));
+      onFiles([...event.dataTransfer.files]);
     },
-    [busy, accept, onFiles],
+    [busy, onFiles],
   );
 
   return {

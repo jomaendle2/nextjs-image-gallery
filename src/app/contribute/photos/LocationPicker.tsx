@@ -1,18 +1,13 @@
 "use client";
 
 import { MapPin } from "lucide-react";
-import {
-  type ChangeEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 import { FIELD, LABEL, LABEL_HINT, META } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { CELL_KM, coarsen, MAX_ERROR_KM } from "@/lib/photos/coarsen";
 import type { OwnPhotoRow, Pin } from "@/lib/photos/types";
+import { MapSurface } from "./MapSurface";
 import { Why } from "./Why";
 
 /**
@@ -39,43 +34,6 @@ import { Why } from "./Why";
  */
 
 /**
- * Loading MapLibre with a bare `import()` rather than `next/dynamic`.
- *
- * `next/dynamic` exists to lazily mount a *React component*, and MapLibre is
- * not one — it is an imperative library you hand a DOM node to. Reaching for
- * it here would mean writing a React wrapper whose only purpose is to give
- * `next/dynamic` something to import, and its `ssr: false` would be
- * guarding against a render that cannot happen anyway, because this call
- * sits inside an effect.
- *
- * What matters is what both approaches buy, and this gets it: the library is
- * in its own chunk, fetched when somebody presses the button and never
- * before. `PhotoCard` already mounts the edit form on first open, but that
- * precedent covers *mounting*, not *downloading* — a statically imported
- * MapLibre would sit in the dashboard's chunk whether or not any row was
- * ever expanded.
- */
-async function loadMapLibre() {
-  const [library] = await Promise.all([
-    import("maplibre-gl"),
-    /*
-     * The stylesheet comes with the chunk rather than the page. MapLibre
-     * lays its canvas and controls out in CSS, so without this the map is a
-     * pile of absolutely-positioned nothing — and importing it at the top of
-     * this file would put it in the dashboard's stylesheet for every
-     * contributor who never opens a map.
-     */
-    import("maplibre-gl/dist/maplibre-gl.css"),
-  ]);
-  return library;
-}
-
-/** Where the map opens when there is nothing to open it on. */
-const DEFAULT_CENTRE: Pin = { lat: 20, lng: 0 };
-const DEFAULT_ZOOM = 1.2;
-const MARKED_ZOOM = 9;
-
-/**
  * Reads a coordinate a person typed.
  *
  * Deliberately forgiving about everything except the two numbers: people
@@ -85,7 +43,7 @@ const MARKED_ZOOM = 9;
  * assumption, because assuming here means publishing a dot somewhere nobody
  * chose.
  */
-function parsePoint(text: string): Pin | null {
+export function parsePoint(text: string): Pin | null {
   const numbers = text.match(/-?\d+(?:\.\d+)?/g);
   if (numbers === null || numbers.length !== 2) {
     return null;
@@ -101,6 +59,22 @@ function parsePoint(text: string): Pin | null {
   }
   return { lat, lng };
 }
+
+/**
+ * A point as the field spells it, which is the plainest possible form.
+ *
+ * No fixed precision here: the field's value is what gets saved, and padding
+ * an approximate point out to five decimals would dress a guess up as a
+ * survey. Rounding, where it is wanted, is a decision about the *source* —
+ * a map click is rounded before it is formatted, a coordinate somebody was
+ * offered is not lengthened.
+ */
+export function pointText(point: Pin): string {
+  return `${point.lat}, ${point.lng}`;
+}
+
+/** How many decimals a click on the map is worth. About a metre. */
+const CLICK_PLACES = 5;
 
 function format(point: Pin, places: number): string {
   const ns = point.lat >= 0 ? "N" : "S";
@@ -123,127 +97,6 @@ function initialText(photo: OwnPhotoRow): string {
     return `${photo.coarse_lat}, ${photo.coarse_lng}`;
   }
   return "";
-}
-
-/**
- * The map itself, mounted only once somebody asks for it.
- *
- * Separate from the picker so the imperative lifecycle — create, move,
- * destroy — is not tangled with the form state. It reports clicks upward and
- * takes the current point downward; the field and the map are two views of
- * one value, and the value lives in the parent.
- */
-function MapSurface({
-  styleUrl,
-  point,
-  onPick,
-}: {
-  styleUrl: string;
-  point: Pin | null;
-  onPick: (picked: Pin) => void;
-}) {
-  const container = useRef<HTMLDivElement | null>(null);
-  const marker = useRef<{
-    setLngLat: (at: [number, number]) => unknown;
-  } | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  /*
-   * The click handler is read through a ref rather than closed over, so a
-   * new callback identity from the parent cannot tear the map down and
-   * rebuild it. Rebuilding would refetch every tile.
-   */
-  const pick = useRef(onPick);
-  pick.current = onPick;
-
-  const startAt = useRef(point);
-
-  useEffect(() => {
-    let cancelled = false;
-    let map: { remove: () => void } | null = null;
-
-    loadMapLibre()
-      .then((maplibre) => {
-        if (cancelled || container.current === null) {
-          return;
-        }
-        const created = new maplibre.Map({
-          container: container.current,
-          style: styleUrl,
-          center: [
-            startAt.current?.lng ?? DEFAULT_CENTRE.lng,
-            startAt.current?.lat ?? DEFAULT_CENTRE.lat,
-          ],
-          zoom: startAt.current === null ? DEFAULT_ZOOM : MARKED_ZOOM,
-          /*
-           * Compact, because MapTiler's and OpenStreetMap's attribution is
-           * required and would otherwise take a third of a 288px-tall map.
-           * It is still there, and still opens.
-           */
-          attributionControl: { compact: true },
-        });
-        map = created;
-
-        /*
-         * Our own element rather than MapLibre's default pin, which is a
-         * blue SVG with the colour baked in — a hex literal `design.test.ts`
-         * would catch, and a colour the viewer's palette has no token for.
-         */
-        const element = document.createElement("div");
-        element.className =
-          "size-4 rounded-full border-2 border-white bg-white/40";
-        marker.current = new maplibre.Marker({ element })
-          .setLngLat([
-            startAt.current?.lng ?? DEFAULT_CENTRE.lng,
-            startAt.current?.lat ?? DEFAULT_CENTRE.lat,
-          ])
-          .addTo(created);
-
-        created.on("click", (event: { lngLat: { lat: number; lng: number } }) =>
-          pick.current({ lat: event.lngLat.lat, lng: event.lngLat.lng }),
-        );
-      })
-      .catch((cause: unknown) => {
-        /*
-         * A failed chunk is a failed map, not a failed form. The field above
-         * still works, so this says so rather than throwing into the error
-         * boundary and taking the photographer's unsaved caption with it.
-         */
-        console.error("Could not load the map:", cause);
-        if (!cancelled) {
-          setFailed(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      map?.remove();
-      marker.current = null;
-    };
-  }, [styleUrl]);
-
-  /* Typing in the field moves the marker; clicking the map fills the field. */
-  useEffect(() => {
-    if (point !== null) {
-      marker.current?.setLngLat([point.lng, point.lat]);
-    }
-  }, [point]);
-
-  if (failed) {
-    return (
-      <Notice tone="warning">
-        The map could not be loaded. Type the coordinates above instead — that
-        works exactly the same.
-      </Notice>
-    );
-  }
-
-  return (
-    <div
-      className="h-72 w-full overflow-hidden rounded-2xl border border-white/[0.08]"
-      ref={container}
-    />
-  );
 }
 
 /**
@@ -315,6 +168,7 @@ export function LocationPicker({
   styleUrl,
   invalid = false,
   messageId,
+  proposed = null,
 }: {
   photo: OwnPhotoRow;
   styleUrl: string | null;
@@ -327,6 +181,14 @@ export function LocationPicker({
   invalid?: boolean;
   /** Where the form's own message is, for `aria-describedby`. */
   messageId?: string;
+  /**
+   * A coordinate the photographer accepted elsewhere on this form, or the
+   * text Undo is putting back.
+   *
+   * Null and absent both mean "nobody has offered anything"; a new object
+   * means "apply this now", and only its identity is checked.
+   */
+  proposed?: { text: string; at: number } | null;
 }) {
   const [text, setText] = useState(() => initialText(photo));
   const [publicOnly, setPublicOnly] = useState(
@@ -348,8 +210,39 @@ export function LocationPicker({
   );
   const openMap = useCallback(() => setMapOpen(true), []);
   const handlePick = useCallback((picked: Pin) => {
-    setText(`${picked.lat.toFixed(5)}, ${picked.lng.toFixed(5)}`);
+    setText(
+      pointText({
+        lat: Number(picked.lat.toFixed(CLICK_PLACES)),
+        lng: Number(picked.lng.toFixed(CLICK_PLACES)),
+      }),
+    );
   }, []);
+
+  /*
+   * A point offered from somewhere else on the form, applied here.
+   *
+   * The prop is an object with a stamp on it rather than a bare point, and
+   * the stamp is the whole mechanism: accepting the same chip twice would
+   * otherwise hand this effect a `===`-equal value and nothing would happen
+   * the second time. Identity is the signal; the contents are the payload.
+   *
+   * A prop rather than the two alternatives. Lifting `text` into the form
+   * would spread this component's parsing and formatting rules across two
+   * files for the sake of one caller, and an imperative handle would be a
+   * ref-based side channel for something that is plainly a value flowing
+   * down. The map opens with it, because a pin somebody cannot see has not
+   * been shown to them — but only when there is a pin: an Undo that empties
+   * this field must not open a map to display nothing.
+   */
+  useEffect(() => {
+    if (proposed === null || proposed === undefined) {
+      return;
+    }
+    setText(proposed.text);
+    if (styleUrl !== null && parsePoint(proposed.text) !== null) {
+      setMapOpen(true);
+    }
+  }, [proposed, styleUrl]);
 
   const typedSomething = text.trim() !== "";
   /*

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { PhotoSuggestion } from "@/lib/ai/suggestion";
-import { fillsFrom, stageOf, suggestionNote } from "./fill";
+import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
+import { fillsFrom, isFillable, stageOf, suggestionNote } from "./fill";
 
 /**
  * What a suggestion is allowed to do to a form somebody is already typing in.
@@ -10,72 +10,86 @@ import { fillsFrom, stageOf, suggestionNote } from "./fill";
  * and it is checked here instead.
  */
 
+function place(over: Partial<PlaceGuess> = {}): PlaceGuess {
+  return {
+    name: "Algarve, Portugal",
+    confidence: "high",
+    reason: "limestone arches over a pale beach",
+    point: null,
+    ...over,
+  };
+}
+
 function suggestion(over: Partial<PhotoSuggestion> = {}): PhotoSuggestion {
   return {
     title: "Low tide at Praia da Marinha",
     description: "Limestone arches over a pale beach at the end of the day.",
-    location: "Algarve, Portugal",
-    locationConfidence: "high",
+    places: [place()],
     ...over,
   };
 }
 
 describe("which fields a suggestion writes into", () => {
-  it("writes all three when the model answered all three", () => {
+  it("writes the two sentences", () => {
     expect(fillsFrom(suggestion())).toEqual([
       ["title", "Low tide at Praia da Marinha"],
       [
         "description",
         "Limestone arches over a pale beach at the end of the day.",
       ],
-      ["location", "Algarve, Portugal"],
     ]);
   });
 
   /*
-   * The rule this file exists for. `shapeSuggestion` nulls the location
-   * whenever the model hedged, and a photographer who has already typed
-   * "Bali" must not lose it because of that — the field is skipped, not
-   * cleared.
+   * The rule this file exists for, and the one that changed.
+   *
+   * A place used to be written straight into the Location field whenever the
+   * model was sure of it, which is why so much of this module was once about
+   * telling a declined guess apart from an empty one. Nothing writes a place
+   * now: candidates are buttons under the field, and the field belongs to
+   * whoever typed in it until they click.
    */
-  it("leaves the location alone when the model would not name the place", () => {
+  it("never writes a place, however sure the model is", () => {
     const writes = fillsFrom(
-      suggestion({ location: null, locationConfidence: "low" }),
+      suggestion({ places: [place({ confidence: "high" })] }),
     );
 
     expect(writes.map(([field]) => field)).toEqual(["title", "description"]);
   });
 
-  it("skips a field the model returned empty", () => {
-    const writes = fillsFrom(suggestion({ title: "", description: "" }));
-
-    expect(writes).toEqual([["location", "Algarve, Portugal"]]);
+  it("writes nothing at all when it has two places and no sentences", () => {
+    expect(
+      fillsFrom(
+        suggestion({ title: "", description: "", places: [place(), place()] }),
+      ),
+    ).toEqual([]);
   });
 
-  it("writes nothing at all rather than blanking the form", () => {
-    expect(
-      fillsFrom(suggestion({ title: "", description: "", location: null })),
-    ).toEqual([]);
+  it("skips a field the model returned empty", () => {
+    const writes = fillsFrom(suggestion({ title: "" }));
+
+    expect(writes.map(([field]) => field)).toEqual(["description"]);
+  });
+
+  it("knows the place and the pin are not fields it fills", () => {
+    expect(isFillable("title")).toBe(true);
+    expect(isFillable("location")).toBe(false);
+    expect(isFillable("pin")).toBe(false);
   });
 });
 
 describe("what the photographer is told", () => {
   it("always says nothing has been saved", () => {
-    expect(suggestionNote(suggestion())).toContain("nothing is saved");
+    expect(suggestionNote()).toContain("nothing is saved");
   });
 
   /*
-   * A location left blank on purpose looks exactly like one the feature
-   * failed to fill in, so the silence is reported.
+   * The sentence about a withheld place has gone, and this is what keeps it
+   * gone: there is nothing left to withhold, so a note claiming there might
+   * be would be describing an older feature.
    */
-  it("says so when the place was dropped rather than missed", () => {
-    const note = suggestionNote(suggestion({ locationConfidence: "low" }));
-
-    expect(note).toContain("would not guess where this was taken");
-  });
-
-  it("does not mention the place when it named one", () => {
-    expect(suggestionNote(suggestion())).not.toContain("would not guess");
+  it("no longer reports a place it declined to guess", () => {
+    expect(suggestionNote()).not.toContain("would not guess");
   });
 });
 
@@ -101,21 +115,24 @@ describe("which field the model is on", () => {
     expect(stageOf({ title: "Low tide", description: "" })).toBe("description");
   });
 
-  it("is on the place once one is being shown", () => {
+  it("is on the places once one is being offered", () => {
     expect(
-      stageOf({ title: "Low tide", description: "Waves.", location: "Alg" }),
+      stageOf({
+        title: "Low tide",
+        description: "Waves.",
+        places: [place({ name: "Alg" })],
+      }),
     ).toBe("location");
   });
 
   /*
-   * A place the model declined to name never reaches the form, so the wait
-   * must not claim to be placing anything. `shapePartial` has already
-   * withheld it; this is the half of that decision the sentence has to agree
-   * with.
+   * An empty array is the model having got as far as the places and found
+   * none, which reads on screen as no chips at all — so the wait must not
+   * claim to be working out a where that is never going to appear.
    */
   it("does not claim to be placing a photograph it will not place", () => {
-    expect(stageOf({ title: "Low tide", description: "Waves." })).toBe(
-      "description",
-    );
+    expect(
+      stageOf({ title: "Low tide", description: "Waves.", places: [] }),
+    ).toBe("description");
   });
 });
