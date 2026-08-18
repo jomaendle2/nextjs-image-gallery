@@ -13,7 +13,8 @@
       "!next-env.d.ts",
       "!src/app/globals.css",
       "!src/lib/geo/world.ts",
-      "!src/lib/geo/world-fine.ts"
+      "!src/lib/geo/world-fine.ts",
+      "!docs/snapshots"
     ]
   },
   "formatter": {

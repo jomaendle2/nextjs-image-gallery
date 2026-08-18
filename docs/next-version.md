@@ -240,33 +240,51 @@ in a review thread because a comment in a diff is read once.
 `photos.tags` exists and the editor fills it: a model proposes subjects from
 the closed list in `src/lib/photos/tags.ts`, the photographer confirms them
 with a click, and a GIN index is already on the column. **No page reads it
-yet, and that is deliberate.** 28 published photographs across 23 distinct
-locations means a place index of one photograph per entry, and a subject
-index is only worth a page once several photographs share a subject. Building
-the browse first would have produced a directory of singletons and taught us
-nothing about which axes people actually use.
+yet.**
 
-Each of these is a small piece of work once its trigger fires. None should be
-built before it does.
+All 28 photographs were tagged in one pass by `npm run recaption`, so the
+distribution is known rather than guessed:
+
+    mountains 11   ocean 10   coast 9   clouds 8   beach 7   waves 6
+    palms 4   sunset 4   desert 3   cliffs 3   city 3   fog 3   blossom 3
+    architecture 2   glacier 2   ice 2   lake 2   flowers 2   road 2
+    volcano 1   sunrise 1   ruins 1   jungle 1   river 1   waterfall 1
+
+Which fired two of the triggers below immediately — six tags already carry
+six or more photographs. That is a useful reminder that a trigger is a
+measurement and not a delay: these were written expecting to wait, and the
+answer was already yes. **The remaining reason not to build is ordering, not
+evidence**: the tags have been confirmed by nobody. A model proposed all of
+them in a batch and no photographer has yet pressed a chip. Before a page
+groups photographs by these strings in public, somebody should look down the
+list and disagree with a few — the whole design of the feature is that the
+person who took the photograph decides, and a batch run is the one path that
+bypasses them.
+
+Five of the vocabulary's thirty entries went unused (`canyon`, `forest`,
+`night`, `snow`, `wildlife`), which is the deletion trigger at the bottom of
+this section, not yet met.
 
 - **`/tag/<slug>`, a page per subject.** The tag *is* the slug — the
   vocabulary is lowercase and hyphen-free so the URL needs no mapping table.
   One query with `WHERE tags @@ ...`, the existing grid, and the existing
   feed columns. **Trigger:** any single tag carried by six or more published
   photographs. Below that the page is a shorter version of the gallery.
+  **Met**: six tags qualify. Waiting on confirmation by a person, above.
 
 - **A filter on the gallery.** Chips above the grid narrowing it in place,
   rather than a separate page — closer to how somebody actually browses, and
   it reuses `PhotoFilters` from the dashboard. **Trigger:** three or more
   tags each carrying six or more photographs, so there is something to
-  choose *between*. One busy tag wants a page, not a filter.
+  choose *between*. One busy tag wants a page, not a filter. **Met**: six
+  tags qualify. Same caveat.
 
 - **Related photographs under the viewer.** "More like this", ranked by
   shared tags and then by recency. The cheapest of the three and the one
   most likely to be used, because it needs no navigation — but the most
   embarrassing when the answer is thin. **Trigger:** the median published
   photograph carries three tags, so a shared-tag ranking has something to
-  rank.
+  rank. **Met**: the median is three.
 
 - **A place index.** Explicitly *not* triggered by tags at all; it waits on
   locations repeating. **Trigger:** ten locations carried by two or more
