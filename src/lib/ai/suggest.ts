@@ -22,27 +22,50 @@ import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
  */
 
 /**
- * A cheap model that can see, and a second one from a different vendor.
+ * A model that can recognise a place, and a second one from a different
+ * vendor.
  *
  * Both verified against `https://ai-gateway.vercel.sh/v1/models` on the day
  * this was written rather than recalled: the model list moves faster than any
  * training data, and a plausible-looking wrong id is a feature that is broken
  * only in production.
  *
- * Gemini Flash first because it is the cheapest thing on the list that writes
- * a decent English sentence about a picture — a suggestion is one paragraph
- * read once by the person who took the photograph, so the money belongs in
- * the number of photographs a gallery can caption, not in the prose of any
- * one of them.
+ * **This used to lead with the cheapest thing that writes a decent sentence,
+ * and that was the right trade until the place guess started being acted
+ * on.** A name now fills the Location field by itself when the model says it
+ * is sure, and the pin follows — so a confident wrong guess is no longer a
+ * chip somebody declines, it is a dot on the public globe. What the primary
+ * model is chosen for changed with it: not prose, but knowing when it does
+ * not know.
  *
- * The fallback is Anthropic rather than another Google model on purpose. What
- * a second entry buys is survival of one vendor's bad hour, and two models
- * behind the same API go down together. Both are marked as not training on
- * what is sent, which is the property that matters for other people's
- * photographs and is why the processor row in `src/lib/legal.ts` can say so.
+ * Measured on two real photographs from this gallery rather than argued
+ * about, and the second one is why the cheap tier lost:
+ *
+ * | model              | a recognisable coastline | a flower against sky |
+ * | ------------------ | ------------------------ | -------------------- |
+ * | gemini-3.7-flash   | ~8km off, **sure**       | no guess — correct   |
+ * | gemini-2.5-pro     | ~8km off, **sure**       | **"Hawaii", sure**   |
+ * | claude-sonnet-5    | correct, sure            | wrong, marked unsure |
+ *
+ * A frangipani against a blue sky carries no location signal at all. The
+ * honest answers are "no idea" or a hedge; `gemini-2.5-pro` invented Hawaii
+ * and marked it certain, which under the auto-fill above would have put a
+ * wrong pin on the globe with nobody asked. It is disqualified on that one
+ * result, whatever it does to the prose.
+ *
+ * The fallback is Google rather than a second Anthropic model on purpose.
+ * What a second entry buys is survival of one vendor's bad hour, and two
+ * models behind the same API go down together. Both are marked as not
+ * training on what is sent, which is the property that matters for other
+ * people's photographs and is why the processor row in `src/lib/legal.ts`
+ * can say so.
+ *
+ * The cost is real and is the point of the trade: a frontier model per press
+ * against a caption a photographer reads once. It is bounded by the same
+ * rate limit as before and by there being a person pressing the button.
  */
-const MODEL = "google/gemini-3.7-flash";
-const FALLBACK_MODELS = ["anthropic/claude-haiku-4.5"];
+const MODEL = "anthropic/claude-sonnet-5";
+const FALLBACK_MODELS = ["google/gemini-3.7-flash"];
 
 /**
  * Long enough for a slow first token, short enough that a photographer does
@@ -94,9 +117,16 @@ const SUGGESTION_SCHEMA = z.object({
     .describe(
       "One plain sentence saying what is visible in the frame. This is read " +
         "aloud to people who cannot see the photograph, so describe the " +
-        "picture — subject, colour, light, weather — and do not name the " +
-        "place, the mood, or the camera. Like: 'Teal waves crash against " +
-        "rocky cliffs.' or 'Pink cherry blossoms against a clear blue sky.'",
+        "picture — subject, colour, light, weather — and do not mention the " +
+        "mood or the camera. " +
+        "You may name the place, and should when it adds something a blind " +
+        "reader would otherwise miss: 'Terraced Inca ruins on a ridge above " +
+        "the Urubamba valley.' beats 'Stone ruins on a mountain ridge.' " +
+        "**Only name a place you were told or are certain of.** If the " +
+        "photographer gave one, use it. If they did not and you are not " +
+        "sure, describe what you see and name nothing — a place guessed here " +
+        "is read out as fact to somebody who cannot check it. Like: 'Teal " +
+        "waves crash against rocky cliffs.'",
     ),
   /*
    * Last, and the order is load-bearing now that this streams.
@@ -189,6 +219,17 @@ export interface SuggestionSource {
   /** Bytes of the display copy. JPEG, because that is what `derive` writes. */
   image: Uint8Array;
   exif: PhotoExif | null;
+  /**
+   * The place the photographer has already named, if they have.
+   *
+   * Given rather than guessed, for the same reason the exposure line is: the
+   * photographer was there. Without it, pressing the button a second time on
+   * a photograph already labelled "Machu Picchu, Peru" re-derived the place
+   * from pixels and could contradict the person who took it. It is their own
+   * public text, already printed under the photograph, so sending it
+   * discloses nothing the gallery does not.
+   */
+  location: string | null;
 }
 
 /**
@@ -259,6 +300,25 @@ export function suggestForPhotograph(
   signal?: AbortSignal,
 ): SuggestionRun {
   const context = contextLine(source.exif);
+  const known = source.location?.trim();
+
+  /*
+   * The photographer's own place name, handed over as fact rather than left
+   * to be re-derived from pixels.
+   *
+   * Phrased as "they say" rather than "this is", because it is their claim
+   * and the model may still add a nearer one — somebody who wrote "Portugal"
+   * is not contradicted by "Cabo de São Vicente". What it must not do is
+   * argue: a second press on a captioned photograph used to be able to
+   * replace a correct place with a worse guess, which is the one way this
+   * feature could take information away from the person who was there.
+   */
+  const told =
+    known === undefined || known === ""
+      ? null
+      : `The photographer says this was taken at: ${known}. Treat that as ` +
+        "true. Use it in the description where it helps, and let your places " +
+        "confirm or refine it rather than contradict it.";
 
   /*
    * Either reason to stop, as one signal.
@@ -293,7 +353,8 @@ export function suggestForPhotograph(
             text:
               "Suggest a title, a description and one or two possible " +
               "places for this photograph." +
-              (context === null ? "" : ` The file records: ${context}.`),
+              (context === null ? "" : ` The file records: ${context}.`) +
+              (told === null ? "" : ` ${told}`),
           },
           {
             /*

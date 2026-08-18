@@ -688,6 +688,17 @@ export interface PhotoSource {
    */
   display_url: string | null;
   exif: PhotoExif | null;
+  /**
+   * The place the photographer has already named, if they have.
+   *
+   * Sent to the model so it stops guessing what it can be told. Before this,
+   * pressing "Suggest details" a second time on a photograph labelled
+   * "Machu Picchu, Peru" re-derived the place from pixels and could disagree
+   * with the person who was standing there. It is the photographer's own
+   * public text — the same string the gallery already prints under the
+   * photograph — so sending it discloses nothing new.
+   */
+  location: string | null;
 }
 
 /**
@@ -709,7 +720,7 @@ export async function getOwnPhotoSource(
   authorId: string,
 ): Promise<PhotoSource | null> {
   const rows = await sql`
-    SELECT p.display_url, p.exif
+    SELECT p.display_url, p.exif, p.location
     FROM photos p
     WHERE p.id = ${id} AND p.author_id = ${authorId};
   `;
@@ -720,5 +731,6 @@ export async function getOwnPhotoSource(
   return {
     display_url: (row["display_url"] as string | null) ?? null,
     exif: (row["exif"] as PhotoExif | null) ?? null,
+    location: (row["location"] as string | null) ?? null,
   };
 }

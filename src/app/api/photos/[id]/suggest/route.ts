@@ -100,7 +100,14 @@ async function readDisplayCopy(url: string): Promise<Uint8Array> {
  */
 type Gate =
   | { refusal: NextResponse; source?: undefined }
-  | { refusal?: undefined; source: { url: string; exif: PhotoExif | null } };
+  | {
+      refusal?: undefined;
+      source: {
+        url: string;
+        exif: PhotoExif | null;
+        location: string | null;
+      };
+    };
 
 /**
  * Everything before the model call, which is the half that can answer for
@@ -165,7 +172,13 @@ async function gate(id: string): Promise<Gate> {
     };
   }
 
-  return { source: { url: source.display_url, exif: source.exif } };
+  return {
+    source: {
+      url: source.display_url,
+      exif: source.exif,
+      location: source.location,
+    },
+  };
 }
 
 /** Put one record on the wire; false once there is nobody to put it on. */
@@ -366,7 +379,10 @@ export async function POST(
    * whole prompt now, and both come from the database, not the caller.
    */
   return new NextResponse(
-    suggestionLines({ image, exif: source.exif }, request.signal),
+    suggestionLines(
+      { image, exif: source.exif, location: source.location },
+      request.signal,
+    ),
     {
       headers: {
         "Cache-Control": "private, no-store, no-transform",

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
-import { fillsFrom, locationToFill, stageOf, suggestionNote } from "./fill";
+import {
+  fillsFrom,
+  locationToFill,
+  pinToDrop,
+  stageOf,
+  suggestionNote,
+} from "./fill";
 
 /**
  * What a suggestion is allowed to do to a form somebody is already typing in.
@@ -165,5 +171,41 @@ describe("locationToFill", () => {
 
   it("has nothing to say about no places", () => {
     expect(locationToFill([], "")).toBeNull();
+  });
+});
+
+describe("pinToDrop", () => {
+  const sure = {
+    name: "Taipei, Taiwan",
+    confidence: "high",
+    reason: "the segmented profile of Taipei 101",
+    point: { lat: 25.08, lng: 121.53 },
+  } as const;
+
+  it("drops a sure guess's point into an empty field", () => {
+    expect(pinToDrop([sure], "")).toEqual({ lat: 25.08, lng: 121.53 });
+  });
+
+  it("never moves a pin somebody placed", () => {
+    // A marked spot is the one thing on this form that is already a decision.
+    expect(pinToDrop([sure], "25.1, 121.5")).toBeNull();
+  });
+
+  it("keeps an unsure guess on its chip", () => {
+    // The globe draws a dot from this. "Less sure" must stay a click.
+    expect(pinToDrop([{ ...sure, confidence: "low" }], "")).toBeNull();
+  });
+
+  it("drops nothing when the guess carried no point", () => {
+    // A model can name a place it cannot locate; that is a name, not a pin.
+    expect(pinToDrop([{ ...sure, point: null }], "")).toBeNull();
+  });
+
+  it("only ever considers the model's first choice", () => {
+    expect(pinToDrop([{ ...sure, confidence: "low" }, sure], "")).toBeNull();
+  });
+
+  it("has nothing to say about no places", () => {
+    expect(pinToDrop([], "")).toBeNull();
   });
 });

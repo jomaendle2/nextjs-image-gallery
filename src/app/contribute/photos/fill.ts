@@ -156,6 +156,36 @@ export function locationToFill(
     : null;
 }
 
+/**
+ * The point to drop into an empty pin field without a click, or null.
+ *
+ * The same rule as `locationToFill`, on the same guess, for the same reason —
+ * and it deliberately did not exist until now. The argument against it was
+ * that a name is text somebody reads and corrects, while a pin is a public
+ * artifact: it becomes the dot the globe draws. That is still true; what
+ * changed is that leaving it behind a second click meant a photographer who
+ * had already accepted "Taipei, Taiwan" then had to press "Put a pin roughly
+ * here" to say the same thing again. Two clicks for one fact.
+ *
+ * The guards are what keep the old argument honest. Only the model's first
+ * choice, only at `high`, only into an empty field, and only when it actually
+ * carried a point — a name without coordinates drops nothing. Undo puts it
+ * back with everything else, and the public half is coarsened to a hundred
+ * kilometres before it is stored, so the dot this produces says roughly where
+ * and never where somebody stood.
+ */
+export function pinToDrop(
+  places: readonly PlaceGuess[],
+  currentValue: string,
+): { lat: number; lng: number } | null {
+  const [top] = places;
+  return top?.confidence === "high" &&
+    top.point !== null &&
+    currentValue.trim() === ""
+    ? top.point
+    : null;
+}
+
 /** The id prefix the coordinate field uses, which is not its field name. */
 const PIN_PREFIX = "pin";
 

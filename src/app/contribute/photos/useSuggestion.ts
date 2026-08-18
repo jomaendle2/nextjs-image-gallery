@@ -7,6 +7,7 @@ import {
   fieldElement,
   fillsFrom,
   locationToFill,
+  pinToDrop,
   type SuggestionStage,
   stageOf,
   suggestionNote,
@@ -240,6 +241,23 @@ export function useSuggestion(
           touched.current.add("location");
           location.value = name;
         }
+      }
+
+      /*
+       * And the pin, on the same guess and under the same rule.
+       *
+       * A photographer who has just watched "Taipei, Taiwan" fill itself in
+       * should not then have to press "Put a pin roughly here" to say the
+       * same thing again. The point goes through the picker rather than the
+       * DOM because that field is controlled — writing `.value` on it would
+       * be overwritten by the next render.
+       */
+      const pin = fieldElement("pin", photoId);
+      const point = pinToDrop(final.places, pin?.value ?? "");
+      if (point !== null) {
+        remember("pin", pin?.value ?? "");
+        touched.current.add("pin");
+        setProposed(proposal(pointText(point)));
       }
 
       setNote(suggestionNote());
