@@ -124,7 +124,23 @@ export default function RootLayout({
      * sees a hydration error for markup we never wrote. Children are still
      * validated; this does not hide real mismatches anywhere else.
      */
-    <html lang="en" suppressHydrationWarning={true}>
+    /*
+      The font variable belongs on `<html>`, not `<body>`.
+
+      `--font-sans` is declared in `globals.css` on `:root`, and its value is
+      `var(--font-geist-sans), …`. With the Geist class on `<body>`, that
+      variable did not exist at `:root` — and a custom property whose value
+      contains an unresolvable `var()` is invalid at computed-value time, so
+      `--font-sans` computed to nothing, `font-family: var(--font-sans)` fell
+      through to Tailwind's default stack, and the downloaded face was never
+      used by anything. Declaring it one element higher is what makes the
+      token resolve.
+    */
+    <html
+      className={geistSans.variable}
+      lang="en"
+      suppressHydrationWarning={true}
+    >
       <head>
         {/*
           Analytics is third-party and on the critical path for nothing, but
@@ -133,7 +149,7 @@ export default function RootLayout({
         */}
         <link href="https://plausible.io" rel="preconnect" />
       </head>
-      <body className={`${geistSans.variable} antialiased`}>
+      <body className="antialiased">
         <PlausibleProvider domain="thebeautyof.earth">
           {children}
           {/*
