@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getAllViewCounts, incrementViewCount } from "@/lib/database";
+import {
+  getAllViewCounts,
+  getViewCount,
+  incrementViewCount,
+} from "@/lib/database";
 import { clientIp, createLimiter } from "@/lib/rate-limit";
 
 /**
@@ -63,27 +67,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     /*
+     * Already counted recently from this address: answer with the current
+     * total rather than an error. The caller is showing a number, not
+     * performing a transaction, and a 429 here would make a refresh look
+     * broken to somebody who did nothing wrong.
+     *
+     * A single-row read, not `getAllViewCounts`. The first version of this
+     * reached for the whole joined table and picked one row out of it, which
+     * made declining to count a photograph cost strictly more than counting
+     * it — the opposite of the point, and worst for exactly the held refresh
+     * key this exists to blunt.
+     */
+    if (!repeatLimiter.check(`${clientIp(request.headers)}:${imageId}`)) {
+      return NextResponse.json({
+        viewCount: await getViewCount(imageId),
+        success: true,
+      });
+    }
+
+    /*
      * Zero comes back for an id that matches no photograph — and also for a
      * database error, which `incrementViewCount` swallows by design. Since
      * the two are indistinguishable here, both answer 200 with a count of
      * zero rather than inventing a 404 that would be wrong half the time.
      * Nothing was written either way; the client simply shows no number.
      */
-    /*
-     * Already counted recently from this address: answer with the current
-     * total rather than an error. The caller is showing a number, not
-     * performing a transaction, and a 429 here would make a refresh look
-     * broken to somebody who did nothing wrong.
-     */
-    if (!repeatLimiter.check(`${clientIp(request.headers)}:${imageId}`)) {
-      const counts = await getAllViewCounts();
-      const current = counts.find((row) => String(row.image_id) === imageId);
-      return NextResponse.json({
-        viewCount: current?.view_count ?? 0,
-        success: true,
-      });
-    }
-
     const viewCount = await incrementViewCount(imageId);
     return NextResponse.json({ viewCount, success: true });
   } catch (error) {

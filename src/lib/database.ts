@@ -43,6 +43,32 @@ export async function incrementViewCount(imageId: string): Promise<number> {
 }
 
 /**
+ * One photograph's count, without incrementing it.
+ *
+ * For the caller that has decided not to count this view but still has to
+ * answer with a number — `/api/views` when the same address asks for the
+ * same photograph again. The first version of that path reached for
+ * `getAllViewCounts`, which reads the whole joined table: a refusal to write
+ * one row became a full-table read, so declining to count cost strictly more
+ * than counting. This is the primary-key lookup it should always have been.
+ *
+ * Zero for an unknown id and zero on failure, matching `incrementViewCount`
+ * — the caller shows no number either way and there is nothing it could
+ * usefully do differently.
+ */
+export async function getViewCount(imageId: string): Promise<number> {
+  try {
+    const result = await sql`
+      SELECT view_count FROM image_views WHERE image_id = ${imageId};
+    `;
+    return (result[0]?.["view_count"] as number | undefined) ?? 0;
+  } catch (error) {
+    console.error("Error reading a view count:", error);
+    return 0;
+  }
+}
+
+/**
  * Every count the gallery could actually display, and nothing else.
  *
  * Joined to `photos` rather than selected outright: this response goes to
