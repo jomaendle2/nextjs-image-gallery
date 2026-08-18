@@ -2,11 +2,9 @@ import { del, put } from "@vercel/blob";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOurBlob } from "@/lib/blob-host";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/photos/caps";
 import { deriveFromBuffer } from "@/lib/photos/derive";
 import { blobIsClaimed, insertDraftPhoto } from "@/lib/photos/repository";
-
-/** Matches the token constraint in /api/uploads/token. */
-const MAX_BYTES = 25 * 1024 * 1024;
 
 const LEADING_SLASH = /^\//;
 
@@ -85,8 +83,8 @@ async function readUpload(url: URL): Promise<Buffer> {
    * this is the part that was simply wasteful.
    */
   const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > MAX_BYTES) {
-    throw new TellTheUser("That file is larger than 25 MB.");
+  if (Number.isFinite(declared) && declared > MAX_UPLOAD_BYTES) {
+    throw new TellTheUser(`That file is larger than ${MAX_UPLOAD_MB} MB.`);
   }
 
   return Buffer.from(await response.arrayBuffer());
@@ -202,8 +200,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
    */
   let derived: Awaited<ReturnType<typeof deriveFromBuffer>>;
   try {
-    if (buffer.byteLength > MAX_BYTES) {
-      throw new TellTheUser("That file is larger than 25 MB.");
+    if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+      throw new TellTheUser(`That file is larger than ${MAX_UPLOAD_MB} MB.`);
     }
     derived = await deriveFromBuffer(buffer);
   } catch (error) {

@@ -1,17 +1,15 @@
 import { type HandleUploadBody, handleUpload } from "@vercel/blob/client";
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentContributor } from "@/lib/auth/session";
-
-/** Photographers upload big originals; 25 MB covers a full-frame JPEG. */
-const MAX_BYTES = 25 * 1024 * 1024;
+import { MAX_UPLOAD_BYTES } from "@/lib/photos/caps";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 /**
  * Issues a short-lived token so the browser can upload straight to Blob.
  *
- * The file never passes through a function: a 25 MB original would otherwise
- * be buffered server-side for no reason. The constraints below are enforced
+ * The file never passes through a function: a full-frame original would
+ * otherwise be buffered server-side for no reason. The constraints below are enforced
  * by Blob itself, because they are baked into the signed token rather than
  * checked by code the client could skip.
  *
@@ -33,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
         return {
           allowedContentTypes: ALLOWED,
-          maximumSizeInBytes: MAX_BYTES,
+          maximumSizeInBytes: MAX_UPLOAD_BYTES,
           addRandomSuffix: true,
           // Read back in the draft route to attribute the photo, so a client
           // cannot claim to be someone else by posting a different author id.

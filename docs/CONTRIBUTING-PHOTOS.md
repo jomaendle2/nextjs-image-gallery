@@ -19,7 +19,7 @@ contributor publishes directly.
    no way to tell it had never had a chance.
 3. Lands on `/contribute/photos` and adds photographs — several at once, by
    picker or by dropping them on the panel. JPEG, PNG, WebP or AVIF, up to
-   25 MB each. The browser uploads straight to storage, so a file is never
+   50 MB each. The browser uploads straight to storage, so a file is never
    re-encoded or shrunk on the way in. They go up one after another rather
    than in parallel, and each reports its own progress; one failing does not
    take the others with it.

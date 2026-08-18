@@ -29,3 +29,34 @@ export const MAX_TECHNIQUE = 600;
 
 /** A place as somebody writes it on a label. */
 export const MAX_LOCATION = 120;
+
+/**
+ * The largest original the site will accept, in bytes.
+ *
+ * Here for the reason the text limits are here: this number had grown three
+ * homes — the token route, the draft route and the upload form — and the
+ * string "25 MB" had grown five more, in two sentences on screen, two error
+ * messages and the contributor guide. Raising it meant editing eight places
+ * and being right in all of them.
+ *
+ * Only one of the three enforces anything a client cannot skip: the token
+ * route bakes it into the signed token, so Blob refuses the request itself.
+ * The draft route's two checks are belt-and-braces against a blob that
+ * arrived another way, and the form's is advisory — it exists so a
+ * photographer learns the file is too big before waiting for the upload.
+ *
+ * Raising the cap changes nothing about what a visitor receives. A 60 MB
+ * original becomes exactly one 3840 px q85 mozjpeg either way
+ * (`DISPLAY_MAX_EDGE` in `derive.ts`); what it changes is peak memory during
+ * ingest, which is why the draft route carries an explicit memory and
+ * duration budget in `vercel.json`.
+ */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/**
+ * The same number as people write it, for prose and error messages.
+ *
+ * Derived rather than typed, so a sentence cannot disagree with the limit it
+ * describes — which is precisely what happened to the sign-in link's expiry.
+ */
+export const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);

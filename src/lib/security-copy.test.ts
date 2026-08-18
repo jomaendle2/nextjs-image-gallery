@@ -74,3 +74,54 @@ describe("I12 — a link's lifetime is stated from LOGIN_TTL_MINUTES", () => {
     }
   });
 });
+
+/**
+ * The same rule for the upload cap, which had grown eight homes.
+ *
+ * Three constants (`token/route.ts`, `draft/route.ts`, `UploadForm.tsx`) and
+ * five sentences — two on screen, two error messages, one in the contributor
+ * guide — all saying 25 MB independently. Raising it meant being right in
+ * eight places at once, which is the shape of change that is quietly wrong in
+ * one of them.
+ *
+ * Named files rather than a sweep of all of them, unlike I12. A sweep would
+ * have to forbid the characters "MB" in prose, and two files legitimately
+ * observe that the stored originals are 9–13 MB while a third enforces an
+ * unrelated payload limit — so the sweep would punish accurate sentences
+ * about different numbers. The control here is narrower than the copy rule:
+ * these three files, and only these, decide what the site accepts.
+ */
+describe("the upload cap is stated from MAX_UPLOAD_BYTES", () => {
+  const ENFORCERS = [
+    ["app", "api", "uploads", "token", "route.ts"],
+    ["app", "api", "photos", "draft", "route.ts"],
+    ["app", "contribute", "photos", "UploadForm.tsx"],
+  ];
+
+  it("every file that enforces a size reads the one constant", () => {
+    for (const parts of ENFORCERS) {
+      expect(read(...parts)).toContain("MAX_UPLOAD_BYTES");
+    }
+  });
+
+  it("none of them computes a byte limit of its own", () => {
+    for (const parts of ENFORCERS) {
+      /*
+       * `n * 1024 * 1024` is how all three used to spell it, and is the only
+       * form in which a second cap could plausibly reappear here.
+       */
+      expect(read(...parts)).not.toMatch(/\d+\s*\*\s*1024\s*\*\s*1024/);
+    }
+  });
+
+  it("the two messages a person reads derive the number", () => {
+    // Not a literal, or the sentence and the limit drift the way the sign-in
+    // link's expiry did — six sentences wrong for months.
+    expect(read("app", "api", "photos", "draft", "route.ts")).toContain(
+      "${MAX_UPLOAD_MB} MB",
+    );
+    expect(read("app", "contribute", "photos", "UploadForm.tsx")).toContain(
+      "MAX_UPLOAD_MB",
+    );
+  });
+});
