@@ -89,15 +89,22 @@ describe("the details route", () => {
      * row by holding down a refresh key could inflate their own payout, and
      * the counter would stop measuring what members read.
      *
-     * The author branch is everything after the marker comment, which is
-     * placed where the member branch has already returned.
+     * The author path is a named function now, and two callers reach it —
+     * an ordinary signed-in non-member, and a member whose own draft the
+     * member query cannot see. That is why this check moved off a positional
+     * slice: "everything after this marker" silently became "everything
+     * after this marker, including the whole of `GET`" the moment the
+     * function was hoisted above it, and the invariant passed by accident
+     * for exactly one commit. A named function has a beginning and an end.
      */
     const body = code(route);
+    const start = body.indexOf("async function answerAsAuthor");
+    expect(start).toBeGreaterThan(-1);
     const authorBranch = body.slice(
-      body.indexOf("memberDetailsLimiter.check(contributor.id)"),
+      start,
+      body.indexOf("export async function GET"),
     );
-    // Comments stripped, and anchored on code: the marker comment above the
-    // branch names `recordMemberView` in order to say it must not be there.
+
     expect(authorBranch).toContain("getMemberDetails(id, {");
     expect(authorBranch).not.toContain("recordMemberView");
   });
@@ -123,10 +130,17 @@ describe("the details route", () => {
 
   it("keys that dedup by member and photograph, not by one or the other", () => {
     // Keyed by member alone, the first photograph a member opened would be
-    // the only one ever counted for them that day.
-    expect(route).toMatch(
-      /memberViewLimiter\.check\(`\$\{member\.email\}:\$\{id\}`\)/,
-    );
+    // the only one ever counted for them that day. The key is built once and
+    // reused, so match its construction rather than the call site.
+    expect(route).toMatch(/const viewKey = `\$\{member\.email\}:\$\{id\}`/);
+    expect(route).toContain("memberViewLimiter.check(viewKey)");
+    /*
+     * And released when the write it stands for fails: the slot is taken
+     * synchronously, before detached work that swallows its own error, so
+     * one transient database failure would otherwise cost this member's view
+     * of this photograph for twenty-five hours.
+     */
+    expect(route).toContain("memberViewLimiter.forget(viewKey)");
   });
 
   it("tells a refused reader whether they are signed in", () => {
@@ -193,5 +207,40 @@ describe("the author branch is disjoint, not a disjunct", () => {
      * past the test that exists to notice exactly this.
      */
     expect(slice).not.toMatch(/export async function getOwn/);
+  });
+});
+
+describe("a refusal settles only what it actually reported", () => {
+  const details = read(
+    "components",
+    "gallery",
+    "carousel",
+    "MemberDetails.tsx",
+  );
+
+  /*
+   * Where this went wrong twice, in the caller rather than in the model.
+   *
+   * `nextSessionAccess` has always had three answers — settle true, settle
+   * false, or learn nothing. The caller reduced its input to two by writing
+   * `refusal.signedIn === true`, which turns "the 403 carried no JSON we
+   * could read" into "not signed in": the session settles as anonymous,
+   * `enabled: sessionIsMember !== false` disables the query for the whole
+   * tab, and a photographer whose first request met Deployment Protection
+   * or a WAF never sees their own notes again — no request made, nothing in
+   * the console.
+   *
+   * A source check because the failure is a *shape*: the third state has to
+   * survive the trip from the wire into the function. Behaviour tests of
+   * `nextSessionAccess` pass either way, which is exactly why they did.
+   */
+  it("does not flatten an unknown signedIn into false", () => {
+    expect(code(details)).not.toMatch(/signedIn\s*===\s*true/);
+  });
+
+  it("settles only on a boolean", () => {
+    expect(code(details)).toMatch(
+      /typeof\s+refusal\.signedIn\s*===\s*"boolean"/,
+    );
   });
 });

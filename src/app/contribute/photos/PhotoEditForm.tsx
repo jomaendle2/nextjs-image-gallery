@@ -317,15 +317,7 @@ export function PhotoEditForm({
         }
         marks={marks}
         photo={photo}
-        suggest={
-          aiOffered ? (
-            <SuggestDetails
-              mapStyleUrl={mapStyleUrl}
-              photoId={photo.id}
-              suggesting={suggesting}
-            />
-          ) : null
-        }
+        suggest={aiOffered ? <SuggestDetails suggesting={suggesting} /> : null}
       />
 
       <MemberFields

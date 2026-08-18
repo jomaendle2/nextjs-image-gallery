@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
-import { fillsFrom, isFillable, stageOf, suggestionNote } from "./fill";
+import { fillsFrom, locationToFill, stageOf, suggestionNote } from "./fill";
 
 /**
  * What a suggestion is allowed to do to a form somebody is already typing in.
@@ -70,12 +70,6 @@ describe("which fields a suggestion writes into", () => {
 
     expect(writes.map(([field]) => field)).toEqual(["description"]);
   });
-
-  it("knows the place and the pin are not fields it fills", () => {
-    expect(isFillable("title")).toBe(true);
-    expect(isFillable("location")).toBe(false);
-    expect(isFillable("pin")).toBe(false);
-  });
 });
 
 describe("what the photographer is told", () => {
@@ -134,5 +128,42 @@ describe("which field the model is on", () => {
     expect(
       stageOf({ title: "Low tide", description: "Waves.", places: [] }),
     ).toBe("description");
+  });
+});
+
+describe("locationToFill", () => {
+  const high = {
+    name: "Sagres, Portugal",
+    confidence: "high",
+    reason: "the lighthouse on the headland",
+    point: null,
+  } as const;
+  const low = {
+    ...high,
+    name: "Peniche, Portugal",
+    confidence: "low",
+  } as const;
+
+  it("fills an empty field with a sure guess", () => {
+    expect(locationToFill([high], "")).toBe("Sagres, Portugal");
+    // Whitespace is an empty field: nobody typed a location made of spaces.
+    expect(locationToFill([high], "  ")).toBe("Sagres, Portugal");
+  });
+
+  it("never overwrites what somebody typed", () => {
+    // A typed word beats a guess, whatever the model's confidence.
+    expect(locationToFill([high], "Cabo de São Vicente")).toBeNull();
+  });
+
+  it("keeps an unsure guess on its chip", () => {
+    // "Less sure" written into a field reads as a fact once it is there.
+    expect(locationToFill([low], "")).toBeNull();
+    // Only the FIRST place may fill — a sure second guess behind an unsure
+    // first would mean the model's own ordering disagreed with itself.
+    expect(locationToFill([low, high], "")).toBeNull();
+  });
+
+  it("has nothing to say about no places", () => {
+    expect(locationToFill([], "")).toBeNull();
   });
 });

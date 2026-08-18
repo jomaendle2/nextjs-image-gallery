@@ -2,6 +2,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
+import { OverlaidChrome } from "@/components/OverlaidChrome";
 import "./globals.css";
 import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
@@ -151,6 +152,14 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <PlausibleProvider domain="thebeautyof.earth">
+          {/*
+            Measures bottom browser chrome that floats over the page without
+            shrinking the viewport — an in-app browser's URL bar. Here rather
+            than in the carousel where the bug was found, because every
+            `safe-b-*` surface on the site reads what it writes, including
+            the unsaved-work bar on a page that has no carousel at all.
+          */}
+          <OverlaidChrome />
           {children}
           {/*
             Deliberately a sibling of `children` and nothing else.

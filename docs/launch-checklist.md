@@ -131,16 +131,14 @@ outstanding, and not something the repository can do for you.
 ### Set `MAPTILER_KEY` — outstanding
 
 **Not set in production.** `vercel env ls production` lists no such variable,
-so on the live site `src/lib/maptiler.ts` returns nothing and both map
-surfaces render their "map unavailable" notice: the location picker in the
-members-only section, and the hint map beside "Suggest details".
+so on the live site `src/lib/maptiler.ts` returns nothing and the location
+picker in the members-only section renders a plain "no map here" line instead
+of a map.
 
 It degrades honestly rather than breaking — coordinates can still be typed by
-hand, and the hint is optional — so this does not block a merge. But the hint
-map is one of the two things the newest feature is *for*, and right now it is
-a blank panel with a sentence in it. It is read on the server and passed down
-as a prop, never as `NEXT_PUBLIC_*`, so setting it does not put the key in a
-client bundle.
+hand — so this does not block a merge. The key is read on the server and
+passed down as a prop, never as `NEXT_PUBLIC_*`, so setting it does not put
+it in a client bundle.
 
 ---
 
@@ -280,9 +278,10 @@ The parts most likely to surprise you, all deliberate:
 ## 6. Verified working, as of 16 August
 
 **These claims are older than the code.** They were verified on 16 August and
-nothing in this section has been re-run since; the branch has taken the whole
-AI place-hint feature, the site and workspace navs, the unsaved-work guard and
-the typeface fix in the meantime. Treat the list as evidence that these paths
+nothing in this section has been re-run since; the branch has taken the AI
+suggestion feature, the site and workspace navs, the unsaved-work guard and
+the typeface fix in the meantime (the place-hint half of the suggestion
+feature has since been removed again). Treat the list as evidence that these paths
 worked once, not as a statement about what is on the branch today.
 
 What *has* been verified since, on the current tree: 480 tests pass,

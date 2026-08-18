@@ -380,6 +380,7 @@ export const PhotoCard = memo(function PhotoCardRow({
   layout,
   onOpen,
   hidden = false,
+  autoOpen = false,
 }: {
   photo: OwnPhotoRow;
   selected?: boolean;
@@ -396,6 +397,22 @@ export const PhotoCard = memo(function PhotoCardRow({
    * Must be stable, like `onSelect`, or `memo` stops holding.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Open this row on arrival — the draft an upload just created.
+   *
+   * Initial state rather than an effect that opens it later, so the form is
+   * there on first paint instead of unfolding a frame after. Read once, on
+   * mount: a stale `?open=` in the URL after the row was closed by hand must
+   * not wrench it open again on the next unrelated re-render.
+   *
+   * "Once" holds because the row never unmounts. `PhotoList` seeds
+   * `everOpened` with this id, so the row stays in the tree — hidden, not
+   * removed — even when the search box stops matching it. Without that seed,
+   * closing the row, filtering it away and clearing the filter would remount
+   * it and the stale parameter would spring it open again. Verified by doing
+   * exactly that.
+   */
+  autoOpen?: boolean;
   /**
    * Rendered, but not shown — an opened row the filter no longer matches.
    *
@@ -432,8 +449,8 @@ export const PhotoCard = memo(function PhotoCardRow({
    * at all. `showing` follows the element's real `open` property, and
    * `hidden` does the hiding that `<details>` cannot do from out here.
    */
-  const [opened, setOpened] = useState(false);
-  const [showing, setShowing] = useState(false);
+  const [opened, setOpened] = useState(autoOpen);
+  const [showing, setShowing] = useState(autoOpen);
 
   const handleToggle = useCallback(
     (event: SyntheticEvent<HTMLDetailsElement>) => {

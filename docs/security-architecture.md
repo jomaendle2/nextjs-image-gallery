@@ -282,40 +282,23 @@ while keeping a real exact point behind the paywall.
 `photos/map.ts`, the one crossing point between rows and payloads, names no
 `precise_` column at all.
 
-### I16 — A coordinate reaches a third party only blunted, and only on purpose
+### I16 — retired with the feature it guarded
 
-*Held by construction, and pinned by a test.*
+*Was: a coordinate reaches a third party only blunted, and only on purpose.*
 
-Everything else on this site keeps coordinates in: the GPS block is never
-read, the public dot is coarsened before it is stored, and the exact pair
-never leaves a member-gated route. "Suggest details" is the one place a
-coordinate travels *outward*, because a photographer can point at roughly
-where they were so a model has something better to go on than the colour of
-a cliff.
+The photographer's hint — a typed phrase and an optionally pointed-at area
+sent alongside "Suggest details" — was the one place a coordinate travelled
+*outward*, and I16 held it to two conditions: blunted inside `readHint`, the
+only path from a request body to a prompt; and existing only when somebody
+typed or clicked one. The feature is gone (it read as a second location field
+on a form that already had one, and confused the first real user), and with
+it went the request body itself: the suggest route no longer parses input at
+all, so the prompt is built entirely from the stored display copy and EXIF.
 
-Two conditions, and both are structural rather than remembered:
-
-- **Blunted.** `ai/hint.ts` rounds to one decimal place — about eleven
-  kilometres — inside `readHint`, which is the only path from a request body
-  to a prompt. `hintLine` reads nothing but what `readHint` returned, so
-  there is no route through this feature that carries a finer number.
-- **On purpose.** A hint exists only when somebody typed or clicked one. It
-  is never derived from a file, never defaulted from the pin the form
-  already holds, and never sent because a map happened to be open.
-
-Deliberately **not** `coarsen()`, and this is the part worth arguing.
-Borrowing it would look like reuse and would be a coupling: `CELL_KM` is
-frozen against every dot already drawn on the globe, and a prompt is not a
-reason anybody should ever have to weigh when deciding whether that number
-can move. The two jobs also differ in lifetime — one is stored for ever and
-must stay stable, the other lives for a single request and is never drawn.
-I15's count of `coarsen` call sites stays at two.
-
-The hint is also **never stored**, on either side. The box it comes from has
-no `name` attribute, so it is not in the `FormData` `savePhoto` reads — the
-guarantee is the absence of a field rather than a promise to clear one.
-
----
+That is a strictly smaller surface than the invariant used to defend. If a
+hint-shaped feature ever returns, I16 returns with it — the retired tests sat
+at the end of `security-location.test.ts`, where a note now points back to
+the commit that removed both.
 
 ## 4. What follows from all this
 

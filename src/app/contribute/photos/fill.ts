@@ -1,4 +1,4 @@
-import type { PhotoSuggestion } from "@/lib/ai/suggestion";
+import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 
 /**
  * What a suggestion does to a form, decided away from the form.
@@ -68,11 +68,6 @@ export function fillsFrom(
   return writes;
 }
 
-/** Whether a field is one the stream writes on its own. */
-export function isFillable(field: TouchedField): field is FillableField {
-  return FILLABLE.includes(field as FillableField);
-}
-
 /**
  * Which field the model is on, so the wait can say something truer than
  * "Looking…".
@@ -132,4 +127,60 @@ const NOTHING_SAVED =
 
 export function suggestionNote(): string {
   return NOTHING_SAVED;
+}
+
+/**
+ * The place to write into an empty Location field without a click, or null.
+ *
+ * `PlaceChoices` was built on "the guess lands on a button, not in a box",
+ * and that rule was written when the box might hold something. When the box
+ * is empty and the model said `high`, the choice on offer was "click the
+ * obviously right chip or leave a blank" — a click carrying no information.
+ * The consent already happened: pressing "Suggest details" is the ask, and
+ * this is part of the answer arriving.
+ *
+ * The two guards carry the old rule's remaining weight. A field with
+ * anything in it is never touched — a typed word beats a guess — and a `low`
+ * guess still lands on a chip, because "less sure" written into a field
+ * reads as a fact once it is there.
+ */
+export function locationToFill(
+  places: readonly PlaceGuess[],
+  currentValue: string,
+): string | null {
+  const [top] = places;
+  return top !== undefined &&
+    top.confidence === "high" &&
+    currentValue.trim() === ""
+    ? top.name
+    : null;
+}
+
+/** The id prefix the coordinate field uses, which is not its field name. */
+const PIN_PREFIX = "pin";
+
+/**
+ * One of the edit form's inputs, found by id — the same mechanism
+ * `PhotoEditForm` uses to move the cursor to a refused field.
+ *
+ * Here rather than in `useSuggestion`, because the mapping from a
+ * `TouchedField` to an element id is the same knowledge as the `TouchedField`
+ * union itself, and that lives here. The hook is left holding the part with a
+ * shape worth reading on its own: a stream arriving into boxes somebody may
+ * already have typed in.
+ *
+ * The `instanceof` pair is not ceremony. `getElementById` will happily return
+ * whatever else has claimed that id, and writing `.value` onto an element
+ * with no such property fails silently and for ever.
+ */
+export function fieldElement(
+  field: TouchedField,
+  photoId: string,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const prefix = field === "pin" ? PIN_PREFIX : field;
+  const element = document.getElementById(`${prefix}-${photoId}`);
+  return element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement
+    ? element
+    : null;
 }

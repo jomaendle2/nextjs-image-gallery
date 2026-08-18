@@ -167,19 +167,16 @@ export const PROCESSORS = [
    * button on their own draft, so nothing a visitor does reaches it and no
    * consent banner follows from it.
    *
-   * The hint is named because it is the one thing here that a photographer
-   * *composes* rather than something the file already held. They may type a
-   * few words about where the picture was taken, and they may point at a
-   * rough area on a map — and a coordinate leaving this server is the
-   * category this site is most careful about, so it is disclosed rather than
-   * folded into "a photograph". It is blunted to about eleven kilometres
-   * before it is sent, it is sent only when somebody pointed at it on
-   * purpose, and it is never stored on either side.
+   * The data line used to also name a photographer's hint — a typed phrase
+   * and an optionally pointed-at area, blunted before sending. The hint
+   * feature is gone (it read as a second location field and confused the
+   * first real user), so the request now carries nothing anybody composed:
+   * only the stored copy and what the file already held.
    */
   {
     name: "Vercel AI Gateway (Google, Anthropic)",
     role: "Suggested titles, descriptions and places, on the photographer upload page only",
-    data: "A photograph, its camera settings, and any hint its photographer typed or pointed at — an approximate area, never an exact point",
+    data: "A photograph and its camera settings — never the original file, and never a coordinate",
     basis: "Contract with contributors (Art. 6(1)(b) GDPR)",
   },
   {

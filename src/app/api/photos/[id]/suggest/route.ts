@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { readHint } from "@/lib/ai/hint";
 import { aiSuggestionsConfigured } from "@/lib/ai/offer";
 import { encodeRecord, NDJSON, OUR_FAULT_MESSAGE } from "@/lib/ai/stream";
 import {
@@ -358,18 +357,16 @@ export async function POST(
    * chunk at the end.
    */
   /*
-   * The hint, if the photographer offered one.
-   *
-   * Read after the gates and after the photograph, because it is the least
-   * important thing in the request: a body we cannot parse is not a refusal,
-   * it is a suggestion made without a steer. `readHint` is the only path
-   * from this body to the prompt, and it is where a coordinate is blunted —
-   * I16 — so nothing downstream of here has a precise one to leak.
+   * No body is read. The request used to carry a photographer's hint — a few
+   * typed words and an optionally pointed-at area — which was the one path
+   * from a request body to a prompt, guarded by its own rounding invariant.
+   * The feature confused its first real user (a second location-ish input on
+   * a form that already had one) and is gone; with it went the only reason
+   * this route ever parsed input. The photograph and its stored EXIF are the
+   * whole prompt now, and both come from the database, not the caller.
    */
-  const hint = readHint(await request.json().catch(() => null));
-
   return new NextResponse(
-    suggestionLines({ image, exif: source.exif, hint }, request.signal),
+    suggestionLines({ image, exif: source.exif }, request.signal),
     {
       headers: {
         "Cache-Control": "private, no-store, no-transform",

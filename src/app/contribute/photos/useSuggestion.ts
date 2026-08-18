@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Hint } from "@/lib/ai/hint";
 import { OUR_FAULT_MESSAGE, type SuggestionRecord } from "@/lib/ai/stream";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 import {
-  type FillableField,
+  fieldElement,
   fillsFrom,
+  locationToFill,
   type SuggestionStage,
   stageOf,
   suggestionNote,
@@ -34,29 +34,6 @@ import { openSuggestion } from "./suggestRequest";
  * controlled inside `LocationPicker`, so it is changed by handing that
  * component a value rather than by writing to the element.
  */
-
-/** The id prefix the coordinate field uses, which is not its field name. */
-const PIN_PREFIX = "pin";
-
-/**
- * The inputs, found by id — the same mechanism `PhotoEditForm` uses to move
- * the cursor to a refused field.
- *
- * The `instanceof` pair is not ceremony. `getElementById` will happily return
- * whatever else has claimed that id, and writing `.value` onto an element
- * with no such property fails silently and for ever.
- */
-function fieldElement(
-  field: TouchedField,
-  photoId: string,
-): HTMLInputElement | HTMLTextAreaElement | null {
-  const prefix = field === "pin" ? PIN_PREFIX : field;
-  const element = document.getElementById(`${prefix}-${photoId}`);
-  return element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement
-    ? element
-    : null;
-}
 
 /** A line off the wire, once we have decided it is one of ours. */
 function asRecord(value: unknown): SuggestionRecord | null {
@@ -91,7 +68,7 @@ export interface Suggesting {
   places: PlaceGuess[];
   /** Whether an answer has landed, so an empty list can be said out loud. */
   answered: boolean;
-  ask: (hint: Hint) => void;
+  ask: () => void;
   undo: () => void;
   /** Put a candidate's name in the Location field. */
   takeName: (place: PlaceGuess) => void;
@@ -165,7 +142,7 @@ export function useSuggestion(
    * done since it was last pressed. A place somebody accepted from a chip
    * two runs ago belongs to the second answer and not to the first.
    */
-  const touched = useRef(new Set<FillableField>());
+  const touched = useRef(new Set<TouchedField>());
 
   /** Remember what a field held, the first time this feature changes it. */
   const remember = useCallback((field: TouchedField, current: string) => {
@@ -210,7 +187,7 @@ export function useSuggestion(
             }
           }
           before.current.delete(field);
-          touched.current.delete(field as FillableField);
+          touched.current.delete(field);
         }
       }
       setCanUndo(before.current.size > 0);
@@ -240,12 +217,34 @@ export function useSuggestion(
        */
       setAnswered(!salvaged);
 
-      const kept = new Set(fillsFrom(final).map(([field]) => field));
+      const kept = new Set<TouchedField>(
+        fillsFrom(final).map(([field]) => field),
+      );
       putBack([...touched.current].filter((field) => !kept.has(field)));
+
+      // A sure place fills an empty Location field; `locationToFill` holds
+      // the decision, this is only the write. Undo covers it like the rest.
+      const location = fieldElement("location", photoId);
+      if (location !== null) {
+        const name = locationToFill(final.places, location.value);
+        if (name !== null) {
+          remember("location", location.value);
+          /*
+           * Recorded as this run's, so the failure path sweeps it. A stream
+           * dying after this write would otherwise restore title and
+           * description — under a message promising nothing changed — and
+           * leave the guess in the Location field with its chips cleared.
+           * `touched` was `Set<FillableField>`, which could not hold
+           * "location" at all; `TouchedField` is what lets it be swept.
+           */
+          touched.current.add("location");
+          location.value = name;
+        }
+      }
 
       setNote(suggestionNote());
     },
-    [write, putBack],
+    [write, putBack, photoId, remember],
   );
 
   /**
@@ -300,70 +299,67 @@ export function useSuggestion(
     [apply],
   );
 
-  const ask = useCallback(
-    (hint: Hint) => {
-      /*
-       * Whatever was running stops now.
-       *
-       * Pressing the button twice used to leave two live streams writing to
-       * the same three inputs, and the loser could land last.
-       */
-      running.current?.abort();
-      const controller = new AbortController();
-      running.current = controller;
-      const { signal } = controller;
+  const ask = useCallback(() => {
+    /*
+     * Whatever was running stops now.
+     *
+     * Pressing the button twice used to leave two live streams writing to
+     * the same three inputs, and the loser could land last.
+     */
+    running.current?.abort();
+    const controller = new AbortController();
+    running.current = controller;
+    const { signal } = controller;
 
-      setError(null);
-      setNote(null);
-      setStage("looking");
-      setPlaces([]);
-      setAnswered(false);
-      touched.current = new Set();
+    setError(null);
+    setNote(null);
+    setStage("looking");
+    setPlaces([]);
+    setAnswered(false);
+    touched.current = new Set();
 
-      const asking = async () => {
-        const body = await openSuggestion(photoId, hint, signal);
+    const asking = async () => {
+      const body = await openSuggestion(photoId, signal);
+      onFilled();
+      await consume(body, signal);
+    };
+
+    asking()
+      .catch((cause: unknown) => {
+        /*
+         * An abandoned run says nothing and puts nothing back.
+         *
+         * It has already been replaced by a newer run or its row is gone,
+         * so both halves of the ordinary failure path would be wrong here:
+         * `putBack` would restore this run's remembered values over fields
+         * the *newer* run is currently writing, and the error notice would
+         * accuse the feature of failing when the photographer simply
+         * pressed the button again.
+         */
+        if (signal.aborted) {
+          return;
+        }
+
+        /*
+         * The form goes back to what it said before the button was
+         * pressed. The message promises that nothing has been changed
+         * either way, and a half-written title left in the box would make
+         * that untrue.
+         */
+        putBack([...touched.current]);
+        setPlaces([]);
+        setAnswered(false);
+        setNote(null);
+        setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
+      })
+      .finally(() => {
+        if (signal.aborted) {
+          return;
+        }
+        setStage(null);
         onFilled();
-        await consume(body, signal);
-      };
-
-      asking()
-        .catch((cause: unknown) => {
-          /*
-           * An abandoned run says nothing and puts nothing back.
-           *
-           * It has already been replaced by a newer run or its row is gone,
-           * so both halves of the ordinary failure path would be wrong here:
-           * `putBack` would restore this run's remembered values over fields
-           * the *newer* run is currently writing, and the error notice would
-           * accuse the feature of failing when the photographer simply
-           * pressed the button again.
-           */
-          if (signal.aborted) {
-            return;
-          }
-
-          /*
-           * The form goes back to what it said before the button was
-           * pressed. The message promises that nothing has been changed
-           * either way, and a half-written title left in the box would make
-           * that untrue.
-           */
-          putBack([...touched.current]);
-          setPlaces([]);
-          setAnswered(false);
-          setNote(null);
-          setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
-        })
-        .finally(() => {
-          if (signal.aborted) {
-            return;
-          }
-          setStage(null);
-          onFilled();
-        });
-    },
-    [photoId, onFilled, consume, putBack],
-  );
+      });
+  }, [photoId, onFilled, consume, putBack]);
 
   const undo = useCallback(() => {
     putBack([...before.current.keys()]);

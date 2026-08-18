@@ -1,6 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { getCurrentContributor, getCurrentMember } from "@/lib/auth/session";
-import { isOwner } from "@/lib/auth/types";
+import { type Contributor, isOwner } from "@/lib/auth/types";
 import { recordMemberView } from "@/lib/members/repository";
 import { getMemberDetails } from "@/lib/photos/repository";
 import { memberDetailsLimiter, memberViewLimiter } from "@/lib/rate-limit";
@@ -21,6 +21,58 @@ import { memberDetailsLimiter, memberViewLimiter } from "@/lib/rate-limit";
  * feature that serves subscribers — the same reasoning that keeps
  * authentication out of middleware in this codebase.
  */
+/**
+ * A photographer reading their own writing, and never the view counter.
+ *
+ * Its own function because two paths reach it: an ordinary signed-in
+ * non-member, and a member whose own draft the member query cannot see —
+ * `published_at IS NOT NULL` is in that query, so buying a membership used
+ * to cost a photographer the ability to read their own unpublished notes.
+ * One function means the second path cannot drift from the first, and in
+ * particular cannot acquire a `recordMemberView` the first does not have.
+ */
+async function answerAsAuthor(
+  id: string,
+  contributor: Contributor,
+): Promise<NextResponse> {
+  // Same limiter instance, keyed by contributor id — matching
+  // `suggestLimiter.check(contributor.id)`, the other per-photographer gate.
+  if (!memberDetailsLimiter.check(contributor.id)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again shortly." },
+      { status: 429 },
+    );
+  }
+
+  const own = await getMemberDetails(id, {
+    contributorId: contributor.id,
+    isOwner: isOwner(contributor),
+  });
+
+  /*
+   * Somebody else's photograph, or none. A refusal rather than a 404,
+   * because from here the two are the same fact and the interface treats
+   * them the same way.
+   *
+   * `signedIn: true` is the load-bearing half: it tells the panel that this
+   * no is about *this photograph*, not about the session, so the next
+   * photograph is still worth asking about. Without it, a photographer who
+   * opened a colleague's work first would never see their own notes again
+   * for the life of the tab.
+   */
+  if (own === null) {
+    return NextResponse.json(
+      { access: "none", signedIn: true },
+      { status: 403 },
+    );
+  }
+
+  return NextResponse.json(
+    { access: "author", ...own },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -85,11 +137,33 @@ export async function GET(
     }
 
     const details = await getMemberDetails(id);
+
+    /*
+     * A member who is also the author falls through rather than getting a
+     * 404 on their own draft.
+     *
+     * The member branch returns before the contributor lookup happens, and
+     * the member query filters `published_at IS NOT NULL` — so a
+     * photographer who happens to hold a membership was told their own
+     * unpublished photograph did not exist, while the same photographer
+     * without a membership was shown it. Buying a membership must not take
+     * a capability away.
+     *
+     * Falling through rather than widening the member query, because the
+     * two questions stay separate: the member branch keeps its public
+     * conditions exactly as they were, and the author branch below answers
+     * the ownership question it was built for — including the view counter
+     * staying out of it.
+     */
     if (details === null) {
-      return NextResponse.json(
-        { error: "No such photograph." },
-        { status: 404 },
-      );
+      const author = await getCurrentContributor();
+      if (author === null) {
+        return NextResponse.json(
+          { error: "No such photograph." },
+          { status: 404 },
+        );
+      }
+      return await answerAsAuthor(id, author);
     }
 
     /*
@@ -112,11 +186,21 @@ export async function GET(
      * finger on the refresh key added a view per press, and these counts
      * divide a revenue pool between photographers.
      */
-    if (memberViewLimiter.check(`${member.email}:${id}`)) {
+    const viewKey = `${member.email}:${id}`;
+    if (memberViewLimiter.check(viewKey)) {
       after(async () => {
         try {
           await recordMemberView(id);
         } catch (error) {
+          /*
+           * The slot goes back. It was consumed synchronously above, before
+           * the write it stands for — so without this a single transient
+           * Neon failure cost this member's view of this photograph for the
+           * next twenty-five hours, silently, in the numbers that divide a
+           * revenue pool. `useRecordView` lifts its own client-side guards
+           * on failure for exactly this reason.
+           */
+          memberViewLimiter.forget(viewKey);
           console.error("Could not record a member view:", error);
         }
       });
@@ -177,40 +261,5 @@ export async function GET(
     );
   }
 
-  // Same limiter instance, keyed by contributor id — matching
-  // `suggestLimiter.check(contributor.id)`, the other per-photographer gate.
-  if (!memberDetailsLimiter.check(contributor.id)) {
-    return NextResponse.json(
-      { error: "Too many requests. Try again shortly." },
-      { status: 429 },
-    );
-  }
-
-  const own = await getMemberDetails(id, {
-    contributorId: contributor.id,
-    isOwner: isOwner(contributor),
-  });
-
-  /*
-   * Somebody else's photograph, or none. A refusal rather than a 404,
-   * because from here the two are the same fact and the interface treats
-   * them the same way.
-   *
-   * `signedIn: true` is the load-bearing half: it tells the panel that this
-   * no is about *this photograph*, not about the session, so the next
-   * photograph is still worth asking about. Without it, a photographer who
-   * opened a colleague's work first would never see their own notes again
-   * for the life of the tab.
-   */
-  if (own === null) {
-    return NextResponse.json(
-      { access: "none", signedIn: true },
-      { status: 403 },
-    );
-  }
-
-  return NextResponse.json(
-    { access: "author", ...own },
-    { headers: { "Cache-Control": "private, no-store" } },
-  );
+  return await answerAsAuthor(id, contributor);
 }

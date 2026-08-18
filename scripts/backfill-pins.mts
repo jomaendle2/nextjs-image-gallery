@@ -25,11 +25,17 @@
 import process from "node:process";
 import { sql } from "../src/lib/database.ts";
 import { coarsen } from "../src/lib/photos/coarsen.ts";
-import { confirmDestructive } from "./guard.mts";
+import { consumeApplyFlag, databaseHost } from "./guard.mts";
 
-confirmDestructive(
-  "rewrite coarse coordinates on existing photographs in this database",
-);
+/*
+ * The plan is printed before anything is written, so `--apply` is a decision
+ * taken with the coordinates on screen rather than ahead of them.
+ * `confirmDestructive` refuses too early for that — it exits before the rows
+ * are read — so this borrows its flag and prints its own banner.
+ */
+const apply = consumeApplyFlag();
+console.log(`\n  Target database: ${databaseHost()}`);
+console.log(apply ? "  Mode: WRITING\n" : "  Mode: dry run (pass --apply)\n");
 
 const PINS: Record<string, { at: [number, number]; note: string }> = {
   "1": { at: [-8.8206, 115.0889], note: "Bali — Uluwatu coast" },
@@ -51,6 +57,38 @@ const PINS: Record<string, { at: [number, number]; note: string }> = {
   "14": { at: [9.75, 100.03], note: "Koh Phangan" },
 };
 
+/**
+ * Places named publicly by a photographer, drawn as a dot and nothing more.
+ *
+ * The difference from `PINS` above is the whole reason this is a second
+ * table rather than four more rows in the first, and it is a difference
+ * about consent rather than about data.
+ *
+ * `PINS` writes `precise_lat`/`precise_lng` as well — the member-only
+ * column the form labels "Where you stood". That was defensible for the
+ * fourteen photographs above because they are the operator's own, and
+ * putting a landmark centre in your own row is a note to yourself.
+ *
+ * These four are somebody else's. Writing a centroid into "where you stood"
+ * on another photographer's work would claim, to every paying member, a spot
+ * they never marked — and it would flip `has_member_details`, so the
+ * photograph would start advertising member content that consists entirely
+ * of our guess. The coarse dot carries no such claim: `/globe` describes it
+ * as roughly where somebody was, it is a cell about a hundred kilometres
+ * across, and it is derived here from a place name the photographer chose to
+ * publish. That is a restatement of what they already said, at lower
+ * precision, which is the one direction this is safe in.
+ *
+ * If one of them wants an exact point, the picker is one click and it
+ * overwrites this.
+ */
+const PLACES: Record<string, { at: [number, number]; note: string }> = {
+  qIDJrB27r1Qf: { at: [-25.6866, -54.4445], note: "Iguazu Falls" },
+  "-maJXk5ZP3nQ": { at: [-50.4967, -73.1377], note: "Perito Moreno glacier" },
+  aAewyCdbMOf6: { at: [-50.9423, -73.4068], note: "Torres del Paine" },
+  G6n1cUoBwg2b: { at: [-13.1631, -72.545], note: "Machu Picchu" },
+};
+
 const rows = await sql`
   SELECT id, title, location FROM photos WHERE published_at IS NOT NULL
   ORDER BY id;
@@ -60,24 +98,61 @@ let marked = 0;
 for (const row of rows) {
   const id = row["id"] as string;
   const pin = PINS[id];
-  if (pin === undefined) {
+  const place = PLACES[id];
+  const entry = pin ?? place;
+
+  if (entry === undefined) {
     console.log(`skip ${id} — no coordinate listed for "${row["location"]}"`);
   } else {
-    const [lat, lng] = pin.at;
-    const coarse = coarsen(lat, lng);
-    await sql`
-      UPDATE photos
-         SET precise_lat = ${lat}, precise_lng = ${lng},
-             coarse_lat = ${coarse.lat}, coarse_lng = ${coarse.lng}
-       WHERE id = ${id};
-    `;
+    await mark(id, entry, pin !== undefined, String(row["title"]));
     marked += 1;
-    console.log(
-      `${id.padStart(2)}  ${String(row["title"]).padEnd(20)}` +
-        ` ${lat}, ${lng}  ->  ${coarse.lat}, ${coarse.lng}   (${pin.note})`,
-    );
   }
 }
 
-console.log(`\nMarked ${marked} of ${rows.length} published photographs.`);
+/** One photograph: the dot always, the member-only pair only for a `PINS`. */
+async function mark(
+  id: string,
+  entry: { at: [number, number]; note: string },
+  exact: boolean,
+  title: string,
+): Promise<void> {
+  const [lat, lng] = entry.at;
+  const coarse = coarsen(lat, lng);
+
+  if (apply) {
+    /*
+     * Two statements rather than one with a conditional fragment: a tagged
+     * template cannot be spliced into a value slot, and the difference
+     * between them — whether the member-only pair is written at all — is
+     * exactly the distinction the two tables exist to keep.
+     */
+    if (exact) {
+      await sql`
+        UPDATE photos
+           SET precise_lat = ${lat}, precise_lng = ${lng},
+               coarse_lat = ${coarse.lat}, coarse_lng = ${coarse.lng}
+         WHERE id = ${id};
+      `;
+    } else {
+      await sql`
+        UPDATE photos
+           SET coarse_lat = ${coarse.lat}, coarse_lng = ${coarse.lng}
+         WHERE id = ${id};
+      `;
+    }
+  }
+
+  console.log(
+    `${id.padStart(14)}  ${title.slice(0, 20).padEnd(20)}` +
+      ` ${lat}, ${lng}  ->  ${coarse.lat}, ${coarse.lng}` +
+      `   ${exact ? "dot + exact" : "dot only  "}  (${entry.note})`,
+  );
+}
+
+console.log(
+  `\n${apply ? "Marked" : "Would mark"} ${marked} of ${rows.length} published photographs.`,
+);
+if (!apply) {
+  console.log("Dry run. Nothing was changed. Pass --apply to write.\n");
+}
 process.exit(0);

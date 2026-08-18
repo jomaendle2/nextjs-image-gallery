@@ -304,8 +304,8 @@ export function LocationPicker({
 
       {styleUrl === null ? (
         /*
-          A plain line rather than a `Notice`, following `HintMap`: three
-          tones exist on this site and none of them is "by the way". A
+          A plain line rather than a `Notice`: three tones exist on this
+          site and none of them is "by the way". A
           warning border made the permanent state of an optional field the
           loudest thing on the form, in engineer language — "this deployment"
           is not a fact about the photographer or about their photograph, and

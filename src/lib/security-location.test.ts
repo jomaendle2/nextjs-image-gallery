@@ -147,78 +147,18 @@ describe("I15 — a public payload carries only coarsened points", () => {
   });
 });
 
-describe("I16 — a coordinate reaches a third party only blunted, and on purpose", () => {
-  const hint = read("lib", "ai", "hint.ts");
-
-  /*
-   * The one outbound coordinate on this site.
-   *
-   * Everything else about this feature keeps things in — the GPS block is
-   * never read, the public dot is coarsened before it is stored, the exact
-   * pair never leaves a member-gated route. A photographer pointing at
-   * roughly where they were is the exception, and it is an exception with
-   * two conditions on it: blunt, and asked for.
-   */
-  it("the hint is rounded before it can reach a prompt", () => {
-    expect(hint).toMatch(/Math\.round\([\s\S]{0,80}HINT_PLACES/);
-    expect(hint).toContain("const HINT_PLACES = 10");
-  });
-
-  /*
-   * The rounding is inside the reader rather than beside it, so there is no
-   * path from a request body to a prompt that skips it. If `hintLine` ever
-   * starts reading a raw body instead of a `Hint`, this is where that shows.
-   */
-  it("the prompt fragment is built from what the reader returned", () => {
-    const line = hint.slice(hint.indexOf("export function hintLine"));
-    expect(line).toContain("hint.near.lat");
-    expect(line).not.toMatch(/JSON\.parse|request|body/);
-  });
-
-  /*
-   * Not `coarsen`, and this is the reuse that must not happen.
-   *
-   * `CELL_KM` is frozen against every dot already drawn on the globe. A
-   * prompt is not a reason anybody should have to weigh when deciding
-   * whether that number can move, and I15 above counts the call sites — so
-   * borrowing it here would loosen an invariant to save four lines.
-   */
-  it("the hint does not borrow the published dot's blurring", () => {
-    /*
-     * `code()`, because the file explains at length why it does not do this
-     * and a test that punishes explaining the rule is a test that gets the
-     * explanation deleted. Same reason I15's own call-site count uses it.
-     */
-    expect(code(hint)).not.toMatch(/from "@\/lib\/photos\/coarsen"/);
-    expect(code(hint)).not.toMatch(/\bcoarsen\s*\(/);
-  });
-
-  /*
-   * The route reads the body through `readHint` and hands the result on. It
-   * must not reach into the parsed body itself, which is how a precise pair
-   * would get past the rounding while still looking like a hint.
-   */
-  it("the suggest route passes the body through the reader", () => {
-    const route = read("app", "api", "photos", "[id]", "suggest", "route.ts");
-    expect(route).toContain("readHint(");
-    expect(route).toMatch(/const hint = readHint\(/);
-    expect(route).not.toMatch(/body\.(near|lat|lng)/);
-  });
-
-  /*
-   * Never stored, and never stored *by construction*: a control with no
-   * `name` is not in the `FormData` the save action reads, whatever anybody
-   * later does to the handler. A promise to clear the box would be a
-   * promise; this is an absence.
-   */
-  it("the hint box submits nothing, because it has no name", () => {
-    const details = read("app", "contribute", "photos", "SuggestDetails.tsx");
-    const box = details.slice(
-      details.indexOf("<input"),
-      details.indexOf("/>", details.indexOf("<input")),
-    );
-    expect(box.length).toBeGreaterThan(0);
-    expect(box).toContain("id={hintId}");
-    expect(box).not.toMatch(/\bname=/);
-  });
-});
+/*
+ * I16 — a coordinate reaches a third party only blunted — is retired with
+ * the feature it guarded. The photographer's hint (a typed phrase and an
+ * optionally pointed-at area sent alongside "Suggest details") was the one
+ * outbound coordinate on this site, and it carried four invariants: rounded
+ * before the prompt, rounded inside the reader, never borrowing `coarsen`,
+ * never named into the form's `FormData`. The hint is gone end to end —
+ * `hint.ts`, `HintMap.tsx`, the request body, the prompt line — so the data
+ * path those invariants watched no longer exists, and the suggest route no
+ * longer reads a body at all.
+ *
+ * If a hint-shaped feature ever returns, so must these, and `hint.test.ts`
+ * beside them; this comment is the pointer back to the commit that removed
+ * both.
+ */

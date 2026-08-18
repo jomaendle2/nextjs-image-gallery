@@ -158,12 +158,26 @@ export function MemberDetails({ photoId }: { photoId: string }) {
           .json()
           .then((parsed: unknown) => parsed as Details)
           .catch(() => ({ access: "none" }) as Details);
+
         /*
-         * A refusal, and whether it is final. `nextSessionAccess` returns
-         * null for a signed-in reader, which leaves the flag unknown and the
-         * query enabled — the next photograph may be one of theirs.
+         * Three states, not two, and the missing third was a bug that did
+         * the opposite of what the paragraph above promises.
+         *
+         * `refusal.signedIn === true` collapses "we could not tell" into
+         * "not signed in" — so an unparseable 403, or any 403 whose JSON
+         * simply lacks the field, settled the session as anonymous. That
+         * disables `photoDetails` for the whole tab (`enabled:
+         * sessionIsMember !== false`), and a photographer whose first
+         * request met Deployment Protection or a WAF would never see their
+         * own notes again: no request made, nothing in the console.
+         *
+         * Only a `boolean` settles anything. `undefined` means the refusal
+         * told us nothing about the session, which is exactly the state
+         * `nextSessionAccess` has `null` for — so we do not call it.
          */
-        settle("none", refusal.signedIn === true);
+        if (typeof refusal.signedIn === "boolean") {
+          settle("none", refusal.signedIn);
+        }
         return { access: "none" };
       }
       if (!response.ok) {

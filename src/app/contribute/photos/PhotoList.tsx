@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import {
   type ChangeEvent,
   type ReactNode,
@@ -121,6 +122,17 @@ export function PhotoList({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PhotoFilter>("all");
+
+  /*
+   * The draft a finished upload asks to have opened, from `?open=`.
+   *
+   * `UploadForm` writes the first new draft's id there so the photographer
+   * lands *in* the editor rather than beside it — the batch used to end on
+   * a refreshed list and a hunt for the row you just made. A stale or
+   * made-up id matches no row and opens nothing; `PhotoCard` reads the flag
+   * once, on mount, so closing the row by hand is not fought by the URL.
+   */
+  const autoOpenId = useSearchParams().get("open");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
 
@@ -279,8 +291,17 @@ export function PhotoList({
    * Only grows, and only ever holds rows somebody actually opened, so the
    * `INITIAL_ROWS` window still does its job for the untouched hundred.
    */
-  const [everOpened, setEverOpened] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  /*
+   * Seeded with the auto-opened row, rather than waiting to be told about it.
+   *
+   * `PhotoCard` reports a *clicked*-open row through `noteOpened`, because
+   * the list cannot know about a click. It can know about this one — it is
+   * the list that decided which row `?open=` names — so an effect in the
+   * child telling the parent a fact the parent supplied would be a round
+   * trip through the tree for nothing, and one that lands a render late.
+   */
+  const [everOpened, setEverOpened] = useState<ReadonlySet<string>>(() =>
+    autoOpenId === null ? new Set() : new Set([autoOpenId]),
   );
 
   /* Stable, or `PhotoCard`'s `memo` stops holding. */
@@ -433,6 +454,7 @@ export function PhotoList({
         {shown.map(({ photo, hidden }) => (
           <PhotoCard
             aiOffered={aiOffered}
+            autoOpen={photo.id === autoOpenId}
             hidden={hidden}
             layout={layout}
             mapStyleUrl={mapStyleUrl}

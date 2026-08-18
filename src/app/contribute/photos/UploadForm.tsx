@@ -22,6 +22,7 @@ import {
   retryBatch,
 } from "./upload-batch";
 import { useDropZone } from "./useDropZone";
+import { Why } from "./Why";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/avif";
 const ACCEPTED_TYPES = new Set(ACCEPT.split(","));
@@ -36,6 +37,67 @@ const ACCEPTED_TYPES = new Set(ACCEPT.split(","));
  * saturates the connection, makes every progress bar meaningless, and loses
  * the whole batch to one flaky moment.
  */
+/**
+ * The panel's static top: heading, the two-sentence invitation, and the
+ * folded reassurances. Module-level because none of it touches state — and
+ * because the component below sits against the function-length limit, which
+ * is a fair reading of what happened to it: markup that never changes was
+ * crowding the half that does.
+ */
+function PanelIntro() {
+  return (
+    <>
+      <h2 className={SECTION_HEADING}>Add photographs</h2>
+      {/*
+        Two sentences on screen; the reassurances fold. This paragraph ran to
+        five sentences of privacy prose that every photographer re-read on
+        every visit — the `Why` keeps all of it one click away, said once,
+        which is the pattern the edit form already uses for exactly this kind
+        of statement.
+      */}
+      <p className="mt-1 mb-3 text-sm text-white/55">
+        Drag full-size originals here, or choose them below. JPEG, PNG, WebP or
+        AVIF, up to {MAX_UPLOAD_MB} MB each.
+      </p>
+      <div className="mb-4">
+        <Why summary="Your originals stay exactly as you sent them.">
+          Camera and exposure details are read from the file; the GPS block is
+          never read, and the copy the gallery publishes carries no metadata at
+          all. Where a photograph was taken is only ever something you add
+          afterwards, on the photograph itself.
+        </Why>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Land in the editor rather than beside it: a new draft's id goes into
+ * `?open=` and `PhotoList` opens that row, instead of the batch ending on a
+ * refreshed list and a hunt for the row just made.
+ *
+ * The **last** file uploaded, which is the **first row in the list** —
+ * `listOwnPhotos` orders by `created_at DESC`, so the batch appears newest
+ * first and the earliest file lands at the bottom. This opened that bottom
+ * row while claiming in the same breath that "editing proceeds downward",
+ * which was the opposite of what it did. Opening the top row puts the form
+ * where the eye already is and leaves the rest of the batch below it.
+ *
+ * `replace`, not `push`: Back should leave the page, not step through
+ * upload states.
+ */
+function openFreshDraft(
+  router: ReturnType<typeof useRouter>,
+  id: string | null,
+): void {
+  if (id !== null) {
+    router.replace(`/contribute/photos?open=${id}`, { scroll: false });
+  }
+  // One refresh for the batch; per-file refreshes re-render the list under
+  // a running upload.
+  router.refresh();
+}
+
 export function UploadForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +166,9 @@ export function UploadForm() {
       const body = (await response.json()) as { error?: string };
       throw new Error(body.error ?? "That upload could not be read.");
     }
+
+    const created = (await response.json()) as { id?: string };
+    return typeof created.id === "string" ? created.id : null;
   }, []);
 
   /** One file, start to finish. Never throws; reports through `setStatus`. */
@@ -117,14 +182,16 @@ export function UploadForm() {
       setStatus(index, "uploading");
       setPercent(0);
       try {
-        await uploadOne(file);
+        const id = await uploadOne(file);
         setStatus(index, "done");
+        return id;
       } catch (error) {
         setStatus(
           index,
           "failed",
           error instanceof Error ? error.message : "The upload failed.",
         );
+        return null;
       }
     },
     [setStatus, uploadOne],
@@ -140,17 +207,18 @@ export function UploadForm() {
    */
   const runBatch = useCallback(
     async (batch: readonly Attempt[]) => {
+      let topOfList: string | null = null;
       for (const { file, index } of batch) {
         // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — see the note on the component
-        await runOne(file, index);
+        const id = await runOne(file, index);
+        // Last one wins: newest is first in the list. See `openFreshDraft`.
+        topOfList = id ?? topOfList;
       }
 
       if (inputRef.current) {
         inputRef.current.value = "";
       }
-      // One refresh for the batch. Refreshing per file re-renders the whole
-      // list under the upload that is still running.
-      router.refresh();
+      openFreshDraft(router, topOfList);
     },
     [router, runOne],
   );
@@ -277,15 +345,7 @@ export function UploadForm() {
       }`}
       {...handlers}
     >
-      <h2 className={SECTION_HEADING}>Add photographs</h2>
-      <p className="mt-1 mb-4 text-sm text-white/55">
-        Drag them here, or choose them below. JPEG, PNG, WebP or AVIF, up to{" "}
-        {MAX_UPLOAD_MB} MB each. Upload the full-size originals — they are
-        stored exactly as you sent them. Camera and exposure details are read
-        from the file; the GPS block is never read, and the copy the gallery
-        publishes carries no metadata at all. Where a photograph was taken is
-        only ever something you add afterwards, on the photograph itself.
-      </p>
+      <PanelIntro />
 
       <input
         accept={ACCEPT}
