@@ -66,7 +66,7 @@ export function SheetContent({
         picture they can no longer see. A tenth-opacity wash is enough to
         separate the two planes.
       */}
-      <Overlay className="fixed inset-0 z-[110] bg-black/10 data-[state=closed]:animate-[viewer-backdrop-out_180ms_var(--ease-glass)] data-[state=open]:animate-[viewer-fade-in_300ms_var(--ease-glass)_backwards]" />
+      <Overlay className="fixed inset-0 z-[110] bg-black/10 data-[state=closed]:animate-[viewer-backdrop-out_180ms_var(--ease-glass)_forwards] data-[state=open]:animate-[viewer-fade-in_300ms_var(--ease-glass)_backwards]" />
       <Content
         className={cn(
           /*
@@ -78,8 +78,16 @@ export function SheetContent({
            * device's inset, so on a desktop this is still exactly `p-6`.
            */
           "glass-thick fixed inset-y-0 right-0 z-[120] flex w-full flex-col gap-5 overflow-y-auto rounded-l-3xl safe-x-6 safe-t-6 safe-b-6 sm:max-w-sm",
-          // Transform and opacity only — never a layout property.
-          "data-[state=closed]:animate-[sheet-out_180ms_var(--ease-glass)] data-[state=open]:animate-[sheet-in_320ms_var(--ease-glass)_backwards]",
+          /*
+           * Transform and opacity only — never a layout property.
+           *
+           * `forwards` on the exit so the panel holds its off-screen frame
+           * until Radix unmounts it on `animationend`. Without it the
+           * animation's final frame is discarded and the element repaints at
+           * `translateX(0)`, flashing the panel back into place for a tick on
+           * the way out.
+           */
+          "data-[state=closed]:animate-[sheet-out_180ms_var(--ease-glass)_forwards] data-[state=open]:animate-[sheet-in_320ms_var(--ease-glass)_backwards]",
           className,
         )}
       >

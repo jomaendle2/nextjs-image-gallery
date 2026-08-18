@@ -107,11 +107,19 @@ export function PhotoCredit({
         </SheetTrigger>
 
         {/*
-          Mounted only while open, and keyed by the photograph — a panel that
-          stayed mounted would keep one photograph's member lookup alive
-          behind another photograph's caption.
+          Keyed by the photograph, so one photograph's member lookup is never
+          alive behind another photograph's caption.
+
+          **Not wrapped in `open ? … : null`.** It was, and that is what left
+          the panel with no exit: `Dialog.Content` is already inside Radix's
+          own `<Presence>`, which keeps the node in the tree while a
+          `data-[state=closed]` animation runs and unmounts it on
+          `animationend`. Gating the element on our own `open` state tore the
+          subtree out on the same tick the state flipped, so `sheet-out` never
+          got a frame — the panel slid in and then vanished. Presence gives us
+          the unmount the old comment was asking for anyway, just 180ms later.
         */}
-        {open ? <PhotoDetails image={image} key={image.id} /> : null}
+        <PhotoDetails image={image} key={image.id} />
       </Sheet>
     </div>
   );
