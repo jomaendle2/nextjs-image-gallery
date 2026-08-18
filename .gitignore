@@ -55,3 +55,8 @@ next-env.d.ts
 .junie/
 skills-lock.json
 .claude/skills/
+
+# Git worktrees Claude Code checks out inside the repo. Never committable,
+# and each holds a copy of biome.json — which Biome reads as a second root
+# configuration and refuses to run at all until it is out of the way.
+.claude/worktrees/
