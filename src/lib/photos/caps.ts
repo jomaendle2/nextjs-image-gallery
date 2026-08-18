@@ -1,5 +1,12 @@
 /**
- * How long each written field is allowed to be.
+ * The limits a submission is held to.
+ *
+ * Field lengths for most of it, and the upload cap at the bottom — which is
+ * not a length and not written text, so the module's subject is stated
+ * wider than "how long each written field is allowed to be". What the two
+ * kinds share is the only thing that matters here: each is enforced in more
+ * than one place, and each was wrong in at least one of them before it had a
+ * single home.
  *
  * One definition, because these numbers had grown three homes and two of them
  * documented the third in prose: `src/app/contribute/photos/actions.ts` held

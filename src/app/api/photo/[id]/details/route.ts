@@ -37,9 +37,19 @@ export async function GET(
    * rather than as a comment claiming the same thing: the shape is the
    * guarantee.
    *
-   * A combined `getSessionCapabilities()` join was considered and rejected:
-   * it would make every anonymous 403 pay for two joins, and would add a
-   * third way to resolve a session to a codebase that already has two.
+   * A combined `sessionPrincipal()` — one `sessions LEFT JOIN members LEFT
+   * JOIN contributors` — was considered and not done. The reason recorded
+   * here at first was that it "would make every anonymous 403 pay for two
+   * joins", and that was simply false: `getCurrentMember` early-returns on
+   * the absent cookie exactly as `getCurrentContributor` does, so a combined
+   * function would too, and an anonymous reader pays nothing either way. The
+   * honest ledger is that a member would pay one extra LEFT JOIN on a row
+   * already being joined, and a contributor would *save* a round trip.
+   *
+   * What is left is the reason that actually holds: it would be a third way
+   * to resolve a session in a codebase that already has two, and this route
+   * is the first caller that needs both. Worth doing when a second one
+   * appears; not worth doing for one caller.
    */
   const member = await getCurrentMember();
   const { id } = await params;

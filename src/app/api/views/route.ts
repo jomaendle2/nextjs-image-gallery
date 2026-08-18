@@ -11,6 +11,28 @@ import { clientIp, createLimiter } from "@/lib/rate-limit";
 const viewLimiter = createLimiter(240);
 
 /**
+ * The same photograph, from the same address, a small number of times.
+ *
+ * The client already declines to re-count a photograph it has seen in the
+ * last six hours — but that guard is a `localStorage` stamp, so it is worth
+ * exactly what the reader chooses to let it be worth, and it is absent by
+ * design in private browsing. A dedup that only exists in the browser is a
+ * request-saver, not a rule. This is the tier where the rule holds.
+ *
+ * Three rather than one, and the difference matters. Keying by address means
+ * a household, an office and a phone network share a bucket, and refusing
+ * the second person behind a NAT would trade over-counting for the worse
+ * failure of not counting somebody who really did look. Three absorbs that
+ * while still turning a held refresh key into three views instead of two
+ * hundred and forty.
+ *
+ * Six hours to match `VIEW_COOLDOWN_MS` in `useViewCount.ts`, so the two
+ * tiers agree about what "again" means.
+ */
+const VIEW_DEDUP_HOURS = 6;
+const repeatLimiter = createLimiter(3, VIEW_DEDUP_HOURS * 60 * 60 * 1000);
+
+/**
  * A bound on the input, not a description of an id.
  *
  * Deliberately loose. New photographs get 12-character nanoids, but the
@@ -47,6 +69,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
      * zero rather than inventing a 404 that would be wrong half the time.
      * Nothing was written either way; the client simply shows no number.
      */
+    /*
+     * Already counted recently from this address: answer with the current
+     * total rather than an error. The caller is showing a number, not
+     * performing a transaction, and a 429 here would make a refresh look
+     * broken to somebody who did nothing wrong.
+     */
+    if (!repeatLimiter.check(`${clientIp(request.headers)}:${imageId}`)) {
+      const counts = await getAllViewCounts();
+      const current = counts.find((row) => String(row.image_id) === imageId);
+      return NextResponse.json({
+        viewCount: current?.view_count ?? 0,
+        success: true,
+      });
+    }
+
     const viewCount = await incrementViewCount(imageId);
     return NextResponse.json({ viewCount, success: true });
   } catch (error) {

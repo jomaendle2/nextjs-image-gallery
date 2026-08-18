@@ -1,12 +1,22 @@
 /**
  * How long a mailed link stays good — the numbers, and nothing else.
  *
- * These live apart from `tokens.ts` because everything that *states* one of
- * them is copy, and copy must not have to load a database to say a number.
- * `database.ts` throws at module scope without `DATABASE_URL`, so importing
- * `tokens.ts` from the mail templates or the privacy policy would make both
- * unloadable in a unit test and would tie a statically rendered legal page to
- * a connection string it never uses.
+ * These live apart from `tokens.ts` because they are policy, not mechanism.
+ * How long a link is good for is a decision about people — how long somebody
+ * takes to reach their inbox — and it is read by the two mails and the
+ * privacy policy far more often than by the code that mints a token. A
+ * number three pieces of copy quote belongs somewhere copy can reach without
+ * pulling in a query.
+ *
+ * There is also a defect that makes the split load-bearing rather than
+ * merely tidy: `database.ts` throws at module scope when `DATABASE_URL` is
+ * unset, so importing `tokens.ts` anywhere makes that file unloadable in a
+ * unit test and ties a statically rendered legal page to a connection string
+ * it never uses. That is worth fixing at the source — a lazy `sql` would
+ * move the failure from import to first query — and this file is not that
+ * fix. Do not read it as precedent for dodging the throw again; the next
+ * value that needs to escape `tokens.ts` should make the connection lazy
+ * instead.
  *
  * The split exists because the copy was wrong for months: six sentences said
  * fifteen minutes while the constant said sixty. Interpolating is the fix,

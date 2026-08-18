@@ -13,6 +13,11 @@ import process from "node:process";
 import { put } from "@vercel/blob";
 import { sql } from "../src/lib/database.ts";
 import { deriveFromBuffer } from "../src/lib/photos/derive.ts";
+import { confirmDestructive } from "./guard.mts";
+
+confirmDestructive(
+  "upload a display blob per photograph and rewrite their rows in this database",
+);
 
 const MB = 1024 * 1024;
 

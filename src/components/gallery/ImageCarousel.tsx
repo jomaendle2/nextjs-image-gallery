@@ -34,13 +34,23 @@ interface ImageCarouselProps {
    */
   contributor?: GalleryAuthor;
   /**
-   * Whether membership is on sale, so the top bar can offer it.
+   * Whether membership is on sale, for the top bar and for everything under
+   * the provider below.
    *
    * Threaded from the server page rather than read here: this file is
    * `"use client"`, and `GalleryTopBar` explains at its own top why that makes
    * an environment read there silently wrong.
+   *
+   * **Required, with no default.** It was `membershipOffered?: boolean` with
+   * `= false`, and that default is exactly how the slideshow page came to
+   * render this without it: forgetting the prop produced the correct-looking
+   * behaviour on two pages and the wrong one on the third, with nothing to
+   * notice. A source-text test now catches it, but a compiler error is
+   * better than a test, and the fail-closed default belongs where it cannot
+   * be forgotten instead — on the context, which is what a subtree with no
+   * provider reads.
    */
-  membershipOffered?: boolean;
+  membershipOffered: boolean;
   initialIndex?: number;
 }
 
@@ -48,7 +58,7 @@ export function ImageCarousel({
   images,
   contributor,
   initialIndex = 0,
-  membershipOffered = false,
+  membershipOffered,
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
