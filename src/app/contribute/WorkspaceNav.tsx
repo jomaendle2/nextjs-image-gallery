@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { navLink } from "@/components/ui/field";
+import { GuardedLink } from "./photos/GuardedLink";
 
 /**
  * Where you can go while signed in, and which of those places you are.
@@ -16,6 +16,14 @@ import { navLink } from "@/components/ui/field";
  * gallery's marketing links in a working surface is how an admin panel starts
  * feeling like a different product. The two zones get two navs; the wordmark
  * above this one is the door between them.
+ *
+ * `GuardedLink` rather than `Link`, for the one route under this nav that can
+ * hold unsaved text. The dashboard's captions live in uncontrolled inputs
+ * until "Save changes" is pressed, and this nav sits directly above them —
+ * which made it the cheapest way in the whole page to discard ten minutes of
+ * work. Off that page the guard costs a `hasUnsaved()` call that answers
+ * false, which is why it is on all three rather than threaded through as a
+ * prop only `/photos` sets.
  */
 export type WorkspaceSection = "photographs" | "invite" | "contributors";
 
@@ -57,14 +65,14 @@ export function WorkspaceNav({
       {DESTINATIONS.filter(
         (destination) => owner || destination.ownerOnly !== true,
       ).map((destination) => (
-        <Link
+        <GuardedLink
           aria-current={destination.section === current ? "page" : undefined}
           className={navLink(destination.section === current)}
           href={destination.href}
           key={destination.section}
         >
           {destination.label}
-        </Link>
+        </GuardedLink>
       ))}
     </nav>
   );

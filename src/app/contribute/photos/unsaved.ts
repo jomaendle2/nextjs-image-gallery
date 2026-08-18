@@ -43,3 +43,49 @@ export function setUnsaved(id: string, unsaved: boolean): void {
 export function hasUnsaved(): boolean {
   return dirty.size > 0;
 }
+
+/**
+ * Where somebody tried to go while a row was dirty, and nothing more.
+ *
+ * The guard is one component and the links are several, in a tree neither
+ * owns — `WorkspaceNav` renders inside `ContributeShell`'s header, and the
+ * panel that asks the question belongs at the bottom of the viewport. So the
+ * destination travels the same way `dirty` does, for the same reason: the
+ * alternative is a context provider wrapped around the whole workspace to
+ * carry one nullable string, which would drag three server-rendered pages
+ * across the client boundary to do it.
+ *
+ * A single destination rather than a queue. Two blocked clicks in a row is
+ * one person changing their mind, and the second is the one they meant.
+ */
+let leaving: string | null = null;
+const exits = new Set<() => void>();
+
+export function watchPendingExit(onChange: () => void): () => void {
+  exits.add(onChange);
+  return () => {
+    exits.delete(onChange);
+  };
+}
+
+/** Called by a link that has just cancelled its own navigation. */
+export function askBeforeLeaving(href: string): void {
+  leaving = href;
+  for (const exit of exits) {
+    exit();
+  }
+}
+
+export function pendingExit(): string | null {
+  return leaving;
+}
+
+export function clearPendingExit(): void {
+  if (leaving === null) {
+    return;
+  }
+  leaving = null;
+  for (const exit of exits) {
+    exit();
+  }
+}
