@@ -113,7 +113,7 @@ wrong `EMAIL_FROM` — all of which lock you out of the admin page you would
 need in order to fix them. It goes through the same `mintLoginToken` the
 form uses, so the same rules apply.
 
-The link works **once** and expires after fifteen minutes — but *opening* it
+The link works **once** and expires after an hour — but *opening* it
 does not spend it. The page it lands on has a Sign in button, and only
 pressing that redeems the token, so a mail scanner or a link preview cannot
 burn it before you get there.

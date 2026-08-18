@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { escapeHtml, sendApplicationApproved, sendInvitation } from "./email";
+import {
+  escapeHtml,
+  sendApplicationApproved,
+  sendInvitation,
+  sendLoginEmail,
+  sendMembershipWelcome,
+} from "./email";
+import { LOGIN_TTL_MINUTES } from "./ttl";
 
 describe("escapeHtml", () => {
   it("neutralises the characters that open a tag or close an attribute", () => {
@@ -141,5 +148,84 @@ describe("sendInvitation", () => {
 
     expect(sent[0]?.text).toContain("Nobody reviews it");
     expect(sent[0]?.html).toContain("nobody reviews it");
+  });
+});
+
+/**
+ * The two mails that tell somebody how long their link lasts.
+ *
+ * Neither was tested at all, which is how both went on saying fifteen minutes
+ * for the months after `LOGIN_TTL_MINUTES` became sixty. A photographer who
+ * opened the mail twenty minutes later read that it had expired and gave up —
+ * on a link that was still perfectly good. The number is the whole point of
+ * these tests: assert it against the constant, never against a literal, or
+ * this becomes the seventh place that has to be edited by hand.
+ */
+describe("the mails that state a link's lifetime", () => {
+  const sent: Array<{ html: string; text: string }> = [];
+
+  beforeEach(() => {
+    sent.length = 0;
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    vi.stubEnv("EMAIL_FROM", "gallery@example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: { body: string }) => {
+        sent.push(JSON.parse(init.body));
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(""),
+        });
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  // A literal `?token=…` in source is what biome's `noSecrets` looks for, and
+  // it cannot tell a fixture from a leak — so the URL is assembled.
+  const url = `https://example.test/contribute/verify?${new URLSearchParams({ token: "fixture-token" })}`;
+
+  it("the sign-in mail states the real expiry in both alternatives", async () => {
+    await sendLoginEmail("shooter@example.com", url);
+
+    const [message] = sent;
+    expect(message).toBeDefined();
+    expect(message?.text).toContain(`expires in ${LOGIN_TTL_MINUTES} minutes`);
+    expect(message?.html).toContain(`expires in ${LOGIN_TTL_MINUTES} minutes`);
+  });
+
+  it("the sign-in mail carries the link it is given", async () => {
+    await sendLoginEmail("shooter@example.com", url);
+
+    expect(sent[0]?.text).toContain(url);
+    expect(sent[0]?.html).toContain(`href="${url}"`);
+  });
+
+  it("the membership welcome states the same expiry, in digits", async () => {
+    await sendMembershipWelcome("member@example.com", url);
+
+    const [message] = sent;
+    expect(message).toBeDefined();
+    /*
+     * This half used to spell the number in words — "fifteen minutes" — so
+     * the two mails disagreed in voice as well as in fact. Digits in both is
+     * the only form that can be interpolated from one constant.
+     */
+    expect(message?.text).toContain(`lasts ${LOGIN_TTL_MINUTES} minutes`);
+    expect(message?.html).toContain(`lasts ${LOGIN_TTL_MINUTES} minutes`);
+    expect(message?.text).not.toMatch(/fifteen|sixty/i);
+    expect(message?.html).not.toMatch(/fifteen|sixty/i);
+  });
+
+  it("the membership welcome carries the sign-in link it is given", async () => {
+    await sendMembershipWelcome("member@example.com", url);
+
+    expect(sent[0]?.text).toContain(url);
+    expect(sent[0]?.html).toContain(`href="${url}"`);
   });
 });

@@ -8,7 +8,9 @@ contributor publishes directly.
 
 1. Goes to `/contribute` and enters the address the invitation was sent to.
 2. Receives a sign-in link, opens it, and presses **Sign in** on the page it
-   lands on. The link works **once** and expires after 15 minutes.
+   lands on. The link works **once** and expires after an hour
+   (`LOGIN_TTL_MINUTES` in `src/lib/auth/ttl.ts` — read it there rather than
+   repeating the number here).
 
    The button is not ceremony. Corporate mail gateways — SafeLinks,
    Proofpoint and the like — fetch every URL in an inbound message before
@@ -219,7 +221,7 @@ work on this version. They are cheap to avoid once named.
 - **Grep the whole of `src`.** A list of files touching a column, built from
   `src/lib` and `src/app`, missed `src/components` and was wrong within
   seconds of being turned into a test.
-- **Sign-in tokens are single-use and last fifteen minutes.** A token from
+- **Sign-in tokens are single-use and expire.** A token from
   an earlier attempt silently redirects to the sign-in form, and the next
   assertion fails for reasons that have nothing to do with the change. Mint
   a fresh one per run.

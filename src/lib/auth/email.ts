@@ -1,4 +1,5 @@
 import process from "node:process";
+import { LOGIN_TTL_MINUTES } from "@/lib/auth/ttl";
 import { count } from "@/lib/plural";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -75,7 +76,7 @@ async function send({ to, subject, text, html }: Message): Promise<void> {
     /*
      * Printing the message is a development convenience and a production
      * incident. The body of a sign-in email *is* a valid credential for the
-     * next fifteen minutes, so writing it to a platform log hands anybody
+     * life of the link, so writing it to a platform log hands anybody
      * with log access a way into any account that asks for a link — and the
      * person waiting is told "check your inbox" while nothing was sent.
      *
@@ -118,12 +119,12 @@ export async function sendLoginEmail(to: string, url: string): Promise<void> {
       "",
       url,
       "",
-      "This link works once and expires in 15 minutes.",
+      `This link works once and expires in ${LOGIN_TTL_MINUTES} minutes.`,
       "If you did not ask for it, you can ignore this email.",
     ].join("\n"),
     html: page(
       `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         Here is your sign-in link. It works once and expires in 15 minutes.
+         Here is your sign-in link. It works once and expires in ${LOGIN_TTL_MINUTES} minutes.
        </p>
        ${button(url, "Sign in")}
        <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
@@ -288,8 +289,8 @@ export async function sendMembershipWelcome(
       "",
       `Open this to sign in: ${signInUrl}`,
       "",
-      "The link works once and lasts fifteen minutes. If it expires, ask for",
-      `a fresh one at ${origin}/contribute using this same address.`,
+      `The link works once and lasts ${LOGIN_TTL_MINUTES} minutes. If it expires,`,
+      `ask for a fresh one at ${origin}/contribute using this same address.`,
       "",
       "Signed in, every photograph shows where it was taken and how, wherever",
       "the photographer has written it down.",
@@ -302,8 +303,8 @@ export async function sendMembershipWelcome(
        </p>
        ${button(signInUrl, "Sign in")}
        <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         The link works once and lasts fifteen minutes. If it expires, ask for
-         a fresh one at
+         The link works once and lasts ${LOGIN_TTL_MINUTES} minutes. If it
+         expires, ask for a fresh one at
          <a href="${escapeHtml(`${origin}/contribute`)}" style="color:#a8adb4">${escapeHtml(`${origin}/contribute`)}</a>
          using this same address.
        </p>
