@@ -7,10 +7,9 @@ assumed, and struck through once done.
 **The short version:**
 
 ```bash
-vercel env add SITE_URL production      # https://www.thebeautyof.earth
-vercel env ls                           # confirm EMAIL_FROM is on the domain above
+vercel env ls production                # SITE_URL, EMAIL_FROM, RESEND_API_KEY, AI_GATEWAY_API_KEY: all set
+vercel env add MAPTILER_KEY production  # else both maps are an "unavailable" notice
 gh pr merge 11                          # preflight checks config, build applies schema
-# then: street and city in src/lib/legal.ts, and redeploy
 ```
 
 Everything below is why each of those matters and what is deliberately not
@@ -73,7 +72,13 @@ already-built deployment**: Vercel injects the variable set at build time,
 so anything deployed before you added it still has the old environment.
 Push or redeploy after changing one.
 
-### Set `SITE_URL` to the domain you tell people about
+### ~~Set `SITE_URL` to the domain you tell people about~~ — done
+
+Set on Production two days ago, confirmed with `vercel env ls production`.
+The rest of this entry is why it mattered, and why it must not be removed.
+Remember that **an already-built deployment keeps the environment it was
+built with** — the value reaches the site on the next build, which the merge
+provides.
 
 **Not cosmetic — every link this site emails is built from it.** With it
 unset, `siteOrigin()` falls back to `VERCEL_PROJECT_PRODUCTION_URL`, and
@@ -90,22 +95,52 @@ notice are the careful ones.
 It also decides the canonical URLs, the sitemap, both feeds, and every
 unsubscribe link.
 
-```bash
-vercel env add SITE_URL production   # https://www.thebeautyof.earth
-```
-
 The origin deliberately never comes from the request `Host` header — see the
 comment in `src/lib/site-url.ts` — so this cannot be inferred at runtime. It
 has to be configured.
 
-### Fill in the operator address
+### ~~Fill in the operator address~~ — done
 
-`src/lib/legal.ts` — `street` and `city` are empty, so `/imprint`,
-`/privacy` and `/terms` each render a visible amber "Unfinished" banner that
-your friends will see. It is also required by §5 DDG before taking money.
+`src/lib/legal.ts` carries `street: "Im Hirschmorgen 12"` and
+`city: "69181 Leimen"`, both pushed. `legalComplete()` therefore returns
+true and the amber "Unfinished" banner no longer renders on `/imprint`,
+`/privacy` or `/terms`. The other two fields are as this list asked for:
+`kleinunternehmer: true` (no VAT shown) and `vatId: ""`.
 
-Confirm two other fields while you are there: `kleinunternehmer: true` (no
-VAT shown) and `vatId: ""`.
+### ~~Set `AI_GATEWAY_API_KEY`~~ — done
+
+Set on Production and Preview. Checked with `vercel env ls production`
+against `jomaes-projects/beauty-of-earth`, not assumed.
+
+Worth keeping the reason it is on this list. Without it
+`aiSuggestionsConfigured()` falls back to `VERCEL_OIDC_TOKEN`, which a
+deployment is given automatically and which expires after hours — and when it
+does, the "Suggest details" button simply stops being rendered. No error, no
+500, nothing a photographer can report beyond "it used to be there".
+`src/lib/ai/offer.ts` now logs one line in production naming which of the
+three states it is in, so if this variable is ever removed the failure is
+greppable instead of invisible. It is still deliberately **not** in
+`scripts/preflight.mts`: a missing feature must not be able to fail a deploy
+the way a missing `SITE_URL` should.
+
+It is a spending credential, and the route's rate limit is per-instance and
+in-memory — it bounds requests per instance, not cost. **Set a budget on the
+gateway itself**, which is the only place that can bound spend. Still
+outstanding, and not something the repository can do for you.
+
+### Set `MAPTILER_KEY` — outstanding
+
+**Not set in production.** `vercel env ls production` lists no such variable,
+so on the live site `src/lib/maptiler.ts` returns nothing and both map
+surfaces render their "map unavailable" notice: the location picker in the
+members-only section, and the hint map beside "Suggest details".
+
+It degrades honestly rather than breaking — coordinates can still be typed by
+hand, and the hint is optional — so this does not block a merge. But the hint
+map is one of the two things the newest feature is *for*, and right now it is
+a blank panel with a sentence in it. It is read on the server and passed down
+as a prop, never as `NEXT_PUBLIC_*`, so setting it does not put the key in a
+client bundle.
 
 ---
 
@@ -186,6 +221,18 @@ The parts most likely to surprise you, all deliberate:
 ---
 
 ## 6. Verified working, as of 16 August
+
+**These claims are older than the code.** They were verified on 16 August and
+nothing in this section has been re-run since; the branch has taken the whole
+AI place-hint feature, the site and workspace navs, the unsaved-work guard and
+the typeface fix in the meantime. Treat the list as evidence that these paths
+worked once, not as a statement about what is on the branch today.
+
+What *has* been verified since, on the current tree: 480 tests pass,
+`tsc --noEmit` is clean, `biome check src/` is clean, and `next build`
+completes with no warnings — `/globe` and `/photographers` still prerender as
+static, so the new nav added no client JavaScript to them. None of that
+exercises a browser or a real service, which is what the list below did.
 
 Driven end to end against the real database and the real services, not
 inferred:
