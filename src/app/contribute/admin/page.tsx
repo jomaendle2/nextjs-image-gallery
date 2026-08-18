@@ -12,6 +12,7 @@ import { count } from "@/lib/plural";
 import { countConfirmedSubscribers } from "@/lib/subscribers/repository";
 import { ContributeShell } from "../ContributeShell";
 import { InviteForm } from "../InviteForm";
+import { WorkspaceNav } from "../WorkspaceNav";
 import { AllPhotos } from "./AllPhotos";
 import { AnnounceActions } from "./AnnounceActions";
 import { ApplicationRowActions } from "./ApplicationRowActions";
@@ -54,6 +55,7 @@ export default async function AdminPage() {
   return (
     <ContributeShell
       back={{ href: "/contribute/photos", label: "Your photographs" }}
+      nav={<WorkspaceNav current="contributors" owner={true} />}
       subtitle="Invite photographers, and moderate what appears in the gallery."
       title="Photographers"
     >

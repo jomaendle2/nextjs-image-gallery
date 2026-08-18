@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { SessionChip } from "@/components/SessionChip";
-import { META } from "@/components/ui/field";
+import { SiteNav } from "@/components/ui/SiteNav";
 
 /**
  * The only chrome added to the main gallery.
@@ -14,23 +13,20 @@ import { META } from "@/components/ui/field";
  * `SessionChip` is the second, and exists only for somebody signed in: a
  * photographer had no route from the gallery to their own photographs.
  *
- * **`justify-between` with the chip on the left is what keeps the layout
- * still.** The chip cannot be rendered on the server — this page is
+ * **`ml-auto` on the nav, not `justify-between` on the row, is what keeps the
+ * layout still.** The chip cannot be rendered on the server — this page is
  * statically cached and one document is served to everybody — so it appears
  * after hydration for the people who have a session. Beside `photographers`
  * on the right, its arrival would shove that link sideways on every
  * signed-in visit. On the left, in a slot that is simply empty for everybody
  * else, nothing moves.
- */
-/**
- * One link's worth of styling, three times.
  *
- * `px-2` below `sm` rather than `px-3`: three of these plus the session chip
- * is tight at 390, and the 44px touch floor is held by `min-h-11` and
- * `min-w-11` regardless of the horizontal padding.
+ * `justify-between` used to do this, and it was wrong for the visitor who has
+ * no session: `SessionChip` renders `null` for them, and `justify-between`
+ * with a single child leaves that child hard against the left edge. Anonymous
+ * visitors — nearly all of them — got the navigation in the wrong corner.
+ * `ml-auto` pins the nav right whether or not the chip is ever there.
  */
-const LINK_CLASS = `${META} inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 sm:px-3`;
-
 export function GalleryTopBar({
   membershipOffered = false,
 }: {
@@ -49,7 +45,7 @@ export function GalleryTopBar({
   membershipOffered?: boolean;
 }) {
   return (
-    <div className="relative z-10 flex items-center justify-between safe-x-4 safe-t-4 sm:safe-x-8 sm:safe-t-5">
+    <div className="relative z-10 flex items-center safe-x-4 safe-t-4 sm:safe-x-8 sm:safe-t-5">
       <SessionChip />
       {/*
         Three destinations rather than one.
@@ -61,22 +57,11 @@ export function GalleryTopBar({
         anything. These are the whole of the site's public navigation and they
         belong on the page that has all the traffic.
 
-        `membership` only when it is actually on sale — the flag arrives as a
-        prop for the reason given above it.
+        No `current`: the gallery is not one of the three, so nothing is
+        marked here. `membership` only when it is actually on sale — the flag
+        arrives as a prop for the reason given above it.
       */}
-      <nav className="flex items-center gap-0.5 sm:gap-2">
-        <Link className={LINK_CLASS} href="/globe">
-          globe
-        </Link>
-        <Link className={LINK_CLASS} href="/photographers">
-          photographers
-        </Link>
-        {membershipOffered ? (
-          <Link className={LINK_CLASS} href="/membership">
-            membership
-          </Link>
-        ) : null}
-      </nav>
+      <SiteNav className="ml-auto" membershipOffered={membershipOffered} />
     </div>
   );
 }

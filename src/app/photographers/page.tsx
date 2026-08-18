@@ -10,9 +10,11 @@ import {
   SECTION_HEADING,
 } from "@/components/ui/field";
 import { glassControl, PRIMARY_FILL } from "@/components/ui/glass-button";
+import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
+import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { count } from "@/lib/plural";
@@ -43,7 +45,13 @@ export default async function PhotographersPage() {
     >
       <div className="mx-auto w-full max-w-[1536px] px-4 py-10 sm:px-8 sm:py-14">
         <header>
-          <WordmarkLink />
+          <div className="flex flex-wrap items-center justify-between gap-x-4">
+            <WordmarkLink />
+            <SiteNav
+              current="photographers"
+              membershipOffered={membershipConfigured()}
+            />
+          </div>
 
           <h1 className={`mt-1.5 ${PAGE_TITLE}`}>Photographers</h1>
           <p className={`mt-1 ${META}`}>

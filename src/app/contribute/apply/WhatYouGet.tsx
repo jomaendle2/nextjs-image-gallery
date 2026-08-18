@@ -1,4 +1,11 @@
 import {
+  KeyRound,
+  LayoutTemplate,
+  type LucideIcon,
+  ShieldCheck,
+  Signature,
+} from "lucide-react";
+import {
   BODY_SMALL,
   ITEM_HEADING,
   SECTION_HEADING,
@@ -8,6 +15,17 @@ import { TextLink } from "@/components/ui/TextLink";
 interface Offer {
   title: string;
   detail: string;
+  /**
+   * Decorative, and `aria-hidden` at the render site.
+   *
+   * Four cards of unbroken prose read as one grey block, and the eye has
+   * nothing to land on while deciding which of them to read. The mark gives
+   * each card a fixed point above its heading — it is a wayfinding aid, not
+   * information. Every one of these promises is carried entirely by its
+   * words, so a reader who never sees the glyph loses nothing, which is why
+   * it is hidden from assistive technology rather than labelled.
+   */
+  icon: LucideIcon;
 }
 
 /**
@@ -26,11 +44,13 @@ interface Offer {
  */
 const OFFERS: readonly Offer[] = [
   {
+    icon: LayoutTemplate,
     title: "A page that is yours",
     detail:
       "Your photographs full-screen at a URL with your name on it, listed among the photographers. Somewhere worth linking to from your own site.",
   },
   {
+    icon: Signature,
     title: "Your name on every photograph",
     detail:
       "Your name sits on every photograph wherever it appears, linking out to your own site. Nothing here is published anonymously.",
@@ -50,11 +70,13 @@ const OFFERS: readonly Offer[] = [
    * it back out.
    */
   {
+    icon: ShieldCheck,
     title: "Nothing is taken from your file",
     detail:
       "The GPS block in your file is never read, so where you were is never taken from it. What the gallery publishes is a fresh copy carrying no metadata at all — downloading it tells nobody anything. If you want to say where you stood you can write it down or mark it on a map, and you can clear it again; camera and exposure are kept, because those are about the photograph rather than about you.",
   },
   {
+    icon: KeyRound,
     title: "You keep control",
     detail:
       "Publish directly, with no approval queue. Edit, unpublish or delete your own photographs at any time. Your original is kept exactly as you sent it — untouched, never re-encoded, and never linked from the site.",
@@ -77,6 +99,12 @@ export function WhatYouGet() {
       <ul className="mt-4 grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] sm:grid-cols-2">
         {OFFERS.map((offer) => (
           <li className="bg-surface p-4 sm:p-5" key={offer.title}>
+            <offer.icon
+              aria-hidden="true"
+              className="mb-2.5 text-white/40"
+              size={18}
+              strokeWidth={1.5}
+            />
             <h3 className={ITEM_HEADING}>{offer.title}</h3>
             <p className={`mt-1.5 text-pretty ${BODY_SMALL}`}>{offer.detail}</p>
           </li>

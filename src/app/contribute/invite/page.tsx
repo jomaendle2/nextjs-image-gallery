@@ -5,10 +5,12 @@ import { Notice } from "@/components/ui/Notice";
 import { TextLink } from "@/components/ui/TextLink";
 import { invitesRemaining, listInvitees } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
+import { isOwner } from "@/lib/auth/types";
 import { OPERATOR } from "@/lib/legal";
 import { count } from "@/lib/plural";
 import { ContributeShell } from "../ContributeShell";
 import { InviteForm } from "../InviteForm";
+import { WorkspaceNav } from "../WorkspaceNav";
 import { inviteAsContributor } from "./actions";
 
 export const metadata: Metadata = {
@@ -47,6 +49,7 @@ export default async function InvitePage() {
   return (
     <ContributeShell
       back={{ href: "/contribute/photos", label: "Your photographs" }}
+      nav={<WorkspaceNav current="invite" owner={isOwner(contributor)} />}
       subtitle="The gallery grows by photographers bringing in photographers."
       title="Invite a photographer"
     >

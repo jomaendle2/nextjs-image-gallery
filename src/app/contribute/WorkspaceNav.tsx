@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { navLink } from "@/components/ui/field";
+
+/**
+ * Where you can go while signed in, and which of those places you are.
+ *
+ * The workspace had a breadcrumb — `jo mändle / your photographs` — which
+ * answers "how do I get out" and "how do I go back one", but never "what else
+ * is there". The three destinations were instead a row of prose links on the
+ * dashboard *only*, so from `/contribute/invite` the only way to reach
+ * `/contribute/admin` was to go back to the dashboard and read the row again.
+ * Two pages deep, the site forgot it had other pages.
+ *
+ * Deliberately **not** the public `SiteNav`. A signed-in photographer captioning
+ * an evening's uploads is not shopping for a membership, and putting the
+ * gallery's marketing links in a working surface is how an admin panel starts
+ * feeling like a different product. The two zones get two navs; the wordmark
+ * above this one is the door between them.
+ */
+export type WorkspaceSection = "photographs" | "invite" | "contributors";
+
+interface Destination {
+  section: WorkspaceSection;
+  href: string;
+  label: string;
+  /** Owner-only, because the page itself refuses anybody else. */
+  ownerOnly?: boolean;
+}
+
+const DESTINATIONS: readonly Destination[] = [
+  { section: "photographs", href: "/contribute/photos", label: "photographs" },
+  { section: "invite", href: "/contribute/invite", label: "invite" },
+  {
+    section: "contributors",
+    href: "/contribute/admin",
+    label: "contributors",
+    ownerOnly: true,
+  },
+];
+
+/* Styling lives in `navLink`; `SiteNav` draws the same mark. */
+
+export function WorkspaceNav({
+  current,
+  owner,
+}: {
+  current: WorkspaceSection;
+  owner: boolean;
+}) {
+  return (
+    /*
+      `-ml-2` pulls the first item's own padding back so the words line up with
+      the breadcrumb above and the heading below. The padding has to stay: it
+      is what holds the 44px touch target.
+    */
+    <nav aria-label="Your workspace" className="-ml-2 mt-2 flex flex-wrap">
+      {DESTINATIONS.filter(
+        (destination) => owner || destination.ownerOnly !== true,
+      ).map((destination) => (
+        <Link
+          aria-current={destination.section === current ? "page" : undefined}
+          className={navLink(destination.section === current)}
+          href={destination.href}
+          key={destination.section}
+        >
+          {destination.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}

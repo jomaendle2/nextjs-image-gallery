@@ -159,3 +159,35 @@ export const BODY = "text-[0.9375rem] text-white/65 leading-relaxed";
  * to reappear.
  */
 export const BODY_SMALL = "text-[0.8125rem] text-white/55 leading-relaxed";
+
+/**
+ * One destination in a section nav, and how the current one is marked.
+ *
+ * Hoisted out of `SiteNav` and `WorkspaceNav`, which had byte-identical
+ * copies of the two state strings. The duplication was not merely repetition:
+ * `NAV_CURRENT`'s underline insets are numerically coupled to `NAV_LINK`'s
+ * padding, so changing the padding in one file left the rule misaligned in
+ * the other — and only in one of the two zones, which is the hardest kind of
+ * drift to notice. `ViewToggle` had already grown a third, drifted spelling.
+ *
+ * The two navs keep their own destination lists and their own `<nav>`
+ * wrappers, because what differs between them is *which* places exist and who
+ * they are for. How a current section is drawn is one design decision and
+ * belongs in one place, which is here beside the other tokens.
+ *
+ * The mark is a rule under the word rather than colour alone: `aria-current`
+ * answers this for a screen reader and full-strength white answers it for
+ * anyone comparing the items side by side, but neither survives being glanced
+ * at by somebody who has never seen the other state.
+ */
+export const NAV_LINK = `${META_TYPE} relative inline-flex min-h-11 items-center rounded-full px-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 sm:px-3`;
+
+export const NAV_CURRENT =
+  "text-white after:absolute after:inset-x-2 after:bottom-1.5 after:h-px after:bg-white/45 sm:after:inset-x-3";
+
+export const NAV_IDLE = "text-white/55 hover:text-white";
+
+/** The current-or-not pair, so no caller re-types the ternary. */
+export function navLink(current: boolean, extra = ""): string {
+  return `${NAV_LINK} ${current ? NAV_CURRENT : NAV_IDLE} ${extra}`.trim();
+}

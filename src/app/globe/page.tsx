@@ -9,8 +9,10 @@ import {
   PAGE_TITLE,
   SECTION_HEADING,
 } from "@/components/ui/field";
+import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
+import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { CELL_KM } from "@/lib/photos/coarsen";
@@ -64,7 +66,18 @@ export default async function GlobePage() {
     >
       <div className="mx-auto w-full max-w-[1536px] px-4 py-10 sm:px-8 sm:py-14">
         <header>
-          <WordmarkLink />
+          {/*
+            The wordmark says whose site this is; the nav says which of its
+            rooms you are standing in. Before both were here, a visitor who
+            arrived on this page from a shared link could only go home.
+          */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4">
+            <WordmarkLink />
+            <SiteNav
+              current="globe"
+              membershipOffered={membershipConfigured()}
+            />
+          </div>
 
           <h1 className={`mt-1.5 ${PAGE_TITLE}`}>Where these were taken</h1>
           <p className={`mt-1 ${META}`}>

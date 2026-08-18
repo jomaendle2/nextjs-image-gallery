@@ -28,6 +28,16 @@ interface ShellProps {
    * whole section and walk in again.
    */
   back?: { href: string; label: string };
+  /**
+   * The section nav for this page, when the page belongs to a set of peers.
+   *
+   * A slot rather than something the shell builds, because two different
+   * navs come through here: `WorkspaceNav` from the signed-in pages, and the
+   * public `SiteNav` from `/membership`, which borrows this frame without
+   * being part of the workspace at all. The shell owns the position; the
+   * caller owns which room it is in.
+   */
+  nav?: ReactNode;
 }
 
 /**
@@ -93,6 +103,7 @@ function Frame({
   children,
   action,
   back,
+  nav,
   className,
 }: ShellProps & { className: string }) {
   return (
@@ -135,6 +146,7 @@ function Frame({
                 </>
               )}
             </nav>
+            {nav}
             <h1 className={`mt-2 ${PAGE_TITLE}`}>{title}</h1>
             {subtitle === undefined ? null : (
               <p className="mt-2 max-w-prose text-balance text-white/60">

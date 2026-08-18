@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { signOut } from "@/app/contribute/actions";
 import { ContributeShell } from "@/app/contribute/ContributeShell";
 import { GlassButton } from "@/components/ui/glass-button";
+import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
@@ -192,6 +193,13 @@ export default async function MembershipPage({
 
   return (
     <ContributeShell
+      /*
+        The public nav, not `WorkspaceNav` — this page borrows the contribute
+        frame for its layout, but a reader here is a visitor deciding whether
+        to pay, not a photographer at work. `membershipOffered` is hard true
+        because the not-configured case returned above.
+      */
+      nav={<SiteNav current="membership" membershipOffered={true} />}
       action={
         /*
          * The only sign-out a member has.
