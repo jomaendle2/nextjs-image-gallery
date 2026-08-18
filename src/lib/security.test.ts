@@ -177,8 +177,23 @@ describe("I6 — paid content is never in a cacheable payload", () => {
       // The gated reader, and the route that calls it.
       join("/lib", "photos", "repository.ts"),
       join("/app", "api", "photo", "[id]", "details", "route.ts"),
-      // Where a photographer types them, and the action that saves them.
-      join("/app", "contribute", "photos", "PhotoEditForm.tsx"),
+      /*
+       * Where a photographer types them, and the action that saves them.
+       *
+       * `MemberFields.tsx` was the second half of `PhotoEditForm.tsx` until
+       * that file passed its line limit; the fields moved and the entry moved
+       * with them. `members.ts` is new and names two of the columns to count
+       * what is already written, because the section they live in is now
+       * closed when a row opens and a collapsed box that cannot say whether
+       * it holds anything is how writing gets forgotten and overwritten.
+       *
+       * It counts and never returns their contents, which is the distinction
+       * that keeps it a one-line addition here rather than a new surface: a
+       * number about paid prose is not paid prose, and it is shown only to
+       * the photographer who wrote it.
+       */
+      join("/app", "contribute", "photos", "MemberFields.tsx"),
+      join("/app", "contribute", "photos", "members.ts"),
       join("/app", "contribute", "photos", "actions.ts"),
       // The component that displays them, which reads the gated API
       // response rather than the database. Found by this test on its first

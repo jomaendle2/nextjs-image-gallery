@@ -3,6 +3,7 @@
 import { ExternalLink, Trash2 } from "lucide-react";
 import {
   type ReactNode,
+  type SyntheticEvent,
   useActionState,
   useCallback,
   useEffect,
@@ -28,7 +29,8 @@ import {
   savePhoto,
   togglePublished,
 } from "./actions";
-import { LocationPicker } from "./LocationPicker";
+import { MemberFields } from "./MemberFields";
+import { type Marks, marksFor } from "./marks";
 import { SuggestDetails } from "./SuggestDetails";
 
 const INITIAL: PhotoFormState = IDLE;
@@ -48,33 +50,6 @@ const ELEMENT_PREFIX: Record<PhotoField, string> = {
   bg_color: "color",
   pin: "pin",
 };
-
-/**
- * The field the last save refused, and where the sentence explaining it is.
- *
- * Passed down as one object rather than two props because the two are only
- * ever useful together: a field marked `aria-invalid` with no
- * `aria-describedby` tells somebody using a screen reader that something is
- * wrong and not what. WCAG 3.3.1 wants the identification and the description,
- * and they are one thought.
- */
-interface Marks {
-  field: PhotoField | undefined;
-  messageId: string;
-}
-
-/**
- * The two attributes that make a refusal reach assistive technology.
- *
- * Absent rather than `aria-invalid={false}` on the fields that are fine: an
- * explicit false is legal and is also one more state to keep in step, and the
- * default is already "valid".
- */
-function marksFor(marks: Marks, field: PhotoField) {
-  return marks.field === field
-    ? { "aria-describedby": marks.messageId, "aria-invalid": true }
-    : {};
-}
 
 /**
  * Everything anybody who visits the site can read.
@@ -181,111 +156,6 @@ function PublicFields({
   );
 }
 
-/** The three fields a membership pays for, and the consent that goes with. */
-function MemberFields({
-  photo,
-  mapStyleUrl,
-  marks,
-}: {
-  photo: OwnPhotoRow;
-  mapStyleUrl: string | null;
-  marks: Marks;
-}) {
-  return (
-    <fieldset className="space-y-3 rounded-2xl border border-white/[0.08] p-3.5">
-      <legend className={`px-1 ${META}`}>Members only</legend>
-      {/*
-        The one consequence the "Members only" legend above does not
-        describe, said where the decision is made.
-
-        Everything else in this fieldset is member-gated end to end. A pin
-        is not: it is stored at two precisions, and the blunt one is public
-        by design, because a globe anybody can browse is the whole reason
-        the field exists. Somebody filling in this box has to be told that
-        before they fill it in, not afterwards.
-      */}
-      <p className={META}>
-        A marked spot is the one thing here with a public half
-      </p>
-
-      <div className="space-y-1.5">
-        <label className={LABEL} htmlFor={`precise-${photo.id}`}>
-          Where you stood <span className={LABEL_HINT}>(optional)</span>
-        </label>
-        <input
-          className={FIELD}
-          defaultValue={photo.precise_location ?? ""}
-          id={`precise-${photo.id}`}
-          name="precise_location"
-          placeholder="The pull-off below the second switchback"
-        />
-        <p className="text-[0.75rem] text-white/55 leading-relaxed">
-          Only members see this, and only if you fill it in. Nothing is ever
-          read from the file — the GPS block is never opened, so whatever you
-          write down here is the only place this site learns about.
-        </p>
-      </div>
-
-      <LocationPicker
-        invalid={marks.field === "pin"}
-        messageId={marks.messageId}
-        photo={photo}
-        styleUrl={mapStyleUrl}
-      />
-
-      <div className="space-y-1.5">
-        <label className={LABEL} htmlFor={`technique-${photo.id}`}>
-          How you made it <span className={LABEL_HINT}>(optional)</span>
-        </label>
-        <textarea
-          className={FIELD}
-          defaultValue={photo.technique ?? ""}
-          id={`technique-${photo.id}`}
-          name="technique"
-          placeholder="Waited about forty minutes for the cloud to clear the ridge."
-          rows={2}
-        />
-      </div>
-
-      {/*
-        Consent to be the public example, asked here rather than assumed.
-
-        `/membership` shows one photograph's member fields to everybody, so
-        somebody deciding whether five euros is worth it can read the actual
-        writing instead of a promise about it. Which photograph that is has
-        to be the photographer's choice: picking it by query would publish
-        their words because of when they typed them.
-
-        Unchecked by default, and the box says plainly what saying yes
-        means — this text becomes readable by anyone, including people who
-        have not paid.
-      */}
-      <label
-        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.08] p-3"
-        htmlFor={`specimen-${photo.id}`}
-      >
-        <input
-          className="mt-0.5 size-4 flex-shrink-0 accent-white"
-          defaultChecked={photo.is_specimen}
-          id={`specimen-${photo.id}`}
-          name="is_specimen"
-          type="checkbox"
-        />
-        <span className="space-y-1">
-          <span className="block font-medium text-sm text-white/85">
-            Use this one as the public example
-          </span>
-          <span className="block text-[0.75rem] text-white/55 leading-relaxed">
-            The two fields above will be shown in full on the membership page,
-            to everyone, including people who have not paid. Only one photograph
-            is used at a time.
-          </span>
-        </span>
-      </label>
-    </fieldset>
-  );
-}
-
 /**
  * What the last save said, in the tone it said it in.
  *
@@ -373,6 +243,27 @@ export function PhotoEditForm({
    * submit that is about to replace it.
    */
   const [stale, setStale] = useState(false);
+
+  /*
+   * Whether the members-only section is open.
+   *
+   * Closed on every open of a row, deliberately — including for a photograph
+   * whose member fields are already written. The summary counts those, so
+   * nothing is hidden without being announced, and a form that reopens in the
+   * state you last left it in is a form whose height changes for reasons the
+   * person cannot see.
+   *
+   * Controlled rather than left to the element, because a refused save has to
+   * be able to open it. The `onToggle` handler is what keeps the state in
+   * step with the clicks that are not ours.
+   */
+  const [membersOpen, setMembersOpen] = useState(false);
+  const toggleMembers = useCallback(
+    (event: SyntheticEvent<HTMLDetailsElement>) => {
+      setMembersOpen(event.currentTarget.open);
+    },
+    [],
+  );
   const retireMessage = useCallback(() => setStale(true), []);
   const awaitMessage = useCallback(() => setStale(false), []);
 
@@ -411,6 +302,14 @@ export function PhotoEditForm({
   useEffect(() => {
     if (state.field === undefined) {
       return;
+    }
+    /*
+     * The members-only section opens first when the refusal is in it.
+     * `focus()` on a control inside a closed `<details>` puts the cursor
+     * somewhere nobody can see, which is worse than not moving it at all.
+     */
+    if (state.field === "pin") {
+      setMembersOpen(true);
     }
     document
       .getElementById(`${ELEMENT_PREFIX[state.field]}-${photo.id}`)
@@ -469,7 +368,13 @@ export function PhotoEditForm({
         }
       />
 
-      <MemberFields mapStyleUrl={mapStyleUrl} marks={marks} photo={photo} />
+      <MemberFields
+        mapStyleUrl={mapStyleUrl}
+        marks={marks}
+        onToggle={toggleMembers}
+        open={membersOpen}
+        photo={photo}
+      />
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
         {/*

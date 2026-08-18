@@ -13,6 +13,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { CELL_KM, coarsen, MAX_ERROR_KM } from "@/lib/photos/coarsen";
 import type { OwnPhotoRow, Pin } from "@/lib/photos/types";
+import { Why } from "./Why";
 
 /**
  * Marking the spot, and being shown exactly what marking it publishes.
@@ -441,29 +442,42 @@ export function LocationPicker({
         photograph joins the globe and there is nothing behind the paywall to
         leak — one branch in the action rather than a column.
       */}
-      <label
-        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.08] p-3"
-        htmlFor={`pin-public-${photo.id}`}
-      >
-        <input
-          checked={publicOnly}
-          className="mt-0.5 size-4 flex-shrink-0 accent-white"
-          id={`pin-public-${photo.id}`}
-          name="pin_public_only"
-          onChange={handlePublicOnly}
-          type="checkbox"
-        />
-        <span className="space-y-1">
-          <span className="block font-medium text-sm text-white/85">
-            Publish the blurred dot only
+      <div className="space-y-1.5 rounded-xl border border-white/[0.08] p-3">
+        <label
+          className="flex cursor-pointer items-start gap-3"
+          htmlFor={`pin-public-${photo.id}`}
+        >
+          <input
+            checked={publicOnly}
+            className="mt-0.5 size-4 flex-shrink-0 accent-white"
+            id={`pin-public-${photo.id}`}
+            name="pin_public_only"
+            onChange={handlePublicOnly}
+            type="checkbox"
+          />
+          <span>
+            <span className="block font-medium text-sm text-white/85">
+              Publish the blurred dot only
+            </span>
+            {/*
+              What ticking it does stays on screen. The examples and the
+              reasoning fold — this is a consent, and a consent whose
+              consequence needs a click is not consent.
+            */}
+            <span className="mt-0.5 block text-[0.75rem] text-white/55 leading-relaxed">
+              The exact point is discarded, so not even members see it.
+            </span>
           </span>
-          <span className="block text-[0.75rem] text-white/55 leading-relaxed">
-            The exact point is discarded rather than stored, so not even members
-            see it. Use this for anything that should not be findable — a nest,
-            a rare plant, somewhere people live.
-          </span>
-        </span>
-      </label>
+        </label>
+        <Why summary="Use it for anything that should not be findable.">
+          A nest, a rare plant, a garden somebody lives in. The established norm
+          in wildlife photography is not to publish coordinates at all, and a
+          member-only coordinate is still a coordinate given to strangers. This
+          writes the public dot and leaves the exact point unstored, so the
+          photograph joins the globe and there is nothing behind the paywall to
+          leak.
+        </Why>
+      </div>
     </div>
   );
 }
