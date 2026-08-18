@@ -8,6 +8,7 @@ import type { Mark } from "./marks";
 import { placeMarks } from "./marks";
 import { simpleDrag } from "./simple-drag";
 import { type Detailed, FILL, type Land, paintSphere } from "./sphere";
+import { drawRatio, fitSurface } from "./surface";
 
 /**
  * The globe, as an enhancement over the list that is already on the page.
@@ -313,13 +314,31 @@ export function GlobeCanvas({
     const holding: { current: number | null } = { current: null };
     let spun = 0;
 
+    /*
+     * The canvas's size in CSS pixels, measured when it changes rather than
+     * on every frame.
+     *
+     * `getBoundingClientRect` is a layout read, and calling it inside the
+     * loop made every frame flush style and layout before it could draw. The
+     * `ResizeObserver` below already exists and already knows when this
+     * changes, so the loop had been asking a question that was answered.
+     */
+    let cssWidth = 0;
+    let cssHeight = 0;
+    const measure = () => {
+      const rect = canvas.getBoundingClientRect();
+      cssWidth = rect.width;
+      cssHeight = rect.height;
+    };
+    measure();
+
     const render = (time: number) => {
       start ??= time;
 
-      const ratio = Math.min(globalThis.devicePixelRatio || 1, 2);
-      const { width, height } = canvas.getBoundingClientRect();
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
+      const ratio = drawRatio(globalThis.devicePixelRatio);
+      const width = cssWidth;
+      const height = cssHeight;
+      fitSurface(canvas, width, height, ratio);
       /*
        * Two radii, and the whole of the zoom is the gap between them. `frame`
        * is the circle the picture is cut to and never changes with zoom, so
@@ -418,7 +437,10 @@ export function GlobeCanvas({
      * sixty times a second, which is exactly why it would otherwise have
      * shipped.
      */
-    const observer = new ResizeObserver(wake);
+    const observer = new ResizeObserver(() => {
+      measure();
+      wake();
+    });
     observer.observe(canvas);
     // So the effect below can ask for a frame when the fine rings land.
     repaint.current = wake;
