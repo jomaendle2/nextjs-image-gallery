@@ -3,10 +3,8 @@ import {
   BODY,
   BODY_SMALL,
   ITEM_HEADING,
-  META,
   SECTION_HEADING,
 } from "@/components/ui/field";
-import { CELL_KM } from "@/lib/photos/coarsen";
 
 /**
  * One numbered step.
@@ -63,21 +61,16 @@ function Step({
  * uploaded: the thing being explained is the round trip, and somebody with ten
  * drafts and no published photograph has not finished it yet.
  */
-export function FirstRun({
-  membershipOffered,
-}: {
-  /**
-   * Whether anybody can actually buy a membership right now.
-   *
-   * Read on the server by the page and handed down, the same way the tile key
-   * and the AI offer are — this file has no business calling
-   * `membershipConfigured()` itself. Without it the zero state told a brand
-   * new photographer that three of their fields were "for people who pay for
-   * a membership" while nobody could pay, which is the first thing they read
-   * and the first thing they could catch the site being wrong about.
-   */
-  membershipOffered: boolean;
-}) {
+/*
+ * This used to take `membershipOffered` and end with a paragraph about the
+ * "Members only" block. Gone entirely, and not only for length: memberships
+ * are deliberately kept quiet until there are contributors and readers to
+ * offer them to, and the zero state is the loudest possible place to
+ * advertise a tier nobody can buy. The member fields still explain
+ * themselves where they are filled in, which is the project's own rule
+ * about where such statements belong.
+ */
+export function FirstRun() {
   return (
     <section className="mb-8 rounded-3xl border border-white/[0.08] p-6">
       <h2 className={SECTION_HEADING}>Nobody reviews any of this</h2>
@@ -93,10 +86,9 @@ export function FirstRun({
           draft: it is listed here and nowhere else on the site.
         </Step>
         <Step n={2} title="Give each one a title and a description">
-          Both are required, and the description is the one that matters most —
-          it is what a screen reader says in place of the photograph, so without
-          it there is nothing to say. The title names the picture; the
-          description says what is in it.
+          Both are required. The description matters most: it is what a screen
+          reader says in place of the photograph. “Suggest details” drafts both
+          for you — edit anything, nothing is saved until you save.
         </Step>
         <Step n={3} title="Publish it">
           The photograph joins the gallery, your own page, the feed, the globe,
@@ -104,19 +96,6 @@ export function FirstRun({
           unpublish it, edit it and publish it again as often as you like.
         </Step>
       </ol>
-
-      <div className="mt-5 border-white/[0.08] border-t pt-5">
-        <p className={META}>The “Members only” block</p>
-        <p className={`mt-1.5 ${BODY_SMALL}`}>
-          Every photograph has one: where you stood, how you made it, and the
-          spot on a map. Those are for people who pay for a membership
-          {membershipOffered ? "" : ", which nobody can do yet"}, and leaving
-          all three empty costs you nothing. A marked spot is the one exception
-          — it is stored twice, and the blunt half, somewhere in a square about{" "}
-          {CELL_KM} km across, is public. That is the dot the globe draws. The
-          form says so again where you fill it in.
-        </p>
-      </div>
     </section>
   );
 }
