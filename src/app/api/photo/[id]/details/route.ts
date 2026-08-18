@@ -3,7 +3,7 @@ import { getCurrentContributor, getCurrentMember } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { recordMemberView } from "@/lib/members/repository";
 import { getMemberDetails } from "@/lib/photos/repository";
-import { memberDetailsLimiter } from "@/lib/rate-limit";
+import { memberDetailsLimiter, memberViewLimiter } from "@/lib/rate-limit";
 
 /**
  * The member-only half of a photograph.
@@ -112,13 +112,22 @@ export async function GET(
      * to dividing money between photographers — an undercount nobody can
      * detect is worse than a slow response.
      */
-    after(async () => {
-      try {
-        await recordMemberView(id);
-      } catch (error) {
-        console.error("Could not record a member view:", error);
-      }
-    });
+    /*
+     * Once per member per photograph per day, and the dedup is in memory
+     * rather than in a table — see `memberViewLimiter`. Without it the
+     * number measured *fetches*: a member on their own photograph with a
+     * finger on the refresh key added a view per press, and these counts
+     * divide a revenue pool between photographers.
+     */
+    if (memberViewLimiter.check(`${member.email}:${id}`)) {
+      after(async () => {
+        try {
+          await recordMemberView(id);
+        } catch (error) {
+          console.error("Could not record a member view:", error);
+        }
+      });
+    }
 
     /*
      * Never stored by anything between here and the member who asked.

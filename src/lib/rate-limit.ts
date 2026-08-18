@@ -114,6 +114,34 @@ export const stripeLimiter = createLimiter(15);
 export const memberDetailsLimiter = createLimiter(120);
 
 /**
+ * One counted view per member, per photograph, per day.
+ *
+ * A limiter, because "at most once per key per window" is exactly what a
+ * limiter of one already is — and reusing it means this stores nothing.
+ *
+ * That is the whole point. `photo_member_views` is aggregated per photograph
+ * per day and `schema.ts` says why in as many words: it is "deliberately not
+ * enough to reconstruct one person's viewing history", on a site whose
+ * central promise is that it does not record where you were. Deduplicating
+ * exactly would need a durable per-person record of what was looked at,
+ * which is the one thing that table was designed not to be. So the dedup
+ * lives in memory and dies with the instance.
+ *
+ * What that buys and what it does not: a member holding down a refresh key
+ * adds one view instead of hundreds, which is the actual problem — the
+ * counts divide a revenue pool, and a number that rewards whoever reloads
+ * most is not a measure of attention. What it cannot do is survive a cold
+ * start or span instances under Fluid Compute, so a determined member could
+ * still add a handful a day. That is a rounding error against a pool; a
+ * refresh key is not.
+ *
+ * Twenty-five hours rather than twenty-four: the window is rolling per key
+ * while `recordMemberView` buckets by `CURRENT_DATE`, and the overlap means
+ * a view just before midnight cannot be re-counted just after it.
+ */
+export const memberViewLimiter = createLimiter(1, 25 * 60 * 60 * 1000);
+
+/**
  * Asking a model to look at a photograph.
  *
  * I11's own sentence names three things — money, mail, a metered third party

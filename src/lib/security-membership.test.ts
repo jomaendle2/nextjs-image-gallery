@@ -102,6 +102,33 @@ describe("the details route", () => {
     expect(authorBranch).not.toContain("recordMemberView");
   });
 
+  it("counts a view at most once per member per photograph per day", () => {
+    /*
+     * The counter measured *fetches*, so a member with a finger on the
+     * refresh key added a view per press — into the numbers that divide a
+     * revenue pool between photographers.
+     *
+     * `memberViewLimiter` gates it, in memory: `photo_member_views` is
+     * aggregated per photograph per day because `schema.ts` says it must be
+     * "deliberately not enough to reconstruct one person's viewing history",
+     * and an exact dedup would need exactly that record. So this checks the
+     * gate is present and wraps the write, rather than checking a table.
+     */
+    const gate = code(route).indexOf("memberViewLimiter.check");
+    // The *call*, not the import line, which naturally comes first.
+    const write = code(route).indexOf("recordMemberView(id)");
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(write);
+  });
+
+  it("keys that dedup by member and photograph, not by one or the other", () => {
+    // Keyed by member alone, the first photograph a member opened would be
+    // the only one ever counted for them that day.
+    expect(route).toMatch(
+      /memberViewLimiter\.check\(`\$\{member\.email\}:\$\{id\}`\)/,
+    );
+  });
+
   it("tells a refused reader whether they are signed in", () => {
     /*
      * Without this the client's "one refusal ends the asking" optimisation
