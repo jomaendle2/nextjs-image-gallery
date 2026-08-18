@@ -15,6 +15,7 @@ import type { Pin } from "@/lib/photos/types";
 import { stageLabel } from "./fill";
 import { HintMap } from "./HintMap";
 import type { Suggesting } from "./useSuggestion";
+import { Why } from "./Why";
 
 /**
  * The button half of "Suggest details": say where it might be if you like,
@@ -171,6 +172,33 @@ export function SuggestDetails({
           </GlassButton>
         )}
       </div>
+
+      {/*
+        The consent for the one thing on this form that leaves the building.
+
+        Every other decision here carries a `Why` at the moment it is made —
+        the pin's two precisions, the blurred-dot box, the specimen checkbox —
+        and `Why`'s own docblock says that is the only place such a statement
+        is worth anything. The one involving an outside company had none. On
+        screen there was an `sr-only` label and the words "(not saved)" inside
+        the hint placeholder, which quietly implies the opposite about
+        everything else in the request.
+
+        The disclosure existed, in the privacy policy, mid-bullet, under a
+        heading about what is *not* stored. That is a page somebody reads once
+        if ever, and never while deciding whether to press this button.
+
+        No margin class: the container is `space-y-2`.
+      */}
+      <Why summary="Pressing this sends the photograph to a model to look at.">
+        What goes out is the copy the gallery already publishes — the re-encode
+        that carries no metadata of any kind — never the file off your camera,
+        which is the only one that still holds whatever GPS it wrote. It goes
+        through Vercel's AI Gateway to Google or Anthropic, both on terms that
+        forbid training on it, and neither they nor this site keeps it or the
+        hint you typed. Nothing it suggests touches your photograph until you
+        have read it and pressed Save.
+      </Why>
 
       {mapStyleUrl !== null && mapOpen ? (
         <HintMap near={near} onPick={setNear} styleUrl={mapStyleUrl} />
