@@ -78,11 +78,73 @@ function oidcStillValid(token: string): boolean {
   }
 }
 
+/**
+ * Whether production has already been told, so this is said once per instance.
+ *
+ * `aiSuggestionsConfigured()` is called on every render of the dashboard. A
+ * line per render is a line nobody reads, which is the same failure as no
+ * line at all wearing a different costume.
+ */
+let announced = false;
+
+/**
+ * Say out loud, once, that the button is missing or is about to go.
+ *
+ * The one thing this file could not do was be quiet correctly. Returning
+ * `false` is right — no credentials is not a broken deploy, it is a gallery
+ * whose photographers write their own titles — but *silence* about it is not.
+ * The button simply stops rendering: no error, no log, nothing to search for.
+ * Somebody notices weeks later, if at all, and has nothing to grep.
+ *
+ * Deliberately still not `scripts/preflight.mts`, and the distinction is the
+ * point. Preflight refuses to build for the three variables whose absence
+ * makes the site wrong. This one makes a feature absent, which is a different
+ * severity and must not be able to hold up a deploy — so it is a log line and
+ * not a failure.
+ *
+ * Only in production. In development the OIDC token *is* the intended path —
+ * `vercel env pull` writes one and it is how this works on a linked machine —
+ * so warning there would train everybody to ignore the warning.
+ *
+ * The OIDC case is the one worth the noise. The feature works right now and
+ * will stop within hours, at no moment anybody will connect to a deploy, and
+ * with nothing in the logs when it does. That is the failure this whole
+ * module keeps circling, said before it happens rather than after.
+ */
+function announce(usable: boolean, viaOidc: boolean): void {
+  if (announced || process.env["VERCEL_ENV"] !== "production") {
+    return;
+  }
+  announced = true;
+
+  if (!usable) {
+    console.warn(
+      "AI_GATEWAY_API_KEY is not set and no usable VERCEL_OIDC_TOKEN was " +
+        'found: "Suggest details" is switched off and its button will not ' +
+        "be rendered. This is a supported state, not an error — set the key " +
+        "if the feature is meant to be on.",
+    );
+    return;
+  }
+
+  if (viaOidc) {
+    console.warn(
+      'AI_GATEWAY_API_KEY is not set: "Suggest details" is running on ' +
+        "VERCEL_OIDC_TOKEN, which is short-lived. When it expires the " +
+        "button will stop being rendered, silently and without a further " +
+        "log line. Set AI_GATEWAY_API_KEY in production.",
+    );
+  }
+}
+
 export function aiSuggestionsConfigured(): boolean {
   if (process.env["AI_GATEWAY_API_KEY"]) {
+    announce(true, false);
     return true;
   }
 
   const oidc = process.env["VERCEL_OIDC_TOKEN"];
-  return oidc !== undefined && oidc !== "" && oidcStillValid(oidc);
+  const usable = oidc !== undefined && oidc !== "" && oidcStillValid(oidc);
+  announce(usable, usable);
+  return usable;
 }
