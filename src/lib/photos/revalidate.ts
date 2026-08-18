@@ -41,4 +41,19 @@ export function revalidateFeeds(slug: string): void {
    * here does: ad-hoc revalidation kept missing one.
    */
   revalidatePath("/globe");
+  /*
+   * And the route the *card* reads, which is a second cache entirely.
+   *
+   * "Ad-hoc revalidation kept missing one" — said one line above, and it had
+   * missed this one. The globe draws its dots from the page, but hovering one
+   * looks the cell up in the payload of `/api/globe`, fetched separately by
+   * `components/geo/places.ts` and holding its own hour. Busting only the
+   * page put a dot on the map for a cell the card knew nothing about, so
+   * `places.get(...)` returned undefined and hovering the newest photograph
+   * did nothing at all — for up to an hour, then quietly started working.
+   *
+   * Two caches for one feature is the underlying shape; until they are one,
+   * they expire together.
+   */
+  revalidatePath("/api/globe");
 }

@@ -39,8 +39,31 @@ const BLUR_QUALITY = 40;
  * The largest width next/image will ever ask for is 3840. Anything beyond
  * that in the source is bytes the optimizer downloads and throws away.
  */
-const DISPLAY_MAX_EDGE = 3840;
-const DISPLAY_QUALITY = 85;
+export const DISPLAY_MAX_EDGE = 3840;
+export const DISPLAY_QUALITY = 85;
+
+/**
+ * The largest bitmap libvips will agree to decode, in pixels.
+ *
+ * The cap that matters once uploads may be 50 MB. Bytes on disk say almost
+ * nothing about memory: a JPEG is compressed, and a small file describing an
+ * enormous canvas decodes to width × height × channels no matter how little
+ * it weighed. `MAX_UPLOAD_BYTES` is therefore not a bound on anything this
+ * function allocates, and the ingest route holds four buffers at once — the
+ * original, libvips' decode of it, the display copy, and a second pipeline
+ * over that.
+ *
+ * 268 megapixels is roughly a 16000 × 16000 square: far above any camera a
+ * photographer here will be using, and far below the point where a file
+ * shaped like a decompression bomb takes the function down. Exceeding it
+ * throws, which the route already turns into a 422 with the blob deleted —
+ * a clean refusal instead of an OOM, which is the whole difference.
+ *
+ * sharp's own default is 0x3FFF × 0x3FFF; this is stated rather than
+ * inherited so that a change to that default cannot silently change what
+ * this site accepts.
+ */
+const MAX_INPUT_PIXELS = 268_402_689;
 const RGB_MAX = 255;
 const HEX_RADIX = 16;
 const ONE_SECOND = 1;
@@ -171,7 +194,10 @@ async function readExif(buffer: Buffer): Promise<PhotoExif | null> {
  * can ask for, which is why it costs no visible quality.
  */
 async function makeDisplayBuffer(buffer: Buffer): Promise<Buffer> {
-  return await sharp(buffer, { failOn: "error" })
+  return await sharp(buffer, {
+    failOn: "error",
+    limitInputPixels: MAX_INPUT_PIXELS,
+  })
     .rotate()
     .resize({
       width: DISPLAY_MAX_EDGE,
@@ -197,7 +223,16 @@ export async function deriveFromBuffer(buffer: Buffer): Promise<DerivedPhoto> {
    * would report the wrong aspect ratio and reintroduce layout shift.
    */
   const display = await makeDisplayBuffer(buffer);
-  const image = sharp(display, { failOn: "error" });
+  /*
+   * The display copy is already clamped to `DISPLAY_MAX_EDGE`, so this one
+   * cannot exceed the limit — it is stated anyway, because a second pipeline
+   * with different limits from the first is exactly the kind of asymmetry
+   * that survives a refactor of the first.
+   */
+  const image = sharp(display, {
+    failOn: "error",
+    limitInputPixels: MAX_INPUT_PIXELS,
+  });
 
   const { width, height } = await image.metadata();
   if (
