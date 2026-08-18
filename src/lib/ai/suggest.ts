@@ -2,7 +2,6 @@ import { Output, streamText } from "ai";
 import { z } from "zod";
 import type { PhotoExif } from "@/lib/photos/derive";
 import { exifLine } from "@/lib/photos/exif-line";
-import { type Hint, hintLine } from "./hint";
 import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
 
 /**
@@ -190,14 +189,6 @@ export interface SuggestionSource {
   /** Bytes of the display copy. JPEG, because that is what `derive` writes. */
   image: Uint8Array;
   exif: PhotoExif | null;
-  /**
-   * What the photographer offered, already read and already blunted.
-   *
-   * A `Hint` rather than a request body, so this function cannot be the
-   * place a raw coordinate slips into a prompt: by the time one arrives here
-   * `readHint` has rounded it, and there is no other way in.
-   */
-  hint: Hint;
 }
 
 /**
@@ -268,7 +259,6 @@ export function suggestForPhotograph(
   signal?: AbortSignal,
 ): SuggestionRun {
   const context = contextLine(source.exif);
-  const steer = hintLine(source.hint);
 
   /*
    * Either reason to stop, as one signal.
@@ -303,8 +293,7 @@ export function suggestForPhotograph(
             text:
               "Suggest a title, a description and one or two possible " +
               "places for this photograph." +
-              (context === null ? "" : ` The file records: ${context}.`) +
-              (steer === null ? "" : ` ${steer}`),
+              (context === null ? "" : ` The file records: ${context}.`),
           },
           {
             /*

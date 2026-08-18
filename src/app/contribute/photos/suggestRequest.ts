@@ -1,4 +1,3 @@
-import type { Hint } from "@/lib/ai/hint";
 import { OUR_FAULT_MESSAGE } from "@/lib/ai/stream";
 
 /** The sentence the server sent, when it sent one written for a person. */
@@ -29,25 +28,21 @@ function refusalFrom(body: unknown): string {
  */
 export async function openSuggestion(
   photoId: string,
-  hint: Hint,
   signal: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
   const response = await fetch(`/api/photos/${photoId}/suggest`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     /*
+     * No body: the photograph and its stored EXIF are the whole prompt, both
+     * resolved server-side from the id in the path. The request used to carry
+     * a hint, and the route stopped reading bodies when that feature went.
+     *
      * The signal reaches the request as well as the caller's read loop, so an
      * abandoned run also closes the connection — the route holds a model call
      * open for as long as somebody is listening, and that call is billed
      * whether or not anyone still wants the answer.
      */
     signal,
-    /*
-     * Always a body, even an empty hint. The route reads one shape and
-     * `readHint` turns anything it cannot use into no hint at all, so there
-     * is no second code path for the ordinary case.
-     */
-    body: JSON.stringify(hint),
   });
 
   if (!response.ok || response.body === null) {

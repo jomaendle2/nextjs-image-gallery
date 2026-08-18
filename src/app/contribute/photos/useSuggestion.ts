@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Hint } from "@/lib/ai/hint";
 import { OUR_FAULT_MESSAGE, type SuggestionRecord } from "@/lib/ai/stream";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 import {
@@ -91,7 +90,7 @@ export interface Suggesting {
   places: PlaceGuess[];
   /** Whether an answer has landed, so an empty list can be said out loud. */
   answered: boolean;
-  ask: (hint: Hint) => void;
+  ask: () => void;
   undo: () => void;
   /** Put a candidate's name in the Location field. */
   takeName: (place: PlaceGuess) => void;
@@ -300,70 +299,67 @@ export function useSuggestion(
     [apply],
   );
 
-  const ask = useCallback(
-    (hint: Hint) => {
-      /*
-       * Whatever was running stops now.
-       *
-       * Pressing the button twice used to leave two live streams writing to
-       * the same three inputs, and the loser could land last.
-       */
-      running.current?.abort();
-      const controller = new AbortController();
-      running.current = controller;
-      const { signal } = controller;
+  const ask = useCallback(() => {
+    /*
+     * Whatever was running stops now.
+     *
+     * Pressing the button twice used to leave two live streams writing to
+     * the same three inputs, and the loser could land last.
+     */
+    running.current?.abort();
+    const controller = new AbortController();
+    running.current = controller;
+    const { signal } = controller;
 
-      setError(null);
-      setNote(null);
-      setStage("looking");
-      setPlaces([]);
-      setAnswered(false);
-      touched.current = new Set();
+    setError(null);
+    setNote(null);
+    setStage("looking");
+    setPlaces([]);
+    setAnswered(false);
+    touched.current = new Set();
 
-      const asking = async () => {
-        const body = await openSuggestion(photoId, hint, signal);
+    const asking = async () => {
+      const body = await openSuggestion(photoId, signal);
+      onFilled();
+      await consume(body, signal);
+    };
+
+    asking()
+      .catch((cause: unknown) => {
+        /*
+         * An abandoned run says nothing and puts nothing back.
+         *
+         * It has already been replaced by a newer run or its row is gone,
+         * so both halves of the ordinary failure path would be wrong here:
+         * `putBack` would restore this run's remembered values over fields
+         * the *newer* run is currently writing, and the error notice would
+         * accuse the feature of failing when the photographer simply
+         * pressed the button again.
+         */
+        if (signal.aborted) {
+          return;
+        }
+
+        /*
+         * The form goes back to what it said before the button was
+         * pressed. The message promises that nothing has been changed
+         * either way, and a half-written title left in the box would make
+         * that untrue.
+         */
+        putBack([...touched.current]);
+        setPlaces([]);
+        setAnswered(false);
+        setNote(null);
+        setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
+      })
+      .finally(() => {
+        if (signal.aborted) {
+          return;
+        }
+        setStage(null);
         onFilled();
-        await consume(body, signal);
-      };
-
-      asking()
-        .catch((cause: unknown) => {
-          /*
-           * An abandoned run says nothing and puts nothing back.
-           *
-           * It has already been replaced by a newer run or its row is gone,
-           * so both halves of the ordinary failure path would be wrong here:
-           * `putBack` would restore this run's remembered values over fields
-           * the *newer* run is currently writing, and the error notice would
-           * accuse the feature of failing when the photographer simply
-           * pressed the button again.
-           */
-          if (signal.aborted) {
-            return;
-          }
-
-          /*
-           * The form goes back to what it said before the button was
-           * pressed. The message promises that nothing has been changed
-           * either way, and a half-written title left in the box would make
-           * that untrue.
-           */
-          putBack([...touched.current]);
-          setPlaces([]);
-          setAnswered(false);
-          setNote(null);
-          setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
-        })
-        .finally(() => {
-          if (signal.aborted) {
-            return;
-          }
-          setStage(null);
-          onFilled();
-        });
-    },
-    [photoId, onFilled, consume, putBack],
-  );
+      });
+  }, [photoId, onFilled, consume, putBack]);
 
   const undo = useCallback(() => {
     putBack([...before.current.keys()]);

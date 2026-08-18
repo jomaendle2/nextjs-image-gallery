@@ -7,12 +7,11 @@ import type { Pin } from "@/lib/photos/types";
 /**
  * The map, as one imperative object with a React shape around it.
  *
- * Its own file because two controls now draw one: the picker below the
- * Location field, where a click sets the coordinate that gets saved, and the
- * hint map beside "Suggest details", where a click sets a rough point that
- * is sent once and never stored. Both need the same thing — a surface that
- * reports clicks upward and takes a point downward — and neither needs to
- * know how the library underneath is loaded.
+ * Its own file because a second control once drew one — the hint map beside
+ * "Suggest details", since removed. The split earns its keep anyway: a
+ * surface that reports clicks upward and takes a point downward, with no
+ * knowledge of how the library underneath is loaded, is the shape any future
+ * map has to take.
  *
  * That is also what keeps I14 true at exactly one file. The invariant counts
  * the files in this codebase that name the mapping library and requires the
@@ -67,13 +66,12 @@ async function loadMapLibre() {
  * takes the current point downward; the field and the map are two views of
  * one value, and the value lives in the parent.
  *
- * Exported for the hint map beside "Suggest details", and exported rather
- * than copied for a reason with a test behind it: I14 counts the files in
- * this codebase that name the map library and requires the answer to be one.
- * A second component that draws a map by importing this one names nothing,
- * so the invariant holds unchanged — and the alternative, a near-identical
- * copy of the loader and the marker, would put the library in two files and
- * two chunks to save one import.
+ * Exported rather than inlined, for a reason with a test behind it: I14
+ * counts the files in this codebase that name the map library and requires
+ * the answer to be one. A component that draws a map by importing this one
+ * names nothing, so the invariant holds unchanged for every future caller —
+ * where a near-identical copy of the loader and the marker would put the
+ * library in two files and two chunks to save one import.
  */
 export function MapSurface({
   styleUrl,
@@ -84,11 +82,7 @@ export function MapSurface({
   styleUrl: string;
   point: Pin | null;
   onPick: (picked: Pin) => void;
-  /**
-   * The one thing a second caller needs to differ on. A hint map is a glance
-   * at a coastline rather than a surface somebody works on, and it sits
-   * above a form that is already tall.
-   */
+  /** The one thing a second caller would need to differ on. */
   height?: string;
 }) {
   const container = useRef<HTMLDivElement | null>(null);
