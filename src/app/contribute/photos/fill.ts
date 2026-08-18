@@ -68,11 +68,6 @@ export function fillsFrom(
   return writes;
 }
 
-/** Whether a field is one the stream writes on its own. */
-export function isFillable(field: TouchedField): field is FillableField {
-  return FILLABLE.includes(field as FillableField);
-}
-
 /**
  * Which field the model is on, so the wait can say something truer than
  * "Looking…".

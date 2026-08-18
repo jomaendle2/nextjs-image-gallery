@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
-import {
-  fillsFrom,
-  isFillable,
-  locationToFill,
-  stageOf,
-  suggestionNote,
-} from "./fill";
+import { fillsFrom, locationToFill, stageOf, suggestionNote } from "./fill";
 
 /**
  * What a suggestion is allowed to do to a form somebody is already typing in.
@@ -75,12 +69,6 @@ describe("which fields a suggestion writes into", () => {
     const writes = fillsFrom(suggestion({ title: "" }));
 
     expect(writes.map(([field]) => field)).toEqual(["description"]);
-  });
-
-  it("knows the place and the pin are not fields it fills", () => {
-    expect(isFillable("title")).toBe(true);
-    expect(isFillable("location")).toBe(false);
-    expect(isFillable("pin")).toBe(false);
   });
 });
 
