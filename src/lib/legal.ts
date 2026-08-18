@@ -143,6 +143,36 @@ export const PROCESSORS = [
     basis:
       "Contract with contributors and legitimate interest (Art. 6(1)(b) and (f) GDPR)",
   },
+  /*
+   * The second processor a *visitor* never reaches, and the only one that is
+   * sent a photograph.
+   *
+   * One row rather than two, and the name says why: the request goes to
+   * Vercel's AI Gateway, which forwards it to whichever of the two model
+   * providers is answering — Google first, Anthropic when it is not. Naming
+   * only the one that usually answers would be a policy that is true on a
+   * good day. Naming the gateway alone would hide the companies that
+   * actually see the image.
+   *
+   * What is sent is the *display copy*: the re-encode the gallery serves,
+   * which carries no metadata of any kind. The original upload — the one file
+   * on this site that still holds whatever GPS the camera wrote — is never
+   * fetched by this feature, and `src/app/api/photos/[id]/suggest/route.ts`
+   * reads one column rather than the usual coalesce of two so that it cannot
+   * become so by accident.
+   *
+   * Both providers are on terms that forbid training on what is sent, which
+   * is the property that matters when the data is somebody else's
+   * photographs. It happens only when a signed-in photographer presses a
+   * button on their own draft, so nothing a visitor does reaches it and no
+   * consent banner follows from it.
+   */
+  {
+    name: "Vercel AI Gateway (Google, Anthropic)",
+    role: "Suggested titles and descriptions, on the photographer upload page only",
+    data: "A photograph and its camera settings, when its photographer asks for a suggestion",
+    basis: "Contract with contributors (Art. 6(1)(b) GDPR)",
+  },
   {
     name: "Plausible Analytics",
     role: "Visitor statistics",

@@ -4,6 +4,13 @@ import { isOwner } from "@/lib/auth/types";
 import { sql } from "@/lib/database";
 import { coarsen } from "./coarsen";
 /*
+ * Type-only, and for the same reason `exifParam` is imported from `types.ts`
+ * below: `derive.ts` loads `sharp` and `exifr`, and a value import of it here
+ * would follow this repository into the bundle of nearly every route. A type
+ * is erased at compile time and pulls nothing with it.
+ */
+import type { PhotoExif } from "./derive";
+/*
  * `exifParam` comes from `types.ts`, not from `derive.ts` where the rest of
  * the EXIF handling lives. Importing it from `derive.ts` is a value import of
  * a module that loads `sharp` and `exifr`, and the file tracer follows that
@@ -618,4 +625,53 @@ export async function deletePhoto(
  */
 export async function setOpener(id: string): Promise<void> {
   await sql`UPDATE photos SET is_opener = (id = ${id});`;
+}
+
+/** What a model may be shown of a photograph, and nothing else. */
+export interface PhotoSource {
+  /**
+   * The re-encoded copy, and never `blob_url` beside it.
+   *
+   * Every other read in this file coalesces the two — `COALESCE(display_url,
+   * blob_url)` — because a page wants whichever image exists. This one must
+   * not: the original upload is stored exactly as the camera wrote it, GPS
+   * block included, and it is the one file here that may not be sent to a
+   * third party. Null for a row old enough to have no display copy, which
+   * the caller answers by declining rather than by falling back.
+   */
+  display_url: string | null;
+  exif: PhotoExif | null;
+}
+
+/**
+ * One of a photographer's own photographs, as much of it as a suggestion
+ * needs.
+ *
+ * `AND p.author_id = ...` in the statement rather than a check after the
+ * read, which is the pattern `setPublished` and `deletePhoto` already use: a
+ * forged id returns nothing instead of somebody else's photograph. The owner
+ * gets no widening here — this feature is a photographer captioning their own
+ * work, and nobody moderates by asking a model for a title.
+ *
+ * Drafts included, deliberately. Captioning happens before publishing; a
+ * query restricted to published rows would offer the button exactly where it
+ * is no longer needed.
+ */
+export async function getOwnPhotoSource(
+  id: string,
+  authorId: string,
+): Promise<PhotoSource | null> {
+  const rows = await sql`
+    SELECT p.display_url, p.exif
+    FROM photos p
+    WHERE p.id = ${id} AND p.author_id = ${authorId};
+  `;
+  const [row] = rows;
+  if (row === undefined) {
+    return null;
+  }
+  return {
+    display_url: (row["display_url"] as string | null) ?? null,
+    exif: (row["exif"] as PhotoExif | null) ?? null,
+  };
 }

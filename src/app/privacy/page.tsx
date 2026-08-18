@@ -29,6 +29,14 @@ export const metadata: Metadata = {
  * public, is the whole job of this page — a policy that quietly kept the old
  * sentence would be the worst outcome available.
  *
+ * The same paragraph was rewritten a second time, for the same reason, when a
+ * model gained the ability to look at a draft and propose a title. "Never
+ * because something was extracted from a file" was the sentence that stopped
+ * being true: a description read off the photograph is exactly that. The GPS
+ * sentence beside it is untouched and still true — the block is not read, and
+ * the image a model is shown is the copy that carries no metadata — and the
+ * distinction between the two is the thing a reader is relying on.
+ *
  * Note what is *not* claimed: that a public page contacts nobody but our own
  * host. Analytics loads from plausible.io on every page, so that sentence
  * would be false. What is true, and is said, is that the map is not among
@@ -101,8 +109,11 @@ export default function PrivacyPage() {
             store two things: the point they marked, which only members see, and
             a deliberately blunt version of it — the centre of a square roughly
             a hundred kilometres across — which is what the globe draws. Both
-            exist because a photographer decided they should, never because
-            something was extracted from a file.
+            exist because a photographer decided they should. A title, a
+            description or a place name may be suggested by a model that has
+            been shown the photograph — the copy that carries no metadata, not
+            the original — and nothing it suggests is stored until the
+            photographer has read it and saved it themselves.
           </li>
           <li>
             <strong className="font-medium text-white/85">

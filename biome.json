@@ -487,6 +487,7 @@
         "src/lib/database.ts",
         "src/lib/auth/**",
         "src/lib/photos/**",
+        "src/lib/ai/offer.ts",
         "src/lib/maptiler.ts",
         "src/lib/members/offer.ts",
         "src/lib/site-url.ts",

@@ -114,6 +114,37 @@ export const stripeLimiter = createLimiter(15);
 export const memberDetailsLimiter = createLimiter(120);
 
 /**
+ * Asking a model to look at a photograph.
+ *
+ * I11's own sentence names three things — money, mail, a metered third party
+ * — and this is the third: every press of "Suggest details" is a paid call to
+ * a vision provider, whether or not anybody keeps the answer. Nothing else on
+ * this site spends money on a button that produces no record.
+ *
+ * Keyed by contributor id, following `memberDetailsLimiter` and its argument:
+ * the gate upstream is a session, so an anonymous caller never arrives, and a
+ * photographer on a shared connection should not be limited by whoever else
+ * is behind it. The id rather than the address because the session already
+ * carries one and it cannot be changed by re-signing-up under a variant
+ * spelling of the same mailbox.
+ *
+ * Thirty in fifteen minutes, and the number is a shape rather than a budget.
+ * Captioning an evening's uploads is the real use — twenty or thirty
+ * photographs in one sitting, one press each — so a limit that a genuine
+ * session reaches would be a limit that mostly punishes the intended
+ * behaviour. What it stops is the other shape entirely: a loop, which reaches
+ * thirty in a second and then waits, and which is the only way this endpoint
+ * turns into a bill. A person clicking a button, reading a paragraph and
+ * deciding whether they agree with it cannot sustain two a minute for long.
+ *
+ * It is a ceiling, not a cost control. Fluid Compute gives each instance its
+ * own counters, so the honest claim is that no single caller can hammer one
+ * instance; a real spend limit belongs in the provider's dashboard, where it
+ * can be enforced against the account rather than against a process.
+ */
+export const suggestLimiter = createLimiter(30);
+
+/**
  * Contributor invites.
  *
  * Five per window, matching sign-in rather than the more generous Stripe
