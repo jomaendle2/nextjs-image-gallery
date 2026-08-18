@@ -1,8 +1,8 @@
-import { generateText, Output } from "ai";
+import { Output, streamText } from "ai";
 import { z } from "zod";
 import type { PhotoExif } from "@/lib/photos/derive";
 import { exifLine } from "@/lib/photos/exif-line";
-import type { RawSuggestion } from "./suggestion";
+import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
 
 /**
  * The one call to a model, and the words that steer it.
@@ -82,15 +82,17 @@ const SUGGESTION_SCHEMA = z.object({
         "place, the mood, or the camera. Like: 'Teal waves crash against " +
         "rocky cliffs.' or 'Pink cherry blossoms against a clear blue sky.'",
     ),
-  location: z
-    .string()
-    .nullable()
-    .describe(
-      "The place, as short as a person writes it on a label: 'Nusa Penida', " +
-        "'Sagres, Portugal', 'Bromo, Java, Indonesia' — never the official " +
-        "name of a park or municipality when a shorter one is what people " +
-        "say. Null unless something in the frame actually identifies it.",
-    ),
+  /*
+   * Before the place it judges, and the order is load-bearing now that this
+   * streams.
+   *
+   * A model emits JSON keys in schema order, and the interface writes each
+   * field into a real input as the characters arrive. With `location` first,
+   * a guess the model was about to disown would appear in the box, be read,
+   * and then have to be taken back out — and a place that appeared in a form
+   * has been seen, whatever happens next. Asking for the verdict first means
+   * the answer is known before there is anything to hide.
+   */
   locationConfidence: z
     .enum(["high", "low"])
     .describe(
@@ -99,6 +101,15 @@ const SUGGESTION_SCHEMA = z.object({
         "Vegetation, light, architecture style and the general look of a " +
         "coastline are 'low' — they narrow a guess, they do not identify a " +
         "place.",
+    ),
+  location: z
+    .string()
+    .nullable()
+    .describe(
+      "The place, as short as a person writes it on a label: 'Nusa Penida', " +
+        "'Sagres, Portugal', 'Bromo, Java, Indonesia' — never the official " +
+        "name of a park or municipality when a shorter one is what people " +
+        "say. Null unless something in the frame actually identifies it.",
     ),
 });
 
@@ -149,28 +160,51 @@ function contextLine(exif: PhotoExif | null): string | null {
 }
 
 /**
- * Asks a model to look at one photograph and propose three fields.
+ * What one call produces: the fields as they are being written, then the
+ * finished set.
  *
- * Throws on anything the provider does — a refusal, a timeout, a schema the
- * model would not fill in. The caller logs that and says something else to
- * the photographer; a provider's error text is never forwarded, which is the
- * discipline `src/app/api/photos/draft/route.ts` set with `TellTheUser`.
+ * Both halves, because they are not the same thing and only one of them is
+ * trustworthy. A partial is a prefix of a sentence the model has not finished
+ * — good enough to show somebody so they can see it working, never good
+ * enough to be the final content of a field. `complete` is the validated
+ * object, and it is what the form ends up holding.
  */
-export async function suggestForPhotograph(
-  source: SuggestionSource,
-): Promise<RawSuggestion> {
+export interface SuggestionRun {
+  parts: AsyncIterable<PartialRawSuggestion>;
+  complete: PromiseLike<RawSuggestion>;
+}
+
+/**
+ * Asks a model to look at one photograph and propose three fields, reporting
+ * as it writes them.
+ *
+ * Streaming rather than one answer at the end, and the reason is what the
+ * wait feels like rather than what it costs: a vision model takes several
+ * seconds over a photograph, and a button that says "Looking…" for six of
+ * them is indistinguishable from a button that has failed. The same six
+ * seconds spent watching a title appear a word at a time is the model showing
+ * its work.
+ *
+ * Errors from a stream do not arrive as a thrown call — the SDK puts them in
+ * the stream instead, so that a provider dying mid-sentence cannot crash the
+ * process. Both the iteration and `complete` will reject; the caller is
+ * expected to handle either, and the route does. A provider's error text is
+ * still never forwarded, which is the discipline
+ * `src/app/api/photos/draft/route.ts` set with `TellTheUser`.
+ */
+export function suggestForPhotograph(source: SuggestionSource): SuggestionRun {
   const context = contextLine(source.exif);
 
   /*
-   * `generateText` with an `Output.object`, not `generateObject`.
+   * `streamText` with an `Output.object`, not `streamObject`.
    *
-   * `generateObject` is what a from-memory version of this call would use,
-   * and it still exists — but it is deprecated in the installed SDK, and the
-   * lint rule that reads `@deprecated` annotations is what said so before
-   * anything shipped. Structured output is now a property of an ordinary
-   * generation rather than a separate function.
+   * `streamObject` is what a from-memory version of this call would use, and
+   * it still exists — but it is deprecated in the installed SDK, and the lint
+   * rule that reads `@deprecated` annotations is what said so before anything
+   * shipped. Structured output is a property of an ordinary generation rather
+   * than a separate function, streaming or not.
    */
-  const { output, usage, finishReason } = await generateText({
+  const { partialOutputStream, output } = streamText({
     model: MODEL,
     output: Output.object({ schema: SUGGESTION_SCHEMA }),
     system: SYSTEM,
@@ -207,8 +241,16 @@ export async function suggestForPhotograph(
     providerOptions: { gateway: { models: FALLBACK_MODELS } },
     maxRetries: MAX_RETRIES,
     abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+    /*
+     * The full error, once, where it is useful. Without this callback a
+     * provider failure is only observable as a rejected promise somewhere
+     * downstream, by which point the vendor's own message — the one naming
+     * which model refused and why — has been replaced by ours.
+     */
+    onError({ error }) {
+      console.error("The model could not suggest details:", error);
+    },
   });
 
-  console.warn("TEMP usage", JSON.stringify(usage), finishReason);
-  return output;
+  return { parts: partialOutputStream, complete: output };
 }

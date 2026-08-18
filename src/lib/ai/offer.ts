@@ -39,8 +39,50 @@ import process from "node:process";
  * working feature is recoverable by setting `AI_GATEWAY_API_KEY`; offering a
  * button that answers with an error is not.
  */
+/**
+ * Whether an OIDC token is still worth presenting to the gateway.
+ *
+ * The presence check this file used to make was the bug it was written to
+ * prevent. `vercel env pull` writes a `VERCEL_OIDC_TOKEN` that lasts about
+ * twelve hours and leaves it in `.env.local` for ever; two days later the
+ * variable is still set, `Boolean(...)` still says yes, and the button is
+ * still rendered — and every press of it spends a round trip to arrive at
+ * "the suggestion could not be made just now". That is precisely the failure
+ * this module's own comment calls unrecoverable: offering a control that
+ * cannot work.
+ *
+ * The token is a JWT and says when it stops being one, so it is asked.
+ * Sixty seconds of margin, because a token that expires while the request is
+ * in flight fails the same way an expired one does.
+ *
+ * Anything that will not decode is treated as unusable rather than given the
+ * benefit of the doubt, following the same rule in the same direction: a
+ * false negative hides a working feature and is fixed by setting
+ * `AI_GATEWAY_API_KEY`, and a false positive is a button that answers with an
+ * error.
+ */
+function oidcStillValid(token: string): boolean {
+  const [, payload] = token.split(".");
+  if (payload === undefined) {
+    return false;
+  }
+
+  try {
+    const { exp } = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as { exp?: unknown };
+
+    return typeof exp === "number" && exp * 1000 > Date.now() + 60_000;
+  } catch {
+    return false;
+  }
+}
+
 export function aiSuggestionsConfigured(): boolean {
-  return Boolean(
-    process.env["AI_GATEWAY_API_KEY"] || process.env["VERCEL_OIDC_TOKEN"],
-  );
+  if (process.env["AI_GATEWAY_API_KEY"]) {
+    return true;
+  }
+
+  const oidc = process.env["VERCEL_OIDC_TOKEN"];
+  return oidc !== undefined && oidc !== "" && oidcStillValid(oidc);
 }

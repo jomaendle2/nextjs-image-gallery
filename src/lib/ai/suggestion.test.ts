@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { type RawSuggestion, shapeSuggestion } from "./suggestion";
+import {
+  type RawSuggestion,
+  shapePartial,
+  shapeSuggestion,
+} from "./suggestion";
 
 /**
  * The two rules that stand between a model and a photographer's form.
@@ -103,5 +107,55 @@ describe("dropping a place the model is unsure of", () => {
 
   it("treats a blank place as no place", () => {
     expect(shapeSuggestion(answer({ location: "   " })).location).toBeNull();
+  });
+});
+
+/**
+ * The half-written answer, which is the version somebody actually watches.
+ *
+ * The rule worth pinning is the one about the place: while the model has not
+ * yet said how sure it is there is no verdict, and a guess shown and then
+ * retracted has still been read.
+ */
+describe("shapePartial", () => {
+  it("passes through the fields that have arrived", () => {
+    expect(shapePartial({ title: "Low tide" })).toEqual({ title: "Low tide" });
+  });
+
+  it("leaves out a field the model has not reached", () => {
+    expect(shapePartial({})).toEqual({});
+  });
+
+  it("withholds a place until the model has said it is sure", () => {
+    expect(shapePartial({ location: "Algarve" })).toEqual({});
+  });
+
+  it("withholds a place the model is unsure of, for good", () => {
+    expect(
+      shapePartial({ location: "Algarve", locationConfidence: "low" }),
+    ).toEqual({});
+  });
+
+  it("shows a place once the model has vouched for it", () => {
+    expect(
+      shapePartial({ location: "Algarve", locationConfidence: "high" }),
+    ).toEqual({ location: "Algarve" });
+  });
+
+  /*
+   * The caps apply to a prefix too. A model writing past 120 characters is
+   * writing past them from the first chunk that gets there, and a field that
+   * grows past its column and then snaps back at the end is a worse way to
+   * find out than never seeing the extra words.
+   */
+  it("cuts a long prefix to the column's cap", () => {
+    const long = "x".repeat(400);
+    expect(shapePartial({ title: long }).title).toHaveLength(120);
+  });
+
+  it("collapses the whitespace a model streams mid-sentence", () => {
+    expect(shapePartial({ description: "Teal  waves\ncrash" })).toEqual({
+      description: "Teal waves crash",
+    });
   });
 });

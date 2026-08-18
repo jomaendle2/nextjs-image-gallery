@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PhotoSuggestion } from "@/lib/ai/suggestion";
-import { fillsFrom, suggestionNote } from "./fill";
+import { fillsFrom, stageOf, suggestionNote } from "./fill";
 
 /**
  * What a suggestion is allowed to do to a form somebody is already typing in.
@@ -76,5 +76,46 @@ describe("what the photographer is told", () => {
 
   it("does not mention the place when it named one", () => {
     expect(suggestionNote(suggestion())).not.toContain("would not guess");
+  });
+});
+
+/**
+ * What the wait says while the fields are filling.
+ *
+ * Read off the stream rather than told to us, so the thing being checked is
+ * that the reading matches the order the schema asks for. If those two ever
+ * disagree the line describes the wrong field, which is worse than saying
+ * nothing.
+ */
+describe("which field the model is on", () => {
+  it("is looking before anything has arrived", () => {
+    expect(stageOf({})).toBe("looking");
+  });
+
+  it("is on the title while only a title has arrived", () => {
+    expect(stageOf({ title: "Low" })).toBe("title");
+  });
+
+  /* Empty string, not undefined: the field has been opened, not skipped. */
+  it("is on the description from its first character", () => {
+    expect(stageOf({ title: "Low tide", description: "" })).toBe("description");
+  });
+
+  it("is on the place once one is being shown", () => {
+    expect(
+      stageOf({ title: "Low tide", description: "Waves.", location: "Alg" }),
+    ).toBe("location");
+  });
+
+  /*
+   * A place the model declined to name never reaches the form, so the wait
+   * must not claim to be placing anything. `shapePartial` has already
+   * withheld it; this is the half of that decision the sentence has to agree
+   * with.
+   */
+  it("does not claim to be placing a photograph it will not place", () => {
+    expect(stageOf({ title: "Low tide", description: "Waves." })).toBe(
+      "description",
+    );
   });
 });

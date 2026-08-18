@@ -38,22 +38,62 @@ export type FillableField = "title" | "description" | "location";
  * already typed — because a model declined to guess it — would be the worst
  * thing this feature could do. A suggestion adds; it does not erase.
  */
+const FILLABLE: readonly FillableField[] = ["title", "description", "location"];
+
 export function fillsFrom(
-  suggestion: PhotoSuggestion,
+  suggestion: Partial<PhotoSuggestion>,
 ): [FillableField, string][] {
   const writes: [FillableField, string][] = [];
 
-  if (suggestion.title !== "") {
-    writes.push(["title", suggestion.title]);
-  }
-  if (suggestion.description !== "") {
-    writes.push(["description", suggestion.description]);
-  }
-  if (suggestion.location !== null && suggestion.location !== "") {
-    writes.push(["location", suggestion.location]);
+  for (const field of FILLABLE) {
+    const value = suggestion[field];
+    /*
+     * A string and not an empty one. Three states arrive here and only one is
+     * a write: a field the model has not reached is `undefined`, a place it
+     * declined to name is `null`, and both mean leave the box alone.
+     */
+    if (typeof value === "string" && value !== "") {
+      writes.push([field, value]);
+    }
   }
 
   return writes;
+}
+
+/**
+ * Which field the model is on, so the wait can say something truer than
+ * "Looking…".
+ *
+ * Read from what has arrived rather than counted: the fields come in schema
+ * order, so the last one present is the one being written. It is a guess
+ * about a stream rather than a message from the model, which is why it only
+ * ever appears next to the fields themselves filling in — the sentence is the
+ * caption, the fields are the evidence.
+ */
+export type SuggestionStage = "looking" | "title" | "description" | "location";
+
+export function stageOf(partial: Partial<PhotoSuggestion>): SuggestionStage {
+  if (typeof partial.location === "string" && partial.location !== "") {
+    return "location";
+  }
+  if (partial.description !== undefined) {
+    return "description";
+  }
+  if (partial.title !== undefined) {
+    return "title";
+  }
+  return "looking";
+}
+
+const STAGE_LABEL: Record<SuggestionStage, string> = {
+  looking: "Looking at the photograph…",
+  title: "Naming it…",
+  description: "Describing what is in the frame…",
+  location: "Placing it…",
+};
+
+export function stageLabel(stage: SuggestionStage): string {
+  return STAGE_LABEL[stage];
 }
 
 /** Every suggestion says this, because it is the thing worth being sure of. */

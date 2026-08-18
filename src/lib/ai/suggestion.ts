@@ -40,6 +40,21 @@ export interface RawSuggestion {
   locationConfidence: LocationConfidence;
 }
 
+/**
+ * The same answer, half-written.
+ *
+ * Every field optional and every string possibly a prefix, because that is
+ * what a model streaming JSON actually produces: `{"title": "Low ti` is a
+ * legitimate state of this object. Nothing here has been validated against
+ * anything; it exists to be shown, not to be kept.
+ */
+export interface PartialRawSuggestion {
+  title?: string | undefined;
+  description?: string | undefined;
+  location?: string | null | undefined;
+  locationConfidence?: LocationConfidence | undefined;
+}
+
 /** What the route returns. Same shape; every field already trustworthy. */
 export interface PhotoSuggestion {
   title: string;
@@ -84,6 +99,40 @@ function clamp(value: string, max: number): string {
  * interface can say the place was left blank on purpose instead of appearing
  * to have found nothing.
  */
+/**
+ * A half-written answer, made safe to put in front of somebody.
+ *
+ * The same two rules as below, applied to whatever has arrived so far — and
+ * the second is the reason this is a function rather than a cast.
+ *
+ * **A place is withheld until the model has said it is sure.** While the
+ * confidence is still unwritten there is no verdict yet, so an
+ * already-streaming location is held back rather than shown and retracted;
+ * the schema asks for the verdict first precisely so that this wait is short.
+ * `low` drops the place for good, exactly as the finished answer does.
+ *
+ * Absent fields stay absent rather than becoming empty strings. The caller
+ * writes what it is given, so a `""` here would blank a box the model has
+ * simply not reached yet.
+ */
+export function shapePartial(
+  raw: PartialRawSuggestion,
+): Partial<PhotoSuggestion> {
+  const partial: Partial<PhotoSuggestion> = {};
+
+  if (raw.title !== undefined) {
+    partial.title = clamp(raw.title, MAX_TITLE);
+  }
+  if (raw.description !== undefined) {
+    partial.description = clamp(raw.description, MAX_DESCRIPTION);
+  }
+  if (raw.locationConfidence === "high" && typeof raw.location === "string") {
+    partial.location = clamp(raw.location, MAX_LOCATION);
+  }
+
+  return partial;
+}
+
 export function shapeSuggestion(raw: RawSuggestion): PhotoSuggestion {
   const location =
     raw.locationConfidence === "high" && raw.location !== null
