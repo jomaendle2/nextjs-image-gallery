@@ -1,7 +1,13 @@
 "use client";
 
 import { ExternalLink, Trash2 } from "lucide-react";
-import { useActionState, useCallback, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { IDLE } from "@/app/form-state";
 import { ActionError } from "@/components/ui/ActionError";
 import {
@@ -23,6 +29,7 @@ import {
   togglePublished,
 } from "./actions";
 import { LocationPicker } from "./LocationPicker";
+import { SuggestDetails } from "./SuggestDetails";
 
 const INITIAL: PhotoFormState = IDLE;
 
@@ -79,10 +86,32 @@ function marksFor(marks: Marks, field: PhotoField) {
  * did not have. Two named groups in the order somebody fills them in: what
  * everybody sees, then what only members do.
  */
-function PublicFields({ photo, marks }: { photo: OwnPhotoRow; marks: Marks }) {
+function PublicFields({
+  photo,
+  marks,
+  suggest,
+}: {
+  photo: OwnPhotoRow;
+  marks: Marks;
+  /**
+   * The "Suggest details" control, or nothing at all.
+   *
+   * Passed in rather than decided here, because whether a model can be asked
+   * anything is a fact about the deployment's environment and this component
+   * runs in a browser. `aiSuggestionsConfigured()` is read on the server and
+   * drilled down, the same way the map key is.
+   *
+   * Inside this fieldset and not beside the buttons at the foot of the form:
+   * the three fields it writes into are all here, and it belongs where its
+   * effect is rather than where the other actions happen to live.
+   */
+  suggest: ReactNode;
+}) {
   return (
     <fieldset className="space-y-3">
       <legend className={`mb-1.5 ${META}`}>Public — everyone</legend>
+
+      {suggest}
 
       <div className="space-y-1.5">
         <label className={LABEL} htmlFor={`title-${photo.id}`}>
@@ -318,10 +347,19 @@ function SaveResult({
 export function PhotoEditForm({
   photo,
   mapStyleUrl,
+  aiOffered,
 }: {
   photo: OwnPhotoRow;
   /** Null when no `MAPTILER_KEY` is set; the picker says so and still works. */
   mapStyleUrl: string | null;
+  /**
+   * Whether a model can be asked to look at a photograph at all.
+   *
+   * False is a working gallery, not a broken one — the button is simply not
+   * there, and photographers write their own titles as they always have. The
+   * route answers a request that arrives anyway with a 503 and a sentence.
+   */
+  aiOffered: boolean;
 }) {
   const [state, formAction, pending] = useActionState(savePhoto, INITIAL);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -421,7 +459,15 @@ export function PhotoEditForm({
         ) : null}
       </div>
 
-      <PublicFields marks={marks} photo={photo} />
+      <PublicFields
+        marks={marks}
+        photo={photo}
+        suggest={
+          aiOffered ? (
+            <SuggestDetails onFilled={retireMessage} photoId={photo.id} />
+          ) : null
+        }
+      />
 
       <MemberFields mapStyleUrl={mapStyleUrl} marks={marks} photo={photo} />
 

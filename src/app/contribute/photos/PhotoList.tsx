@@ -1,7 +1,13 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 import { Notice } from "@/components/ui/Notice";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { OwnPhotoRow } from "@/lib/photos/types";
@@ -18,6 +24,9 @@ import {
 import { PhotoCard } from "./PhotoCard";
 import { PhotoFilters } from "./PhotoFilters";
 import { SelectAll } from "./SelectAll";
+import { useViewLayout } from "./useViewLayout";
+import { ViewToggle } from "./ViewToggle";
+import { listClassName } from "./view";
 
 /**
  * Finding one photograph among many.
@@ -82,6 +91,8 @@ function BulkReport({
 export function PhotoList({
   photos,
   mapStyleUrl,
+  aiOffered,
+  uploader,
 }: {
   photos: OwnPhotoRow[];
   /**
@@ -90,11 +101,31 @@ export function PhotoList({
    * working state, not a broken one — see `lib/maptiler.ts`.
    */
   mapStyleUrl: string | null;
+  /**
+   * Whether a model can be asked for a title. Read on the server from the
+   * gateway credentials, for the same reason and with the same consequence:
+   * false hides a button rather than breaking a page.
+   */
+  aiOffered: boolean;
+  /**
+   * The upload box, handed in rather than rendered above.
+   *
+   * It used to be the page's own child, which was right while the page was
+   * one column and wrong the moment it stopped being: the rail this list now
+   * sits beside is made of the two things you do *to* the list — add to it,
+   * and narrow it — and the component that owns the narrowing is this one.
+   * A slot keeps the uploader's own state out of here, which matters, because
+   * a batch in flight must not be re-mounted by a keystroke in the search box.
+   */
+  uploader: ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
+
+  /* List or grid: the count decides the first one, the photographer the rest. */
+  const { layout, onLayoutChange } = useViewLayout(photos.length);
 
   /*
    * Whether the reader is picking photographs, rather than reading them.
@@ -235,27 +266,79 @@ export function PhotoList({
     setSelected((current) => toggleAll(current, visible));
   }, [visible]);
 
+  /*
+   * The two things you do to a list, kept together and kept beside it.
+   *
+   * `@container` rather than a breakpoint, and that is the whole reason the
+   * rail works at both widths: `PhotoFilters` lays itself out from the space
+   * it has been given, not from the size of the window. In one column it is a
+   * wide search box with the three status filters alongside; in a 21rem rail
+   * on a large screen it stacks. Written with `sm:` it would have read the
+   * viewport — which on a 2560px monitor says "plenty of room" about a column
+   * narrower than a phone.
+   */
+  const rail = (
+    <aside className="@container space-y-5 xl:sticky xl:top-8 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto xl:pb-2">
+      {uploader}
+      {photos.length > CONTROLS_APPEAR_AT ? (
+        <div className="space-y-3">
+          <PhotoFilters
+            counts={counts}
+            filter={filter}
+            onClearQuery={clearQuery}
+            onFilterChange={onFilterChange}
+            onQueryChange={onQueryChange}
+            query={query}
+          />
+          {/*
+            Beside the filters rather than above the list, because it is the
+            same kind of thing: neither changes a photograph, both change
+            which of them you can see and how.
+          */}
+          <ViewToggle layout={layout} onChange={onLayoutChange} />
+        </div>
+      ) : null}
+    </aside>
+  );
+
+  /*
+   * Two columns from `xl` up, one below it, and nothing at all changes below
+   * it — the phone and tablet layout is the same markup in the same order it
+   * has always been.
+   *
+   * `xl` rather than `lg` because the rail has a real minimum: the upload box
+   * carries five sentences about what happens to a file, and squeezed into
+   * the ~15rem a 1024px screen would leave after the list has its share, that
+   * paragraph becomes a column of two-word lines. 1280px is where both halves
+   * fit at their own size rather than at each other's expense.
+   *
+   * The list is the column that scrolls. Sticky rail, capped to the viewport
+   * so a tall upload box in a short window can still be reached, because a
+   * sticky element taller than the screen hides its own bottom edge.
+   */
+  const workspace = (body: ReactNode) => (
+    <div className="mt-8 xl:grid xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] xl:items-start xl:gap-8">
+      {rail}
+      {/*
+        `@container` so the grid counts its columns from this column's width
+        rather than the window's. The same markup is a two-across grid on a
+        phone and a four-across grid in the wide right-hand column, and no
+        viewport breakpoint can describe both.
+      */}
+      <div className="@container mt-8 xl:mt-0">{body}</div>
+    </div>
+  );
+
   if (photos.length === 0) {
-    return (
-      <p className="mt-8 text-white/55">
-        Nothing here yet. Upload your first photograph above.
-      </p>
+    return workspace(
+      <p className="text-white/55">
+        Nothing here yet. Your first upload will appear here.
+      </p>,
     );
   }
 
-  return (
-    <div className="mt-8">
-      {photos.length > CONTROLS_APPEAR_AT ? (
-        <PhotoFilters
-          counts={counts}
-          filter={filter}
-          onClearQuery={clearQuery}
-          onFilterChange={onFilterChange}
-          onQueryChange={onQueryChange}
-          query={query}
-        />
-      ) : null}
-
+  return workspace(
+    <>
       {visible.length === 0 ? null : (
         <SelectAll
           matching={visible.length}
@@ -287,9 +370,11 @@ export function PhotoList({
           Nothing matches{query.trim() === "" ? " that filter" : ` “${query}”`}.
         </p>
       ) : (
-        <ul className="space-y-3">
+        <ul className={listClassName(layout)}>
           {(showAll ? visible : visible.slice(0, INITIAL_ROWS)).map((photo) => (
             <PhotoCard
+              aiOffered={aiOffered}
+              layout={layout}
               mapStyleUrl={mapStyleUrl}
               key={photo.id}
               onSelect={selecting ? toggleOne : undefined}
@@ -310,6 +395,6 @@ export function PhotoList({
           Show the other {visible.length - INITIAL_ROWS}
         </button>
       ) : null}
-    </div>
+    </>,
   );
 }

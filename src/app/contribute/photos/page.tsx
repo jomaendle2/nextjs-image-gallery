@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GlassButton } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
+import { aiSuggestionsConfigured } from "@/lib/ai/offer";
 import { invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
@@ -9,7 +10,7 @@ import { mapStyleUrl } from "@/lib/maptiler";
 import { listOwnPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { signOut } from "../actions";
-import { ContributeShell } from "../ContributeShell";
+import { ContributeWorkspace } from "../ContributeShell";
 import { FirstRun } from "./FirstRun";
 import { PhotoList } from "./PhotoList";
 import { UploadForm } from "./UploadForm";
@@ -39,7 +40,7 @@ export default async function PhotosPage() {
   const published = photos.filter((photo) => photo.published_at !== null);
 
   return (
-    <ContributeShell
+    <ContributeWorkspace
       action={
         <form action={signOut}>
           <GlassButton size="sm" type="submit">
@@ -81,15 +82,28 @@ export default async function PhotosPage() {
       */}
       {published.length === 0 ? <FirstRun /> : null}
 
-      <UploadForm />
-
       {/*
         The tile key is read here, on the server, and handed down as a prop.
         `NEXT_PUBLIC_MAPTILER_KEY` would have been one word shorter and would
         have compiled the key into every client bundle on the site, including
         the ones anonymous visitors receive.
+
+        `aiSuggestionsConfigured()` is read the same way and for a stronger
+        version of the same reason: a gateway key is a spending credential, so
+        the question "is this switched on" is answered on the server and the
+        answer — a boolean — is what crosses to the browser.
+
+        The upload box goes in as a slot rather than as a sibling above,
+        because from `xl` up it belongs in the rail beside the list. It is
+        still rendered by this page, so a batch in flight is not at the mercy
+        of the list re-rendering around it.
       */}
-      <PhotoList mapStyleUrl={mapStyleUrl()} photos={photos} />
-    </ContributeShell>
+      <PhotoList
+        aiOffered={aiSuggestionsConfigured()}
+        mapStyleUrl={mapStyleUrl()}
+        photos={photos}
+        uploader={<UploadForm />}
+      />
+    </ContributeWorkspace>
   );
 }

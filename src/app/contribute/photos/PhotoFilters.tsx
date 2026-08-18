@@ -30,7 +30,19 @@ export function PhotoFilters({
   onFilterChange: (event: ChangeEvent<HTMLFieldSetElement>) => void;
 }) {
   return (
-    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+    /*
+      `@md` rather than `sm`, and the difference is which box is being
+      measured. This sits in one column on a phone and in a 21rem rail on a
+      large screen, and a viewport query cannot tell those apart — on a 2560px
+      monitor `sm:flex-row` would put a search box and three status filters
+      side by side inside a column narrower than a phone. The container query
+      asks the only question that matters: how much room is there here.
+
+      `@container` is declared by the rail in `PhotoList`. Without it these
+      never match and the controls stay stacked, which is the safe way for
+      this to fail.
+    */
+    <div className="flex flex-col gap-3 @md:flex-row @md:items-center">
       <SearchField
         className="flex-1"
         label="Search your photographs by title or location"

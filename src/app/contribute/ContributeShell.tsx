@@ -43,6 +43,34 @@ export function ContributeShell(props: ShellProps) {
 }
 
 /**
+ * A page somebody works in rather than reads.
+ *
+ * A third name rather than a `wide` flag, for the reason `ContributeCard`
+ * gives below: a boolean here appears in the API of every page to serve one
+ * of them. This is the one — the photograph dashboard, where a list, a search
+ * and an upload box are all in use at once and none of them is prose.
+ *
+ * `max-w-3xl` up to `xl`, so on a phone and a tablet this is the reading
+ * shell exactly. Above it the measure doubles, and the doubling is the point:
+ * a 768px column on a 2560px monitor left the dashboard as a strip of
+ * full-width bars down the middle of an empty screen, each one a 56px
+ * thumbnail and a title with about a thousand pixels of nothing either side.
+ * `PhotoList` spends the new width on a rail rather than on longer bars.
+ *
+ * The measure is only lifted for the working surface. Sentences do not get
+ * wider — the subtitle and the footer keep their own caps, and the reading
+ * pages keep this shell's original one.
+ */
+export function ContributeWorkspace(props: ShellProps) {
+  return (
+    <Frame
+      {...props}
+      className="relative mx-auto w-full max-w-3xl px-6 py-12 sm:py-16 xl:max-w-6xl"
+    />
+  );
+}
+
+/**
  * A single thing to do, centred in the viewport.
  *
  * Sign-in is one field and one button; pinned to the top left of a 1440px
