@@ -74,6 +74,12 @@ const FALLBACK_MODELS = ["google/gemini-3.7-flash"];
  * are held to one for the same reason: the alternative to a fast failure here
  * is not a better suggestion, it is a person typing their own title, which
  * they can do in less time than a third attempt takes.
+ *
+ * Re-measured when the primary model changed rather than assumed to still
+ * hold: `claude-sonnet-5` finishes a whole photograph in about four seconds
+ * end to end, so the ceiling is six times the ordinary run and still the
+ * fast-failure it was chosen to be. Left where it was, which is the point of
+ * checking.
  */
 const TIMEOUT_MS = 25_000;
 const MAX_RETRIES = 1;
@@ -88,9 +94,18 @@ const MAX_RETRIES = 1;
  * the model writing one.
  *
  * Generous rather than tight, because the primary model reasons before it
- * writes: a measured run spends around 265 tokens thinking and 40 answering,
- * so a cap that only counted the visible sentence would truncate every reply.
- * This is a backstop against a runaway generation, not a budget.
+ * writes, and a cap that only counted the visible sentence would truncate
+ * every reply. This is a backstop against a runaway generation, not a budget.
+ *
+ * The old number here quoted a measurement of the model this replaced, which
+ * is a claim that quietly stopped being about anything. What is true of the
+ * current one is coarser and worth more: 34 consecutive real runs across
+ * every photograph in the gallery — the whole `npm run recaption` pass plus
+ * the probes behind the table above — completed inside this ceiling with no
+ * truncation. Exceeding it is not a graceful degradation, which is why it is
+ * worth knowing: the run ends in `salvage`, which keeps the two sentences
+ * and discards the places *and* the subjects, so the visible symptom is a
+ * caption that arrives with no chips at all.
  */
 const MAX_OUTPUT_TOKENS = 2000;
 

@@ -184,29 +184,49 @@ describe("pinToDrop", () => {
   } as const;
 
   it("drops a sure guess's point into an empty field", () => {
-    expect(pinToDrop([sure], "")).toEqual({ lat: 25.08, lng: 121.53 });
+    expect(pinToDrop([sure], "", "")).toEqual({ lat: 25.08, lng: 121.53 });
   });
 
   it("never moves a pin somebody placed", () => {
     // A marked spot is the one thing on this form that is already a decision.
-    expect(pinToDrop([sure], "25.1, 121.5")).toBeNull();
+    expect(pinToDrop([sure], "25.1, 121.5", "")).toBeNull();
   });
 
   it("keeps an unsure guess on its chip", () => {
     // The globe draws a dot from this. "Less sure" must stay a click.
-    expect(pinToDrop([{ ...sure, confidence: "low" }], "")).toBeNull();
+    expect(pinToDrop([{ ...sure, confidence: "low" }], "", "")).toBeNull();
   });
 
   it("drops nothing when the guess carried no point", () => {
     // A model can name a place it cannot locate; that is a name, not a pin.
-    expect(pinToDrop([{ ...sure, point: null }], "")).toBeNull();
+    expect(pinToDrop([{ ...sure, point: null }], "", "")).toBeNull();
   });
 
   it("only ever considers the model's first choice", () => {
-    expect(pinToDrop([{ ...sure, confidence: "low" }, sure], "")).toBeNull();
+    expect(
+      pinToDrop([{ ...sure, confidence: "low" }, sure], "", ""),
+    ).toBeNull();
   });
 
   it("has nothing to say about no places", () => {
-    expect(pinToDrop([], "")).toBeNull();
+    expect(pinToDrop([], "", "")).toBeNull();
+  });
+
+  /*
+   * The case the first version of this function got wrong, and the reason it
+   * now asks `locationToFill` instead of repeating its conditions.
+   *
+   * The photographer typed "Thailand" and left the pin empty. The name is
+   * refused because the box is not empty — and the point used to drop
+   * anyway, because it only ever looked at the pin field. That is a dot on
+   * the public globe in Hawaii, under a photograph captioned Thailand, from
+   * a guess the same form had just declined in writing.
+   */
+  it("does not drop a point whose name the form refused", () => {
+    expect(pinToDrop([{ ...sure, name: "Hawaii" }], "", "Thailand")).toBeNull();
+  });
+
+  it("drops the point when the name is being taken at the same moment", () => {
+    expect(pinToDrop([sure], "", "")).toEqual(sure.point);
   });
 });

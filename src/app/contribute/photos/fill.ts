@@ -167,21 +167,31 @@ export function locationToFill(
  * had already accepted "Taipei, Taiwan" then had to press "Put a pin roughly
  * here" to say the same thing again. Two clicks for one fact.
  *
- * The guards are what keep the old argument honest. Only the model's first
- * choice, only at `high`, only into an empty field, and only when it actually
- * carried a point — a name without coordinates drops nothing. Undo puts it
- * back with everything else, and the public half is coarsened to a hundred
- * kilometres before it is stored, so the dot this produces says roughly where
- * and never where somebody stood.
+ * **It asks `locationToFill` rather than repeating its conditions**, and that
+ * is the fix for the way this was first written. Checking only the pin field
+ * made "the same rule" false in the one case that matters: a photographer who
+ * had typed "Thailand" and left the pin empty got the name refused — the box
+ * was not empty — and the point dropped anyway. The globe would have shown a
+ * dot in Hawaii under a photograph captioned Thailand, from a guess the form
+ * had just declined in writing. The pin may only follow a name that was
+ * actually taken.
+ *
+ * The rest of the guards are the old argument kept honest: only into an
+ * empty pin field, and only when the guess carried a point — a name without
+ * coordinates drops nothing. Undo puts it back with everything else, and the
+ * public half is coarsened to a hundred kilometres before it is stored, so
+ * the dot this produces says roughly where and never where somebody stood.
  */
 export function pinToDrop(
   places: readonly PlaceGuess[],
   currentValue: string,
+  locationValue: string,
 ): { lat: number; lng: number } | null {
   const [top] = places;
-  return top?.confidence === "high" &&
+  return top?.point !== undefined &&
     top.point !== null &&
-    currentValue.trim() === ""
+    currentValue.trim() === "" &&
+    locationToFill(places, locationValue) !== null
     ? top.point
     : null;
 }

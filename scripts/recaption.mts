@@ -26,8 +26,8 @@
  * continue if it cannot.
  *
  *   npm run recaption                      # report only
- *   npm run recaption -- --only 4,13       # just these
- *   npm run recaption -- --apply 4,13      # write these, after snapshotting
+ *   npm run recaption -- --only 4,hnbSFpi3sFiB     # just these
+ *   npm run recaption -- --apply 4,hnbSFpi3sFiB    # write, after snapshotting
  *   npm run recaption -- --restore FILE    # put a snapshot back
  *
  * **Only the owner's own photographs, unless `--everyone` is passed.** This
@@ -68,7 +68,7 @@
  * site within the hour rather than at once. Nothing here can shorten that
  * from outside Next.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { suggestForPhotograph } from "../src/lib/ai/suggest.ts";
 import { shapeSuggestion } from "../src/lib/ai/suggestion.ts";
@@ -84,6 +84,7 @@ interface Row {
   exif: unknown;
   tags: string[];
   author: string;
+  is_owner: boolean;
 }
 
 const args = process.argv.slice(2);
@@ -109,8 +110,9 @@ const chosen = listAfter("--apply") ?? listAfter("--only");
 const everyone = args.includes("--everyone");
 const restoreFrom = listAfter("--restore")?.[0];
 
+const writing = applying || restoreFrom !== undefined;
 console.warn(`database: ${databaseHost()}`);
-console.warn(applying ? "MODE: apply (writes)" : "MODE: report only");
+console.warn(writing ? "MODE: writes" : "MODE: report only");
 
 /**
  * Restoring is the whole point of taking a snapshot, and a snapshot you
@@ -121,6 +123,11 @@ console.warn(applying ? "MODE: apply (writes)" : "MODE: report only");
  * since. It runs before anything else and exits: there is nothing to compare
  * when the job is to undo a comparison.
  */
+if (args.includes("--restore") && restoreFrom === undefined) {
+  console.error("--restore needs the snapshot file to read.");
+  process.exit(1);
+}
+
 if (restoreFrom !== undefined) {
   const saved = JSON.parse(readFileSync(restoreFrom, "utf8")) as {
     id: string;
@@ -146,21 +153,33 @@ if (restoreFrom !== undefined) {
 
 const all = (await sql`
   SELECT p.id, p.title, p.description, p.location, p.display_url, p.exif,
-         p.tags, c.display_name AS author
+         p.tags, c.display_name AS author, (c.role = 'owner') AS is_owner
   FROM photos p JOIN contributors c ON c.id = p.author_id
   ORDER BY p.created_at DESC;`) as unknown as Row[];
 
-const owner = process.env["OWNER_NAME"];
-const mine =
-  everyone || owner === undefined
-    ? all
-    : all.filter((row) => row.author === owner);
+/*
+ * Whose photographs these are, from `contributors.role` rather than from a
+ * name in the environment.
+ *
+ * The first version of this guard read `OWNER_NAME`, which is set nowhere in
+ * this repo — so it was inert: undefined meant "no scope" and every row was
+ * in range, silently, which is the failure the guard was added to prevent.
+ * A safety check that does nothing when unconfigured is worse than none,
+ * because the comment above it says otherwise.
+ *
+ * `role = 'owner'` is the same identity `isOwner` uses everywhere else, it
+ * is already in the database, and it survives a renamed display name.
+ */
+const mine = everyone ? all : all.filter((row) => row.is_owner);
 
-if (!everyone && owner !== undefined && mine.length < all.length) {
+if (mine.length < all.length) {
   console.warn(
     `scope: ${mine.length} of ${all.length} — ` +
-      `${all.length - mine.length} belong to somebody else and are skipped. ` +
-      "Pass --everyone only with their say-so.",
+      `${all.length - mine.length} belong to another photographer` +
+      (everyone
+        ? " and ARE INCLUDED (--everyone)."
+        : " and are skipped. Their captions are published under their name; " +
+          "pass --everyone only with their say-so."),
   );
 }
 
@@ -168,6 +187,21 @@ const rows =
   chosen === null || chosen.length === 0
     ? mine
     : mine.filter((row) => chosen.includes(row.id));
+
+/*
+ * A mistyped id used to mean "0 photographs" after the snapshot had already
+ * been written — a run that looked like it had decided something.
+ */
+if (chosen !== null && chosen.length > 0) {
+  const missing = chosen.filter((id) => !rows.some((row) => row.id === id));
+  if (missing.length > 0) {
+    console.error(
+      `Not found, or not in scope: ${missing.join(", ")}. ` +
+        "Ids are the opaque ones printed by a report run.",
+    );
+    process.exit(1);
+  }
+}
 
 if (applying) {
   if (chosen === null || chosen.length === 0) {
@@ -183,7 +217,20 @@ if (applying) {
    * subset is a snapshot that is useless the second time somebody applies a
    * different subset from the same report.
    */
-  const at = `docs/snapshots/captions-${process.env["STAMP"] ?? "latest"}.json`;
+  /*
+   * Never over an existing file, and this is the whole value of the
+   * snapshot rather than a detail of it. The first version named the file
+   * from `STAMP ?? "latest"`, so a second apply on the same day wrote over
+   * the first one's originals with text the first one had already replaced —
+   * losing exactly what the snapshot exists to keep, and losing it quietly.
+   * `STAMP` is still honoured for a readable name; a collision takes a
+   * suffix rather than the file.
+   */
+  const base = `docs/snapshots/captions-${process.env["STAMP"] ?? "run"}`;
+  let at = `${base}.json`;
+  for (let n = 2; existsSync(at); n += 1) {
+    at = `${base}-${n}.json`;
+  }
   writeFileSync(
     at,
     `${JSON.stringify(
@@ -202,55 +249,69 @@ if (applying) {
 }
 
 let changed = 0;
+let skipped = 0;
 
 for (const row of rows) {
-  const image = new Uint8Array(
-    await (await fetch(row.display_url)).arrayBuffer(),
-  );
+  /*
+   * Checked, because the failure is silent and lands in the column. An
+   * expired or 404 blob URL returns an HTML error body, and handing that to
+   * a vision model as JPEG bytes produces a confident description of
+   * nothing — which an apply run then writes over a real caption.
+   */
+  const response = await fetch(row.display_url);
+  if (response.ok) {
+    const image = new Uint8Array(await response.arrayBuffer());
 
-  const fresh = shapeSuggestion(
-    await suggestForPhotograph({
-      image,
-      exif: row.exif as never,
-      /*
-       * The photographer's own place, exactly as the route sends it. Without
-       * this the comparison would be against a prompt the site no longer
-       * runs, which is the one thing that would make the whole report
-       * meaningless.
-       */
-      location: row.location,
-    }).complete,
-  );
+    const fresh = shapeSuggestion(
+      await suggestForPhotograph({
+        image,
+        exif: row.exif as never,
+        /*
+         * The photographer's own place, exactly as the route sends it. Without
+         * this the comparison would be against a prompt the site no longer
+         * runs, which is the one thing that would make the whole report
+         * meaningless.
+         */
+        location: row.location,
+      }).complete,
+    );
 
-  const titleMoved = fresh.title !== row.title;
-  const descriptionMoved = fresh.description !== row.description;
-  if (titleMoved || descriptionMoved || fresh.tags.length > 0) {
-    changed += 1;
-  }
+    const titleMoved = fresh.title !== row.title;
+    const descriptionMoved = fresh.description !== row.description;
+    if (titleMoved || descriptionMoved || fresh.tags.length > 0) {
+      changed += 1;
+    }
 
-  console.warn(`\n${"=".repeat(72)}`);
-  console.warn(`${row.id}  ${row.location ?? "(no location)"}`);
-  console.warn(`  title  was: ${row.title}`);
-  console.warn(
-    `         now: ${fresh.title}${titleMoved ? "  (suggestion only)" : "   (same)"}`,
-  );
-  console.warn(`  desc   was: ${row.description}`);
-  console.warn(
-    `         now: ${fresh.description}${descriptionMoved ? "" : "   (same)"}`,
-  );
-  console.warn(`  tags   was: ${JSON.stringify(row.tags)}`);
-  console.warn(`         now: ${JSON.stringify(fresh.tags)}`);
+    console.warn(`\n${"=".repeat(72)}`);
+    console.warn(`${row.id}  ${row.location ?? "(no location)"}`);
+    console.warn(`  title  was: ${row.title}`);
+    console.warn(
+      `         now: ${fresh.title}${titleMoved ? "  (suggestion only)" : "   (same)"}`,
+    );
+    console.warn(`  desc   was: ${row.description}`);
+    console.warn(
+      `         now: ${fresh.description}${descriptionMoved ? "" : "   (same)"}`,
+    );
+    console.warn(`  tags   was: ${JSON.stringify(row.tags)}`);
+    console.warn(`         now: ${JSON.stringify(fresh.tags)}`);
 
-  if (applying) {
-    await sql`
+    if (applying) {
+      await sql`
       UPDATE photos
       SET description = ${fresh.description},
           tags = ${fresh.tags}::text[]
       WHERE id = ${row.id};`;
-    console.warn("  → description and tags written; title left alone");
+      console.warn("  → description and tags written; title left alone");
+    }
+  } else {
+    console.warn(
+      `\n${row.id}: display copy unreachable (${response.status}) — skipped`,
+    );
+    skipped += 1;
   }
 }
 
 console.warn(
-  `\n${rows.length} photographs, ${changed} with something to change.`,
+  `\n${rows.length} photographs, ${changed} with something to change` +
+    (skipped === 0 ? "." : `, ${skipped} skipped for an unreachable copy.`),
 );

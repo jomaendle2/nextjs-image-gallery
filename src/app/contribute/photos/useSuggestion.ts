@@ -187,7 +187,18 @@ export function useSuggestion(
        * be overwritten by the next render.
        */
       const pin = fieldElement("pin", photoId);
-      const point = pinToDrop(final.places, pin?.value ?? "");
+      /*
+       * Read after the Location write above, deliberately. `pinToDrop` asks
+       * whether the name was taken, and the field is the record of that — so
+       * a photograph whose Location this run has just filled reads as filled
+       * here, and one whose Location was left alone because the photographer
+       * had typed something reads as theirs.
+       */
+      const point = pinToDrop(
+        final.places,
+        pin?.value ?? "",
+        fieldElement("location", photoId)?.value ?? "",
+      );
       if (point !== null) {
         remember("pin", pin?.value ?? "");
         markTouched("pin");
@@ -270,6 +281,7 @@ export function useSuggestion(
     setNote(null);
     setStage("looking");
     setPlaces([]);
+    setTags([]);
     setAnswered(false);
     clearTouched();
 
@@ -303,6 +315,13 @@ export function useSuggestion(
          */
         putBack(touchedFields());
         setPlaces([]);
+        /*
+         * The subject chips go with the place chips, and for the same
+         * reason: the notice below promises nothing was changed, and a row
+         * of clickable subjects left over from a run that failed is a
+         * suggestion nobody's photograph produced.
+         */
+        setTags([]);
         setAnswered(false);
         setNote(null);
         setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
