@@ -2,6 +2,7 @@ import { Output, streamText } from "ai";
 import { z } from "zod";
 import type { PhotoExif } from "@/lib/photos/derive";
 import { exifLine } from "@/lib/photos/exif-line";
+import { type Hint, hintLine } from "./hint";
 import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
 
 /**
@@ -54,6 +55,22 @@ const FALLBACK_MODELS = ["anthropic/claude-haiku-4.5"];
 const TIMEOUT_MS = 25_000;
 const MAX_RETRIES = 1;
 
+/**
+ * A ceiling on what one press of the button can cost.
+ *
+ * The schema constrains the *shape* of the answer and not its length, and
+ * `shapeSuggestion` cuts a long description to 300 characters only after the
+ * whole thing has been generated and paid for. `.max(2)` on places is a Zod
+ * assertion for the same reason — it rejects a third place, it does not stop
+ * the model writing one.
+ *
+ * Generous rather than tight, because the primary model reasons before it
+ * writes: a measured run spends around 265 tokens thinking and 40 answering,
+ * so a cap that only counted the visible sentence would truncate every reply.
+ * This is a backstop against a runaway generation, not a budget.
+ */
+const MAX_OUTPUT_TOKENS = 2000;
+
 /*
  * The schema is the prompt, mostly.
  *
@@ -83,33 +100,70 @@ const SUGGESTION_SCHEMA = z.object({
         "rocky cliffs.' or 'Pink cherry blossoms against a clear blue sky.'",
     ),
   /*
-   * Before the place it judges, and the order is load-bearing now that this
-   * streams.
+   * Last, and the order is load-bearing now that this streams.
    *
-   * A model emits JSON keys in schema order, and the interface writes each
-   * field into a real input as the characters arrive. With `location` first,
-   * a guess the model was about to disown would appear in the box, be read,
-   * and then have to be taken back out — and a place that appeared in a form
-   * has been seen, whatever happens next. Asking for the verdict first means
-   * the answer is known before there is anything to hide.
+   * A model emits JSON keys in schema order, and the interface renders each
+   * field as the characters arrive. The two sentences are what somebody
+   * watches for; the places are a list of buttons that appear underneath
+   * once there is something to click, and a list that materialises before
+   * the caption it belongs to would move the whole form under the cursor.
    */
-  locationConfidence: z
-    .enum(["high", "low"])
+  places: z
+    .array(
+      z.object({
+        /*
+         * Before the name it judges, for the same reason the verdict used to
+         * come before the location: a chip renders as soon as it has a name,
+         * and a chip that appears unlabelled and then acquires a hedge has
+         * already been read as confident.
+         */
+        confidence: z
+          .enum(["high", "low"])
+          .describe(
+            "'high' only if a named landmark, sign, or unmistakable skyline " +
+              "in this photograph would make somebody who knows the place " +
+              "agree. Vegetation, light, architecture style and the general " +
+              "look of a coastline are 'low' — they narrow a guess, they do " +
+              "not identify a place. A 'low' answer is welcome here: it is " +
+              "shown as a hedged suggestion nobody is obliged to accept.",
+          ),
+        name: z
+          .string()
+          .describe(
+            "The place, as short as a person writes it on a label: 'Nusa " +
+              "Penida', 'Sagres, Portugal', 'Bromo, Java, Indonesia' — never " +
+              "the official name of a park or municipality when a shorter " +
+              "one is what people say.",
+          ),
+        reason: z
+          .string()
+          .describe(
+            "One short clause naming what in this frame points there — 'the " +
+              "lighthouse on the headland', 'limestone arches and red " +
+              "cliffs'. It is shown beside the name so the photographer can " +
+              "check the guess against their own photograph. No hedging " +
+              "words; the confidence field says that.",
+          ),
+        lat: z
+          .number()
+          .nullable()
+          .describe(
+            "Approximate latitude of that place, or null if you cannot give " +
+              "one. A rough centre is useful; a fabricated decimal is not.",
+          ),
+        lng: z
+          .number()
+          .nullable()
+          .describe("Approximate longitude, or null. Null unless lat is set."),
+      }),
+    )
+    .max(2)
     .describe(
-      "'high' only if a named landmark, sign, or unmistakable skyline in " +
-        "this photograph would make somebody who knows the place agree. " +
-        "Vegetation, light, architecture style and the general look of a " +
-        "coastline are 'low' — they narrow a guess, they do not identify a " +
-        "place.",
-    ),
-  location: z
-    .string()
-    .nullable()
-    .describe(
-      "The place, as short as a person writes it on a label: 'Nusa Penida', " +
-        "'Sagres, Portugal', 'Bromo, Java, Indonesia' — never the official " +
-        "name of a park or municipality when a shorter one is what people " +
-        "say. Null unless something in the frame actually identifies it.",
+      "The places this photograph might have been taken, likeliest first. " +
+        "Empty when nothing in the frame points anywhere — that is a good " +
+        "answer, not a failure. Give a second entry only when it is a real " +
+        "alternative somebody might pick instead of the first, never to pad " +
+        "the list.",
     ),
 });
 
@@ -136,6 +190,14 @@ export interface SuggestionSource {
   /** Bytes of the display copy. JPEG, because that is what `derive` writes. */
   image: Uint8Array;
   exif: PhotoExif | null;
+  /**
+   * What the photographer offered, already read and already blunted.
+   *
+   * A `Hint` rather than a request body, so this function cannot be the
+   * place a raw coordinate slips into a prompt: by the time one arrives here
+   * `readHint` has rounded it, and there is no other way in.
+   */
+  hint: Hint;
 }
 
 /**
@@ -175,8 +237,8 @@ export interface SuggestionRun {
 }
 
 /**
- * Asks a model to look at one photograph and propose three fields, reporting
- * as it writes them.
+ * Asks a model to look at one photograph and propose a name, a sentence and
+ * the places it might be, reporting as it writes them.
  *
  * Streaming rather than one answer at the end, and the reason is what the
  * wait feels like rather than what it costs: a vision model takes several
@@ -192,8 +254,32 @@ export interface SuggestionRun {
  * still never forwarded, which is the discipline
  * `src/app/api/photos/draft/route.ts` set with `TellTheUser`.
  */
-export function suggestForPhotograph(source: SuggestionSource): SuggestionRun {
+export function suggestForPhotograph(
+  source: SuggestionSource,
+  /**
+   * The request's own signal, so a reader who leaves stops the generation.
+   *
+   * Without it the model call outlived the person who asked for it: closing
+   * the tab, navigating away, or pressing the button a second time left the
+   * first call running to completion and billed in full. The timeout below
+   * bounded how long a *waiting* photographer sits there; it never bounded
+   * work nobody was waiting for.
+   */
+  signal?: AbortSignal,
+): SuggestionRun {
   const context = contextLine(source.exif);
+  const steer = hintLine(source.hint);
+
+  /*
+   * Either reason to stop, as one signal.
+   *
+   * `AbortSignal.any` settles as soon as the first of them fires and drops
+   * its listeners when it does, so the timer cannot keep a finished request
+   * alive. When there is no request signal this is just the timeout.
+   */
+  const deadline = AbortSignal.timeout(TIMEOUT_MS);
+  const stop =
+    signal === undefined ? deadline : AbortSignal.any([signal, deadline]);
 
   /*
    * `streamText` with an `Output.object`, not `streamObject`.
@@ -215,9 +301,10 @@ export function suggestForPhotograph(source: SuggestionSource): SuggestionRun {
           {
             type: "text",
             text:
-              "Suggest a title, a description and a place for this " +
-              "photograph." +
-              (context === null ? "" : ` The file records: ${context}.`),
+              "Suggest a title, a description and one or two possible " +
+              "places for this photograph." +
+              (context === null ? "" : ` The file records: ${context}.`) +
+              (steer === null ? "" : ` ${steer}`),
           },
           {
             /*
@@ -240,7 +327,8 @@ export function suggestForPhotograph(source: SuggestionSource): SuggestionRun {
      */
     providerOptions: { gateway: { models: FALLBACK_MODELS } },
     maxRetries: MAX_RETRIES,
-    abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    abortSignal: stop,
     /*
      * The full error, once, where it is useful. Without this callback a
      * provider failure is only observable as a rejected promise somewhere
@@ -252,5 +340,27 @@ export function suggestForPhotograph(source: SuggestionSource): SuggestionRun {
     },
   });
 
-  return { parts: partialOutputStream, complete: output };
+  /*
+   * The one thing that could take the server down with it.
+   *
+   * `output` is a getter that builds a *derived* promise on every access —
+   * `finalStep.then(…)` — and the SDK marks only its own internal `_steps`
+   * promise as handled, never this chain. So the moment `streamText` is
+   * called there is a live promise nobody has attached a handler to, and any
+   * failure that stops the caller from reaching `await run.complete` — the
+   * timeout firing mid-stream, the reader disconnecting, a provider dying —
+   * surfaces as an `unhandledRejection`. Under Node's default that is fatal
+   * to the process, which on Fluid Compute means killing every other request
+   * sharing the instance: a failed suggestion for one photographer taking out
+   * an upload for another.
+   *
+   * Attaching an empty catch marks it handled without consuming it — the
+   * caller still awaits the same promise and still sees the same rejection.
+   */
+  const complete = output;
+  Promise.resolve(complete).catch(() => {
+    /* Reported by `onError`, and again by whoever awaits `complete`. */
+  });
+
+  return { parts: partialOutputStream, complete };
 }

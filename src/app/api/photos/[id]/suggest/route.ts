@@ -1,8 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { readHint } from "@/lib/ai/hint";
 import { aiSuggestionsConfigured } from "@/lib/ai/offer";
-import { encodeRecord, NDJSON } from "@/lib/ai/stream";
-import { type SuggestionSource, suggestForPhotograph } from "@/lib/ai/suggest";
-import { shapePartial, shapeSuggestion } from "@/lib/ai/suggestion";
+import { encodeRecord, NDJSON, OUR_FAULT_MESSAGE } from "@/lib/ai/stream";
+import {
+  type SuggestionRun,
+  type SuggestionSource,
+  suggestForPhotograph,
+} from "@/lib/ai/suggest";
+import {
+  type PartialRawSuggestion,
+  salvage,
+  shapePartial,
+  shapeSuggestion,
+} from "@/lib/ai/suggestion";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOurBlob } from "@/lib/blob-host";
 import type { PhotoExif } from "@/lib/photos/derive";
@@ -33,27 +43,15 @@ import { suggestLimiter } from "@/lib/rate-limit";
  */
 const MAX_BYTES = 12 * 1024 * 1024;
 
-/**
- * One sentence for every failure past this point, and no `TellTheUser` class
- * beside it.
- *
- * `src/app/api/photos/draft/route.ts` needs that class because one of its
- * failures — "that file is larger than 25 MB" — is about the photographer's
- * own file and is theirs to act on, while the rest are ours. The discipline
- * is that only sentences written for a person reach one; the class is how
- * that route tells the two apart when it has both kinds.
- *
- * This route has one kind. Every way the model call can fail — a provider
- * outage, a refusal, a timeout, a schema the model would not fill in, a
- * display copy we cannot read back — is ours and none of it is actionable by
- * the person waiting. So the whole `catch` is the replacement, the vendor's
- * text goes to the log, and the refusals a photographer *can* do something
- * about (not signed in, not their photograph, too many requests) are answered
- * above without an exception being involved at all.
+/*
+ * The apology itself lives in `stream.ts`, so both sides of the first byte
+ * say the same thing. Why this route has only *one* kind of failure message —
+ * and no `TellTheUser` class like `/api/photos/draft` — is the part worth
+ * keeping here: every way a model call can fail is ours and none of it is
+ * actionable by the person waiting, so the whole `catch` is the replacement,
+ * the vendor's text goes to the log, and the refusals a photographer *can*
+ * act on are answered above without an exception being involved at all.
  */
-const OUR_FAULT_MESSAGE =
-  "The suggestion could not be made just now. Try again in a moment, or " +
-  "write it yourself — nothing has been changed either way.";
 
 /**
  * The display copy's bytes.
@@ -171,6 +169,67 @@ async function gate(id: string): Promise<Gate> {
   return { source: { url: source.display_url, exif: source.exif } };
 }
 
+/** Put one record on the wire; false once there is nobody to put it on. */
+type Say = (record: Parameters<typeof encodeRecord>[0]) => boolean;
+
+/**
+ * The run, drained onto the wire, ending in exactly one terminal record.
+ *
+ * Its own function rather than the body of `start`, because the stream also
+ * has to deal with a reader that leaves and a controller that will not take
+ * any more — and mixing "what the model said" with "who is still listening"
+ * in one block is what pushed the original past the complexity limit.
+ *
+ * It does not rethrow. Every failure a model call has is answered here, as a
+ * record, because by this point the 200 has already gone out.
+ */
+async function pump(
+  run: SuggestionRun,
+  say: Say,
+  dead: AbortSignal,
+): Promise<void> {
+  /*
+   * The best thing the model has said so far, kept so that a run which wrote
+   * a good title and description and then failed does not throw them away.
+   */
+  let latest: PartialRawSuggestion | null = null;
+
+  try {
+    for await (const part of run.parts) {
+      latest = part;
+      if (!say({ type: "partial", value: shapePartial(part) })) {
+        return;
+      }
+    }
+    say({ type: "done", value: shapeSuggestion(await run.complete) });
+  } catch (error) {
+    if (dead.aborted) {
+      /* They left. Nothing to report, and nobody to report it to. */
+      return;
+    }
+
+    console.error("Could not suggest details for a photograph:", error);
+
+    /*
+     * A finished sentence beats an apology.
+     *
+     * The final object can fail while the useful part of the answer has
+     * already arrived — validation rejects a malformed `places` entry, the
+     * stream truncates after the description, the deadline lands during the
+     * last field. Every one of those used to be answered with "could not be
+     * made just now", putting the form back and discarding a title and
+     * description the photographer had just watched being written. The words
+     * they see are the same; this only changes whether they keep them.
+     */
+    const rescued = salvage(latest);
+    if (rescued === null) {
+      say({ type: "error", message: OUR_FAULT_MESSAGE });
+    } else {
+      say({ type: "done", value: rescued, salvaged: true });
+    }
+  }
+}
+
 /**
  * The model's answer, turned into lines, with the failure written into the
  * body rather than the status.
@@ -187,33 +246,85 @@ async function gate(id: string): Promise<Gate> {
  * and says nothing they can act on — the same lesson as "vipspng: libpng read
  * error" beside somebody's own filename.
  */
-function suggestionLines(source: SuggestionSource): ReadableStream<Uint8Array> {
+function suggestionLines(
+  source: SuggestionSource,
+  requestSignal: AbortSignal,
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  const run = suggestForPhotograph(source);
+
+  /*
+   * Both ways this can end early, composed once.
+   *
+   * `quit` is ours, fired by `cancel` and by a failed enqueue — the platform
+   * does not always abort the request signal when a reader simply goes away.
+   * `AbortSignal.any` unions the two and drops its listeners when it settles,
+   * which is why there is no `addEventListener`/`removeEventListener` pair to
+   * keep balanced here; `suggestForPhotograph` composes its timeout onto this
+   * the same way, one file over.
+   *
+   * One signal rather than two also removes a real bug: `say` used to test
+   * our controller while `pump` tested the request's, so a reader cancelling
+   * left `pump` believing somebody was still listening — logging an error and
+   * trying to write an apology onto a closed stream for what is an ordinary
+   * abandoned request.
+   */
+  const quit = new AbortController();
+  const stop = () => {
+    quit.abort();
+  };
+  const dead = AbortSignal.any([requestSignal, quit.signal]);
+
+  const run = suggestForPhotograph(source, dead);
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const say = (record: Parameters<typeof encodeRecord>[0]) => {
-        controller.enqueue(encoder.encode(encodeRecord(record)));
+      /*
+       * Writing to a stream nobody is reading is not an error worth throwing.
+       *
+       * Once a reader disconnects, `enqueue` throws `TypeError: Invalid
+       * state` — and that used to happen *inside* the try below, so the catch
+       * ran, called `say` again for the error record, threw a second time out
+       * of the catch, and then `controller.close()` in the finally threw a
+       * third. One person closing a tab produced an exception escaping
+       * `start()` rather than a tidy end.
+       */
+      const say: Say = (record) => {
+        if (dead.aborted) {
+          return false;
+        }
+        try {
+          controller.enqueue(encoder.encode(encodeRecord(record)));
+          return true;
+        } catch {
+          stop();
+          return false;
+        }
       };
 
       try {
-        for await (const part of run.parts) {
-          say({ type: "partial", value: shapePartial(part) });
-        }
-        say({ type: "done", value: shapeSuggestion(await run.complete) });
-      } catch (error) {
-        console.error("Could not suggest details for a photograph:", error);
-        say({ type: "error", message: OUR_FAULT_MESSAGE });
+        await pump(run, say, dead);
       } finally {
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          /* Already closed by the reader going away. */
+        }
       }
+    },
+
+    /*
+     * The reader went away. Stop the model rather than paying for an answer
+     * nobody will see — a generation runs to completion regardless of whether
+     * anyone is still listening, and is billed for every token.
+     */
+    cancel() {
+      stop();
     },
   });
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await params;
@@ -246,11 +357,25 @@ export async function POST(
    * until the last one and deliver the whole point of this route as a single
    * chunk at the end.
    */
-  return new NextResponse(suggestionLines({ image, exif: source.exif }), {
-    headers: {
-      "Cache-Control": "private, no-store, no-transform",
-      "Content-Type": NDJSON,
-      "X-Accel-Buffering": "no",
+  /*
+   * The hint, if the photographer offered one.
+   *
+   * Read after the gates and after the photograph, because it is the least
+   * important thing in the request: a body we cannot parse is not a refusal,
+   * it is a suggestion made without a steer. `readHint` is the only path
+   * from this body to the prompt, and it is where a coordinate is blunted —
+   * I16 — so nothing downstream of here has a precise one to leak.
+   */
+  const hint = readHint(await request.json().catch(() => null));
+
+  return new NextResponse(
+    suggestionLines({ image, exif: source.exif, hint }, request.signal),
+    {
+      headers: {
+        "Cache-Control": "private, no-store, no-transform",
+        "Content-Type": NDJSON,
+        "X-Accel-Buffering": "no",
+      },
     },
-  });
+  );
 }

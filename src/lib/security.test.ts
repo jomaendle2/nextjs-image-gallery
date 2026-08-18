@@ -396,6 +396,26 @@ describe("I11 — endpoints that spend money or send mail are limited", () => {
   });
 
   /*
+   * The route that spends money at a third party, which nothing pinned.
+   *
+   * It has carried `suggestLimiter` since the day it was written, and that
+   * is exactly the situation this file exists for: a control that is correct
+   * today and unguarded against tomorrow. Every call is a vision-model
+   * request paid for per image, so an unlimited one is a way to spend this
+   * gallery's budget from a signed-in account — cheaper to abuse than
+   * checkout and easier to loop.
+   *
+   * Keyed by the contributor rather than the address, for the reason the
+   * member route gives: a shared connection is not a bucket.
+   */
+  it("the suggestion route is limited", () => {
+    const route = read("app", "api", "photos", "[id]", "suggest", "route.ts");
+    expect(route).toContain("suggestLimiter.check");
+    expect(route).toContain("status: 429");
+    expect(route).toMatch(/suggestLimiter\.check\(contributor\.id\)/);
+  });
+
+  /*
    * The other half of the same rule, which this test used to leave out.
    *
    * Naming only the two Stripe routes made I11 look enforced while the
