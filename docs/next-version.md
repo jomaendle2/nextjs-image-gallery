@@ -42,8 +42,10 @@ one. **The gate should be deleted the day preview gets its own branch
 database.**
 
 Worth confirming while you are in the dashboard: what the Neon
-point-in-time-recovery retention actually is. Nothing in this repo records a
-backup or restore story for either the database or the blobs.
+point-in-time-recovery retention actually is. The commands for a manual
+`pg_dump` floor, and the note that blobs are covered by none of it, are in
+`docs/launch-checklist.md`; the retention number itself still has to be read
+off the dashboard and written down there.
 
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
 branch per preview is a dashboard setting, not code.
