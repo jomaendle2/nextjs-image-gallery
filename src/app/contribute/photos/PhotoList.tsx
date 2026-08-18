@@ -95,6 +95,25 @@ export function PhotoList({
   const [filter, setFilter] = useState<PhotoFilter>("all");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
+
+  /*
+   * Whether the reader is picking photographs, rather than reading them.
+   *
+   * The per-row checkbox used to be there always, and it explained itself
+   * exactly once — in the "Select N photographs" control at the top of the
+   * list. On a phone, by the time you have scrolled to a row and opened it,
+   * that line is several screens away, so what is actually in front of you is
+   * an unlabelled box beside a photograph, doing nothing visible until you
+   * tick it. The first question anybody asks about this page is what it is
+   * for.
+   *
+   * So selecting is a mode you enter. Nothing is ticked until you ask to
+   * tick, the boxes appear with the bar that acts on them, and the rest of
+   * the time a row is a photograph and a form. It also gives every row back
+   * about forty pixels of width on a phone, which the title needs more than
+   * the checkbox did.
+   */
+  const [selecting, setSelecting] = useState(false);
   /** What the last bulk publish refused, or null when it refused nothing. */
   const [report, setReport] = useState<{
     changed: number;
@@ -115,6 +134,15 @@ export function PhotoList({
       return next;
     });
   }, []);
+
+  /* Leaving the mode drops the selection with it — a tick nobody can see is
+   * a tick nobody meant. */
+  const stopSelecting = useCallback(() => {
+    setSelecting(false);
+    setSelected(new Set());
+  }, []);
+
+  const startSelecting = useCallback(() => setSelecting(true), []);
 
   const clearSelection = useCallback(() => {
     setSelected(new Set());
@@ -231,7 +259,9 @@ export function PhotoList({
       {visible.length === 0 ? null : (
         <SelectAll
           matching={visible.length}
+          onSelecting={selecting ? stopSelecting : startSelecting}
           onToggle={toggleAllVisible}
+          selecting={selecting}
           state={allState}
         />
       )}
@@ -262,7 +292,7 @@ export function PhotoList({
             <PhotoCard
               mapStyleUrl={mapStyleUrl}
               key={photo.id}
-              onSelect={toggleOne}
+              onSelect={selecting ? toggleOne : undefined}
               photo={photo}
               selected={selected.has(photo.id)}
             />

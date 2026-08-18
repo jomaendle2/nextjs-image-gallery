@@ -104,9 +104,8 @@ export function WhatYouGet() {
           icon={<NotebookPen size={15} />}
           tone="accent"
         >
-          The exposure is already there wherever the camera recorded it. This
-          is the rest — the
-          hour, the wait, what they would do differently.
+          The exposure is already there wherever the camera recorded it. This is
+          the rest — the hour, the wait, what they would do differently.
         </Row>
       </ul>
     </section>

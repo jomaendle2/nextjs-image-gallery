@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Notice } from "@/components/ui/Notice";
+import { TextLink } from "@/components/ui/TextLink";
 import { getCurrentContributor, memberForSession } from "@/lib/auth/session";
 import { ContributeCard } from "./ContributeShell";
-import { TextLink } from "@/components/ui/TextLink";
 import { SignInForm } from "./SignInForm";
 
 export const metadata: Metadata = {
@@ -30,8 +30,7 @@ const ERRORS: Record<string, string> = {
    * recovering from a spent link, so telling them one expired invents a
    * failure they did not have.
    */
-  nolink:
-    "That link had nothing in it. Ask for a fresh one below.",
+  nolink: "That link had nothing in it. Ask for a fresh one below.",
   /*
    * A session that ran out. `/contribute/*` used to redirect here silently, so
    * the page simply reappeared as if the site had forgotten them — which,

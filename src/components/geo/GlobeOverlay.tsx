@@ -157,7 +157,9 @@ export function GlobeOverlay({
    */
   const reset = useCallback(() => {
     step(1);
-    setResetCount((count) => count + 1);
+    // `previous`, not `count` — that name is the pluraliser imported above,
+    // and shadowing it here reads as a call to it.
+    setResetCount((previous) => previous + 1);
   }, [step]);
 
   /*
@@ -182,7 +184,13 @@ export function GlobeOverlay({
     return () => {
       globalThis.removeEventListener("keydown", onKey);
     };
-  }, [step, stepIn, stepOut]);
+    /*
+     * `reset` belongs here too. The effect closes over it for the `0` key, so
+     * leaving it out pinned the handler to the first `reset` React ever made —
+     * which held the first `step`, and so the first `zoom`. Pressing 0 after
+     * zooming would have reset to a magnification that was already stale.
+     */
+  }, [reset, stepIn, stepOut]);
 
   const point = chosen === null ? undefined : points[chosen.index];
   const place =

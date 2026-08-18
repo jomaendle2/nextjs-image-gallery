@@ -47,6 +47,75 @@ function Status({ photo }: { photo: OwnPhotoRow }) {
 }
 
 /**
+ * The open half of a row: the desktop preview, the exposure line, the form.
+ *
+ * Extracted because the card grew past the complexity ceiling once the header
+ * and the body stopped being siblings in one flex — and because this is the
+ * part that only exists some of the time, which is exactly the seam a reader
+ * wants.
+ */
+function OpenRow({
+  photo,
+  exif,
+  untitled,
+  mapStyleUrl,
+}: {
+  photo: OwnPhotoRow;
+  exif: string | null;
+  untitled: boolean;
+  mapStyleUrl: string | null;
+}) {
+  return (
+    <div className="border-white/[0.06] border-t p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+        {/*
+              The preview is a desktop affordance and always was.
+
+              On a phone it rendered a full-width 4:3 crop — about 260px of
+              scrolling — directly beneath a summary already showing a 56px
+              thumbnail of the same photograph, so the reader met the picture
+              twice before reaching the first field. From `sm` up it sits
+              beside the form and costs nothing, which is where it earns its
+              place.
+
+              Fixed 4:3 box there. Left to its own aspect ratio, a portrait
+              original made its row three times taller than a landscape one
+              and the list became impossible to scan.
+            */}
+        <div className="hidden sm:block sm:w-[200px] sm:shrink-0">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white/5">
+            <Image
+              alt={untitled ? "Uploaded photograph" : photo.title}
+              blurDataURL={photo.blur_data_url}
+              className="object-cover"
+              fill={true}
+              placeholder="blur"
+              sizes="200px"
+              src={photo.blob_url}
+            />
+          </div>
+          {exif === null ? null : (
+            <p className="mt-2 text-pretty text-white/55 text-xs">{exif}</p>
+          )}
+        </div>
+
+        {/*
+              The exposure line still shows on a phone — it is three lines of
+              fact about the photograph and the only place a contributor sees
+              what the file said. It is the picture that was redundant, not
+              this.
+            */}
+        {exif === null ? null : (
+          <p className="text-pretty text-white/55 text-xs sm:hidden">{exif}</p>
+        )}
+
+        <PhotoEditForm mapStyleUrl={mapStyleUrl} photo={photo} />
+      </div>
+    </div>
+  );
+}
+
+/**
  * One row, memoized.
  *
  * `PhotoList` stabilises every handler it passes down and its comment
@@ -111,8 +180,27 @@ export const PhotoCard = memo(function PhotoCardRow({
   );
 
   return (
-    <li className="glass-thin flex items-stretch overflow-hidden rounded-3xl">
+    <li className="glass-thin overflow-hidden rounded-3xl">
       {/*
+        A column, not a row — and that is the whole of the mobile fix.
+
+        The card used to be one horizontal flex: the select checkbox, the
+        `<details>`, and the "see it live" link. Both of those siblings are
+        `shrink-0`, so while a form was open they went on stealing about 84px
+        of a 342px card for as long as it stayed open. Add the body's own
+        padding, then the members-only fieldset's, then the nested boxes
+        inside that, and helper text ended up in a 166px column — around 22
+        characters a line, which turns a 190-character sentence into eight.
+
+        Now the three of them share a header row and the body sits underneath
+        at the card's full width. `<details>` therefore wraps only its
+        `<summary>`, and the body is rendered by React from the `opened` state
+        that `onToggle` already set rather than by the element's own
+        show-and-hide. That costs nothing: the body has always been behind
+        `{opened ? …}`, so it has never existed without JavaScript anyway.
+      */}
+      <div className="flex items-stretch">
+        {/*
         Beside the disclosure rather than inside it. A checkbox within
         `<summary>` inherits its click, so selecting five photographs would
         also expand five forms — and the usual fix, stopping propagation on
@@ -120,125 +208,104 @@ export const PhotoCard = memo(function PhotoCardRow({
         interactive. Moving it out removes the conflict instead of working
         around it.
       */}
-      {onSelect === undefined ? null : (
-        <label className="flex shrink-0 cursor-pointer items-center pl-4 pr-1">
-          <input
-            aria-label={`Select ${untitled ? "untitled photograph" : photo.title}`}
-            checked={selected ?? false}
-            className="size-5 cursor-pointer rounded accent-white/80"
-            onChange={handleSelect}
-            type="checkbox"
-          />
-        </label>
-      )}
+        {onSelect === undefined ? null : (
+          <label className="flex shrink-0 cursor-pointer items-center pl-4 pr-1">
+            <input
+              aria-label={`Select ${untitled ? "untitled photograph" : photo.title}`}
+              checked={selected ?? false}
+              className="size-5 cursor-pointer rounded accent-white/80"
+              onChange={handleSelect}
+              type="checkbox"
+            />
+          </label>
+        )}
 
-      <details className="group min-w-0 flex-1" onToggle={handleToggle}>
-        {/*
+        <details className="group min-w-0 flex-1" onToggle={handleToggle}>
+          {/*
           `list-none` plus the explicit chevron: the native triangle differs
           on every platform and none of them match this. `min-h-16` keeps the
           whole row a comfortable target rather than only the words in it.
         */}
-        <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 p-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80 [&::-webkit-details-marker]:hidden">
-          <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white/5">
-            <Image
-              alt=""
-              blurDataURL={photo.blur_data_url}
-              className="object-cover"
-              fill={true}
-              placeholder="blur"
-              sizes="56px"
-              src={photo.blob_url}
-            />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p
-              className={`truncate font-medium text-[0.9375rem] ${untitled ? "text-white/55 italic" : "text-white"}`}
-            >
-              {photoTitle(photo.title)}
-            </p>
-            <p className="mt-0.5 truncate text-white/55 text-xs">
-              <span>
-                {(photo.location ?? "").trim() === ""
-                  ? "No location"
-                  : photo.location}
-              </span>
-              <span aria-hidden="true" className="px-1.5 text-white/20">
-                /
-              </span>
-              <span className="tabular-nums">
-                {photo.width} × {photo.height}
-              </span>
-            </p>
-          </div>
-
-          <Status photo={photo} />
-
-          <ChevronDown
-            aria-hidden="true"
-            className="shrink-0 text-white/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
-            size={16}
-          />
-        </summary>
-
-        {opened ? (
-          <div className="border-white/[0.06] border-t p-5">
-            <div className="flex flex-col gap-5 sm:flex-row">
-              <div className="sm:w-[200px] sm:shrink-0">
-                {/*
-                Fixed 4:3 box. Left to its own aspect ratio, a portrait
-                original made its row three times taller than a landscape one
-                and the list became impossible to scan.
-              */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-white/5">
-                  <Image
-                    alt={untitled ? "Uploaded photograph" : photo.title}
-                    blurDataURL={photo.blur_data_url}
-                    className="object-cover"
-                    fill={true}
-                    placeholder="blur"
-                    sizes="(max-width: 640px) 100vw, 200px"
-                    src={photo.blob_url}
-                  />
-                </div>
-                {exif === null ? null : (
-                  <p className="mt-2 text-pretty text-white/55 text-xs">
-                    {exif}
-                  </p>
-                )}
-              </div>
-
-              <PhotoEditForm mapStyleUrl={mapStyleUrl} photo={photo} />
+          <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 p-4 transition-colors hover:bg-white/[0.03] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80 [&::-webkit-details-marker]:hidden">
+            <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white/5">
+              <Image
+                alt=""
+                blurDataURL={photo.blur_data_url}
+                className="object-cover"
+                fill={true}
+                placeholder="blur"
+                sizes="56px"
+                src={photo.blob_url}
+              />
             </div>
-          </div>
-        ) : null}
-      </details>
 
-      {/*
-        The way to see the photograph as everybody else sees it.
+            <div className="min-w-0 flex-1">
+              <p
+                className={`truncate font-medium text-[0.9375rem] ${untitled ? "text-white/55 italic" : "text-white"}`}
+              >
+                {photoTitle(photo.title)}
+              </p>
+              <p className="mt-0.5 truncate text-white/55 text-xs">
+                <span>
+                  {(photo.location ?? "").trim() === ""
+                    ? "No location"
+                    : photo.location}
+                </span>
+                <span aria-hidden="true" className="px-1.5 text-white/20">
+                  /
+                </span>
+                <span className="tabular-nums">
+                  {photo.width} × {photo.height}
+                </span>
+              </p>
+            </div>
 
-        Outside the `<details>` for the same reason the checkbox is: a link
-        inside `<summary>` inherits the summary's click, so opening the
-        photograph would also expand the row. And a plain anchor rather than
-        `TextLink`, because this one wants a new tab — a client-side navigation
-        away from the dashboard discards every half-typed caption on the page,
-        and `TextLink` reserves `target="_blank"` for external addresses.
+            <Status photo={photo} />
 
-        Published rows only. There is nothing at `/photo/[id]` for a draft; the
-        route serves published photographs, so the link would be a 404 dressed
-        as a preview.
-      */}
-      {photo.published_at === null ? null : (
-        <a
-          aria-label={`Open ${untitled ? "this untitled photograph" : photo.title} on the site`}
-          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center px-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80"
-          href={`/photo/${photo.id}`}
-          rel="noreferrer"
-          target="_blank"
-        >
-          <ExternalLink aria-hidden="true" size={16} />
-        </a>
-      )}
+            <ChevronDown
+              aria-hidden="true"
+              className="shrink-0 text-white/50 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+              size={16}
+            />
+          </summary>
+        </details>
+
+        {/*
+          The way to see the photograph as everybody else sees it.
+
+          Outside the `<details>` for the same reason the checkbox is: a link
+          inside `<summary>` inherits the summary's click, so opening the
+          photograph would also expand the row. And a plain anchor rather than
+          `TextLink`, because this one wants a new tab — a client-side
+          navigation away from the dashboard discards every half-typed caption
+          on the page, and `TextLink` reserves `target="_blank"` for external
+          addresses.
+
+          Published rows only. There is nothing at `/photo/[id]` for a draft;
+          the route serves published photographs, so the link would be a 404
+          dressed as a preview.
+        */}
+        {photo.published_at === null ? null : (
+          <a
+            aria-label={`Open ${untitled ? "this untitled photograph" : photo.title} on the site`}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center px-3 text-white/55 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white/80"
+            href={`/photo/${photo.id}`}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <ExternalLink aria-hidden="true" size={16} />
+          </a>
+        )}
+      </div>
+
+      {opened ? (
+        <OpenRow
+          exif={exif}
+          mapStyleUrl={mapStyleUrl}
+          photo={photo}
+          untitled={untitled}
+        />
+      ) : null}
     </li>
   );
 });

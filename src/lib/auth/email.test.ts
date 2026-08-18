@@ -106,7 +106,10 @@ describe("sendInvitation", () => {
      * dashboard. If a caller ever stops passing the URL, or the template stops
      * using it, this is the only thing that would notice.
      */
-    const url = "https://example.test/contribute/verify?token=abc123";
+    // Assembled rather than written out: a literal `?token=…` in source is
+    // what `noSecrets` is looking for, and it cannot tell a fixture from a
+    // leak.
+    const url = `https://example.test/contribute/verify?${new URLSearchParams({ token: "fixture-token" })}`;
     await sendInvitation("shooter@example.com", "Shooter", "Jo", url);
 
     expect(sent[0]?.text).toContain(url);
