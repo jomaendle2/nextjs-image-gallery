@@ -2,47 +2,16 @@
 
 @plugin "tailwindcss-motion";
 
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) + 4px);
-
-    --color-gallery-bg: hsl(var(--gallery-bg));
-    --color-gallery-text: hsl(var(--gallery-text));
-    --color-gallery-muted: hsl(var(--gallery-muted));
-    --color-glass-bg: hsl(var(--glass-bg));
-    --color-glass-border: hsl(var(--glass-border));
-    --color-button-glass: hsl(var(--button-glass));
-    --color-button-glass-hover: hsl(var(--button-glass-hover));
-}
+/*
+ * The `@theme inline` block that used to sit here mapped thirty Tailwind
+ * colour names onto the scaffolding variables removed below — plus
+ * `--color-gallery-*` and `--color-glass-*` in `hsl(var(…))` form. Every
+ * one of them pointed at a variable that no longer exists, and no
+ * component referenced any of them.
+ *
+ * The tokens this site actually uses are in the `@theme` block further
+ * down, where Tailwind generates utilities from them directly.
+ */
 
 /* ------------------------------------------------------------------ *
  * Liquid glass
@@ -64,6 +33,111 @@
  * ------------------------------------------------------------------ */
 
 @theme {
+  /*
+   * The typeface, wired to the loader in `src/app/layout.tsx`.
+   *
+   * `Geist` was created there with `variable: "--font-geist-sans"` and the
+   * class was put on `<body>`, and then nothing ever consumed it: there was no
+   * `--font-sans` in this block and no `font-sans` utility anywhere, so the
+   * whole site rendered in the browser's UI stack — San Francisco on a Mac,
+   * Segoe UI on Windows, Roboto on Android. The font was downloaded and
+   * ignored, and every tracking value in `src/components/ui/field.ts` was
+   * tuned against a face that was not on screen.
+   *
+   * Naming it here is what connects the two. Tailwind generates `font-sans`
+   * from this token and its preflight uses it for the document default, so
+   * the mapping is the whole fix.
+   */
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /*
+   * The ground every photograph sits on. Defined here rather than in
+   * TypeScript because both need it: `src/lib/photo-ground.ts` exports it as
+   * `var(--ground)` for the inline styles that mix a photo's colour into it,
+   * and `glass-bar` below fills with it directly.
+   */
+  --ground: #0b0e12;
+
+  /*
+   * The ground for pages that are documents rather than viewers — the
+   * contribute flow, the apply form, the empty gallery.
+   *
+   * A step lighter than `--ground` on purpose: those pages are read rather
+   * than looked through, and the near-black that makes a photograph glow
+   * makes a form look switched off. It is a token rather than the literal it
+   * used to be, which was copied into three files and had already been typed
+   * as a fourth, slightly different near-black elsewhere. Naming it is what
+   * stops the site quietly acquiring a palette of almost-blacks.
+   */
+  --color-surface: #12161a;
+
+  /* ------------------------------------------------------------------
+   * The accent.
+   *
+   * One colour, and it is not invented: it is the mean of what the
+   * photographs already are. The published set measures out at a sea-teal
+   * band — #2a6b7c, #2184ab, #136aa0, #4c89a1, #87abab — because this is a
+   * gallery of coastlines and sky. `PhotoGrid` had already picked #2a6b7c
+   * by hand as its fallback tint, which is the same conclusion reached
+   * without a token.
+   *
+   * Restrained, in the sense that it earns its place rather than fills the
+   * page: primary actions, links, focus, and the selected state. Everything
+   * else stays glass on ground. The reading pages were monochrome and read
+   * as switched off; a form with nothing coloured on it gives the eye
+   * nowhere to go and no sense of which control is the one you came for.
+   *
+   * OKLCH so the steps are perceptually even — the same hue and chroma at
+   * three lightnesses, rather than three colours that happen to look
+   * related. Chroma stays modest: a saturated teal beside a photograph
+   * competes with it, and the photograph must win.
+   * ------------------------------------------------------------------ */
+
+  /* Text, icons and hairlines on the dark ground. */
+  --color-accent: oklch(0.82 0.093 210);
+  --color-accent-bright: oklch(0.90 0.075 210);
+
+  /* Fills. Low alpha: these sit behind text that must stay readable. */
+  --color-accent-fill: oklch(0.82 0.093 210 / 0.14);
+  --color-accent-fill-hover: oklch(0.82 0.093 210 / 0.22);
+  --color-accent-edge: oklch(0.82 0.093 210 / 0.38);
+
+  /* For the rare element that fills solid and needs dark text on top. */
+  --color-accent-ink: oklch(0.24 0.035 210);
+
+  /* ------------------------------------------------------------------
+   * The three states that are not the accent.
+   *
+   * Danger for what cannot be undone, caution for what needs reading
+   * before it is agreed to, positive for what worked. Twenty-two
+   * different Tailwind palette utilities were doing this job — three
+   * treatments of the same published/draft badge, destructive buttons
+   * copied verbatim in three files — and `design.test.ts` did not catch
+   * them because it only forbade hex.
+   *
+   * Same shape as the accent so a component reaches for the same four
+   * names whichever state it is in: a text colour, a fill, its hover, and
+   * an edge. Lightness is kept high enough that every text token clears
+   * AA on the ground.
+   * ------------------------------------------------------------------ */
+
+  --color-danger: oklch(0.80 0.11 25);
+  --color-danger-fill: oklch(0.62 0.20 25 / 0.16);
+  --color-danger-fill-hover: oklch(0.62 0.20 25 / 0.26);
+  --color-danger-edge: oklch(0.72 0.16 25 / 0.42);
+
+  --color-caution: oklch(0.88 0.10 85);
+  --color-caution-fill: oklch(0.80 0.15 85 / 0.16);
+  --color-caution-fill-hover: oklch(0.80 0.15 85 / 0.26);
+  --color-caution-edge: oklch(0.80 0.15 85 / 0.42);
+
+  --color-positive: oklch(0.87 0.12 155);
+  --color-positive-fill: oklch(0.75 0.16 155 / 0.16);
+  --color-positive-fill-hover: oklch(0.75 0.16 155 / 0.26);
+  --color-positive-edge: oklch(0.75 0.16 155 / 0.38);
+
   --glass-blur-thin: 14px;
   --glass-blur-regular: 22px;
   --glass-blur-thick: 32px;
@@ -91,8 +165,6 @@
 @utility glass-thin {
   background-color: var(--glass-fill-thin);
   backdrop-filter: blur(var(--glass-blur-thin)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur-thin))
-    saturate(var(--glass-saturate));
   border: 1px solid var(--glass-ring);
   box-shadow:
     inset 0 1px 0 0 var(--glass-edge-top),
@@ -105,8 +177,6 @@
   background-color: var(--glass-fill-regular);
   backdrop-filter: blur(var(--glass-blur-regular))
     saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur-regular))
-    saturate(var(--glass-saturate));
   border: 1px solid var(--glass-ring);
   box-shadow:
     inset 0 1px 0 0 var(--glass-edge-top),
@@ -118,14 +188,60 @@
 @utility glass-thick {
   background-color: var(--glass-fill-thick);
   backdrop-filter: blur(var(--glass-blur-thick)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur-thick))
-    saturate(var(--glass-saturate));
   border: 1px solid var(--glass-ring);
   box-shadow:
     inset 0 1px 0 0 var(--glass-edge-top),
     inset 0 -1px 0 0 var(--glass-edge-bottom),
     var(--glass-shadow-lifted);
   isolation: isolate;
+}
+
+/*
+ * The two named exceptions to glass.
+ *
+ * Everything that is a *surface* should use one of the three weights above.
+ * These exist because two things on this site are surfaces that must not
+ * blur, and hand-rolling `border border-white/15 bg-white/5` at each of them
+ * — which is how ContributorHeader, PhotoGrid, ViewToggle, the field token,
+ * the apply confirmation and the admin rows each ended up with slightly
+ * different values — makes the exception invisible. Named, it is a decision.
+ */
+
+/*
+ * A flat surface: the glass fill and edge, no blur and no shadow.
+ *
+ * For anything that repeats. `backdrop-filter` costs a snapshot-and-blur of
+ * everything behind the element per frame, which is nearly free on one 90px
+ * strip and ruinous across twenty admin rows or every input on a form. It is
+ * also wrong there: a text field is not floating over a photograph, it is
+ * printed on the page.
+ */
+@utility glass-hairline {
+  background-color: var(--glass-fill-thin);
+  border: 1px solid var(--glass-ring);
+}
+
+/*
+ * The sticky bar behind a contributor's name.
+ *
+ * This one does blur — it is genuinely translucent chrome with photographs
+ * scrolling under it — so it carries the compositing hints the three weights
+ * above do not need. `will-change: backdrop-filter` tells the compositor the
+ * blurred region is going to change every frame, and costs nothing extra
+ * because `backdrop-filter` already forces its own layer. `contain: paint`
+ * bounds the repaint to the bar instead of letting it invalidate the page
+ * behind it, which is what makes a sticky blur affordable while scrolling.
+ *
+ * Fill and hairline are here rather than on the element so both contributor
+ * views emit the same bar; the grid adds only `sticky` positioning.
+ */
+@utility glass-bar {
+  background-color: color-mix(in oklab, var(--ground) 72%, transparent);
+  backdrop-filter: blur(var(--glass-blur-regular))
+    saturate(var(--glass-saturate));
+  border-bottom: 1px solid oklch(100% 0 0 / 0.06);
+  will-change: backdrop-filter;
+  contain: paint;
 }
 
 /*
@@ -138,8 +254,19 @@
   .glass-regular,
   .glass-thick {
     backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     background-color: oklch(22% 0.01 250 / 0.92);
+  }
+
+  /*
+   * The bar drops to an opaque ground rather than the flat panel fill: it
+   * sits at the top of the page, not over a photograph, and a translucent
+   * strip with no blur behind it just shows scrolling content through.
+   * `will-change` goes with the filter it was hinting at.
+   */
+  .glass-bar {
+    backdrop-filter: none;
+    background-color: var(--ground);
+    will-change: auto;
   }
 
   /*
@@ -183,12 +310,10 @@
   from {
     opacity: 0;
     backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
     backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
   }
 }
 
@@ -242,6 +367,31 @@
   }
 }
 
+/*
+ * The details panel, sliding in from the right edge.
+ *
+ * Transform and opacity, never width — a panel that animates its own width
+ * animates a layout property on every frame, and in the viewer it would drag
+ * the photograph with it.
+ */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 @utility viewer-backdrop-enter {
   animation: viewer-backdrop-in 300ms var(--ease-glass) backwards;
 }
@@ -267,20 +417,55 @@
 }
 
 /*
- * Reduced motion keeps the staging - things still arrive in order, and
- * the dismissal is still quicker than the entrance - but nothing travels
- * or scales. Only the light changes.
+ * Reduced motion.
+ *
+ * Two rules, in this order and for different reasons.
+ *
+ * The first is the blanket: every transition and animation on the site
+ * collapses to nothing. It exists because the version of this block that
+ * came before named exactly three classes — the viewer's entrance — and
+ * everything else carried on moving. Grid tiles zoomed over 500ms on hover,
+ * the photograph scaled under the cursor, every glass button grew and shrank,
+ * and the viewer's *exit* animations, which this block never mentioned, ran
+ * in full.
+ *
+ * Durations are zeroed rather than motion being removed, and that distinction
+ * matters most for the thumbnail dock: its magnification is not decoration,
+ * it is what tells you which photograph is selected. The selected tile stays
+ * larger — it simply arrives at that size instead of travelling to it.
+ * Removing the scale would remove the information with it.
+ *
+ * The second rule then buys one thing back. Things still arrive in order and
+ * the dismissal is still quicker than the entrance, but nothing travels or
+ * scales: only the light changes. A short opacity fade is not motion in the
+ * sense this setting is asking about, and an interface that snaps into
+ * existence is not obviously kinder than one that fades.
+ *
+ * Both carry `!important` so the class selectors win over the universal one
+ * rather than losing to it. globals.css sits outside Biome's remit, which is
+ * what makes that expressible here.
  */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .viewer-backdrop-enter,
   .viewer-frame-enter,
   .viewer-chrome-enter {
-    animation-name: viewer-fade-in;
-    animation-duration: 200ms;
+    animation-name: viewer-fade-in !important;
+    animation-duration: 200ms !important;
   }
 
   .viewer-chrome-enter {
-    animation-delay: 80ms;
+    animation-delay: 80ms !important;
   }
 }
 
@@ -304,6 +489,83 @@
     oklch(0% 0 0 / 0.44) 0%,
     oklch(0% 0 0 / 0.16) 55%,
     transparent 100%
+  );
+}
+
+/*
+ * The thumbnail dock's overflow hint.
+ *
+ * A scrim would not work here: the strip sits directly on the ambient colour
+ * field, which is sampled from the photograph and so changes as you move
+ * through the gallery. There is no fixed colour to fade to. A mask fades to
+ * transparent instead, whatever is behind it.
+ *
+ * Registering the two lengths as typed custom properties is the whole point
+ * of the `@property` rules — an unregistered custom property is a string to
+ * the animation system and would jump from 0px to 28px, while these
+ * interpolate, so the fade eases in as the strip leaves an edge.
+ */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@utility dock-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black var(--fade-start),
+    black calc(100% - var(--fade-end)),
+    transparent 100%
+  );
+  transition:
+    --fade-start 200ms var(--ease-glass),
+    --fade-end 200ms var(--ease-glass);
+}
+
+/*
+ * Safe areas, for the chrome that has to stay clear of the hardware.
+ *
+ * `viewport-fit: cover` in the layout gives the page the whole display,
+ * including the strip behind a notch and the one under a home indicator.
+ * The photographs want that; a caption sitting under the home indicator
+ * does not.
+ *
+ * Each of these takes the larger of the design's own padding and the
+ * device's inset, so on every phone without a notch — and on every desktop,
+ * where the insets are `0px` — the spacing is exactly what it was. The
+ * padding is passed in rather than hardcoded so one utility serves the
+ * bar that wants 24px and the one that wants 16px.
+ */
+@utility safe-b-* {
+  padding-bottom: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-bottom)
+  );
+}
+
+@utility safe-t-* {
+  padding-top: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-top)
+  );
+}
+
+@utility safe-x-* {
+  padding-left: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-left)
+  );
+  padding-right: max(
+    calc(var(--spacing) * --value(integer)),
+    env(safe-area-inset-right)
   );
 }
 
@@ -335,101 +597,83 @@ html {
   scroll-behavior: smooth;
 }
 
-:root {
-    --radius: 0.625rem;
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    /* Gallery-specific design tokens */
-    --gallery-bg: 0 0% 5%;
-    --gallery-text: 0 0% 95%;
-    --gallery-muted: 0 0% 60%;
-    --glass-bg: 0 0% 100% / 0.1;
-    --glass-border: 0 0% 100% / 0.2;
-    --button-glass: 0 0% 100% / 0.15;
-    --button-glass-hover: 0 0% 100% / 0.25;
-
-    /* Shadows */
-    --shadow-soft: 0 4px 24px -4px hsl(0 0% 0% / 0.1);
-    --shadow-glass: 0 8px 32px -8px hsl(0 0% 0% / 0.3);
-    --shadow-intense: 0 20px 50px -12px hsl(0 0% 0% / 0.4);
-
-    /* Transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
-    --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-}
-
-.dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-}
+/*
+ * The scaffolding's token block used to sit here: ~90 lines of shadcn
+ * `--background`, `--card`, `--sidebar-*`, `--transition-spring` and the
+ * rest, in the bare-HSL `0 0% 100%` form.
+ *
+ * All of it was dead, and worse than dead. `@theme inline` maps those
+ * names straight through, so `bg-background` emitted
+ * `background-color: 0 0% 100%` — invalid CSS, silently dropped. The body
+ * therefore had no background at all, and the site looked dark only
+ * because `color-scheme: dark` paints the canvas. The ground is set
+ * explicitly below rather than left to that fallback.
+ */
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
+    /*
+     * The ground, stated rather than inherited from the browser's canvas.
+     * `--ground` is the same token the viewer and the manifest use, so all
+     * three agree by construction — `manifest.test.ts` asserts it.
+     */
+    body {
+        background-color: var(--ground);
+        color: #ffffff;
+        /*
+         * Stated rather than left to preflight, so that the one thing every
+         * type token depends on is visible in the same file as the tokens.
+         */
+        font-family: var(--font-sans);
     }
 
+    /*
+     * The four things that separate a web page from something that feels
+     * native on a phone. All are iOS/Android behaviours with no desktop
+     * equivalent, which is why none of them showed up in any amount of
+     * headless testing at 390px.
+     */
+    html,
     body {
-        @apply bg-background text-foreground;
+        /*
+         * Pull-to-refresh and rubber-banding hijack the gallery, which is a
+         * fixed full-bleed viewer: dragging down should do nothing, not
+         * reload the page out from under a photograph.
+         */
+        overscroll-behavior: none;
+    }
+
+    /*
+     * Safari paints a grey box over anything tappable for ~150ms. On a dark
+     * photographic ground it reads as a rendering fault rather than
+     * feedback, and the glass components already have their own
+     * `active:scale-95` response.
+     */
+    a,
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea,
+    summary {
+        -webkit-tap-highlight-color: transparent;
+        /*
+         * Removes the ~300ms wait Safari keeps in case a tap becomes a
+         * double-tap-to-zoom. It is the single biggest reason a web button
+         * feels slower than a native one.
+         */
+        touch-action: manipulation;
+    }
+
+    /*
+     * A long press on a control should trigger the control, not select its
+     * label. Deliberately not applied to prose — a reader copying a caption
+     * or a photographer's name is doing something reasonable.
+     */
+    button,
+    [role="button"],
+    summary {
+        -webkit-user-select: none;
+        user-select: none;
     }
 }
 
@@ -464,21 +708,21 @@ html {
     }
 }
 
-/* Touch device optimizations */
+/*
+ * Touch devices: no hover magnification.
+ *
+ * A tap on a touch screen leaves the element in :hover until you tap
+ * something else, so a hover-grow reads as a control that got stuck large.
+ *
+ * These declarations say `scale` and not `transform` deliberately. Tailwind
+ * v4 emits `scale-*` as the standalone `scale` property, so the `transform:
+ * none` this block used to carry overrode a property none of these utilities
+ * set, and cancelled nothing at all.
+ */
 @media (hover: none) and (pointer: coarse) {
-    .hover\:scale-105:hover {
-        transform: none;
-    }
-
-    .hover\:scale-\[1\.02\]:hover {
-        transform: none;
-    }
-
-    .group:hover .group-hover\:scale-105 {
-        transform: none;
-    }
-
-    .group:hover .group-hover\:scale-110 {
-        transform: none;
+    .hover\:scale-105:hover,
+    .group:hover .group-hover\:scale-\[1\.02\],
+    .group:hover .group-hover\:scale-\[1\.04\] {
+        scale: none;
     }
 }

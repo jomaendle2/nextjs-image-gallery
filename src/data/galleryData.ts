@@ -1,132 +1,106 @@
-// Gallery data structure
-import type { StaticImageData } from "next/image";
-import nature0 from "@/assets/0.jpg";
-import nature1 from "@/assets/1.jpg";
-import nature2 from "@/assets/2.jpg";
-import nature3 from "@/assets/3.jpg";
-import nature4 from "@/assets/4.jpg";
-import nature5 from "@/assets/5.jpg";
-import nature6 from "@/assets/6.jpg";
-import nature7 from "@/assets/7.jpg";
-import nature8 from "@/assets/8.jpg";
-import nature9 from "@/assets/9.jpg";
-import nature10 from "@/assets/10.jpg";
-import cherry from "@/assets/cherry.jpg";
-import rio from "@/assets/rio.jpg";
-import waves from "@/assets/waves.jpg";
+import { cache } from "react";
+import type { PhotoExif } from "@/lib/photos/derive";
+import { toGalleryImage } from "@/lib/photos/map";
+import { listPublishedPhotos } from "@/lib/photos/repository";
+
+/**
+ * The public half of a photographer's pin, if they marked one.
+ *
+ * The centre of a cell about 100 km across — `coarsen.ts` explains why the
+ * cells are equal-ground-width rather than rounded degrees. Roughly forty
+ * bytes per photograph against a measured 5.4 KB, which is what makes it
+ * affordable in the payload of every gallery page rather than behind a
+ * request of its own.
+ */
+export interface GalleryPin {
+  lat: number;
+  lng: number;
+}
+
+export interface GalleryAuthor {
+  slug: string;
+  name: string;
+  siteUrl: string | null;
+}
 
 export interface GalleryImage {
-  id: number;
+  /** nanoid; doubles as the key the `image_views` table is written against. */
+  id: string;
   /**
-   * The full static import, not just its `.src`. Next needs the intrinsic
-   * width/height to build a correct srcset and to reserve the right aspect
-   * ratio, and it carries the generated blur placeholder with it.
+   * Shaped exactly like a static import, because that is all next/image ever
+   * needed: a `src`, the intrinsic dimensions to reserve the right aspect
+   * ratio, and a `blurDataURL` for the placeholder. Building this object from
+   * a database row is what lets every component below consume a contributed
+   * photo without knowing it did not come from `src/assets`.
    */
-  src: StaticImageData;
+  src: { src: string; width: number; height: number; blurDataURL: string };
   title: string;
   description: string;
   bgColor: string;
+  location: string | null;
+  exif: PhotoExif | null;
+  /** Where the photographer marked, blurred to a ~100 km cell. */
+  pin: GalleryPin | null;
+  /**
+   * Whether this photograph has member-only notes behind it.
+   *
+   * One bit, and the only thing a public payload learns about the paid
+   * fields — computed by the database, never by a query naming them. It
+   * exists so the viewer can offer the membership where there is something
+   * to buy and stay quiet where there is not; before it, the offer appeared
+   * under every photograph including the ones with an empty shelf.
+   *
+   * Not a substitute for the gate. It says *that* something exists, so
+   * nothing here decides who may read it — `/api/photo/[id]/details` still
+   * does, and deleting the component that shows the content would still
+   * expose nothing.
+   */
+  hasMemberDetails: boolean;
+  /** ISO timestamp of publication. What the feed orders and dates by. */
+  publishedAt: string;
+  author: GalleryAuthor;
 }
 
-/** Typed as non-empty so `galleryImages[0]` needs no runtime guard. */
-export const galleryImages: readonly [GalleryImage, ...GalleryImage[]] = [
-  {
-    id: 1,
-    src: waves,
-    title: "Bali, Indonesia",
-    description: "Aerial view of tale waves",
-    bgColor: "#2a6b7c",
+/**
+ * The gallery feed: the pinned opener first, then newest published first.
+ * Pass a contributor slug to narrow it to one photographer.
+ *
+ * Throws, and every caller lets it. There used to be a second, swallowing
+ * variant for the pages that *display* a gallery, on the reasoning that a
+ * photo site showing nothing beats one showing a stack trace. That reasoning
+ * was wrong in a way nobody could see: every consumer is cached for an hour,
+ * and returning `[]` makes the failure look like a *successful* render of an
+ * empty gallery. Next then caches "there is nothing here" and serves it to
+ * everyone until the hour is out — one Neon hiccup during revalidation, and
+ * the front page is blank until 3 a.m. The site does not look broken, it
+ * looks empty, so nothing alerts and nobody reports it.
+ *
+ * A throw is strictly better because Next does not cache it: "if an error is
+ * thrown while attempting to revalidate data, the last successfully
+ * generated data will continue to be served from the cache", and the next
+ * request retries — so the visible result of a transient failure is the
+ * previous good page, and the failure is confined to a first render, where
+ * `error.tsx` offers a retry. The same property is why the sitemap, the
+ * feeds and `/photo/[id]` were converted first: an empty sitemap reads as
+ * deletion, and a missing row as a 404, both cached for the hour.
+ *
+ * `EmptyGallery` stays, and now means what it says. A gallery with no
+ * published photographs is a real state; a query that did not answer is not
+ * that state.
+ *
+ * Wrapped in `cache` because every page that has metadata asks twice.
+ *
+ * Next dedupes `fetch` across `generateMetadata` and the page body; this is
+ * a Neon query, so nothing deduped it. `/photo/[id]` reads the entire
+ * published feed — every row, every base64 blur placeholder — once to build
+ * the share card and again to render, so a crawl of N photographs cost 2N
+ * full-feed queries. `React.cache` is the documented answer when `fetch` is
+ * not involved, and it dedupes per request, which is exactly the scope of
+ * the duplication.
+ */
+export const listGalleryImages = cache(
+  async (authorSlug?: string): Promise<GalleryImage[]> => {
+    const rows = await listPublishedPhotos(authorSlug);
+    return rows.map(toGalleryImage);
   },
-  {
-    id: 2,
-    src: nature0,
-    title: "Vila Nova de Milfontes, Portugal",
-    description: "Beautiful coastal landscape in Portugal",
-    bgColor: "#191815",
-  },
-  {
-    id: 3,
-    src: nature1,
-    title: "Bali, Indonesia",
-    description: "A beautiful, blooming Plumeria rubra flower",
-    bgColor: "#4c89a1",
-  },
-  {
-    id: 4,
-    src: nature2,
-    title: "Bromo, Java, Indonesia",
-    description: "Peaceful sunrise at Bromo Tengger Semeru National Park",
-    bgColor: "#663829",
-  },
-  {
-    id: 5,
-    src: cherry,
-    title: "Böblingen, Germany",
-    description: "Pink cherry blossoms against a clear blue sky.",
-    bgColor: "#4c566e",
-  },
-  {
-    id: 6,
-    src: nature3,
-    title: "Uluwatu, Bali, Indonesia",
-    description: "Teal waves crash against rocky cliffs.",
-    bgColor: "#446165",
-  },
-  {
-    id: 7,
-    src: nature4,
-    title: "Sagres, Portugal",
-    description: "A golden sunset glows over gentle waves on a sandy shore.",
-    bgColor: "#6a4332",
-  },
-  {
-    id: 8,
-    src: nature5,
-    title: "San Diego, California",
-    description: "Close-up of a vibrant palm tree nearby the beach.",
-    bgColor: "#4d623c",
-  },
-  {
-    id: 9,
-    src: nature9,
-    title: "Koh Samui, Thailand",
-    description: "White plumeria blossoms against a clear blue sky.",
-    bgColor: "#2a88a3",
-  },
-  {
-    id: 10,
-    src: rio,
-    title: "Rio de Janeiro, Brazil",
-    description: "Aerial view of the iconic Rio de Janeiro coastline.",
-    bgColor: "#3a5c7b",
-  },
-  {
-    id: 11,
-    src: nature6,
-    title: "San Francisco, California",
-    description: "Golden Gate Bridge at sunset with a vibrant sky.",
-    bgColor: "#2184ab",
-  },
-  {
-    id: 12,
-    src: nature7,
-    title: "Arches National Park, Utah",
-    description:
-      "Storm clouds roll over towering red sandstone formations in Arches NP",
-    bgColor: "#646378",
-  },
-  {
-    id: 13,
-    src: nature8,
-    title: "Böblingen, Germany",
-    description: "Pink cherry blossoms against a clear blue sky.",
-    bgColor: "#136aa0",
-  },
-  {
-    id: 14,
-    src: nature10,
-    title: "Koh Phangan, Thailand",
-    description: "Lovely palm trees swaying in the breeze on a tropical beach.",
-    bgColor: "#87abab",
-  },
-];
+);

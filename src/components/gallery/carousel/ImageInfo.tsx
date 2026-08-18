@@ -1,33 +1,41 @@
-import { ViewCount } from "@/components/gallery/ViewCount";
 import type { GalleryImage } from "@/data/galleryData";
 
 interface ImageInfoProps {
   image: GalleryImage;
 }
 
+/**
+ * The left half of the wall label: what the photograph is.
+ *
+ * The live region covers the caption only. Including the view counter made
+ * every tick of its digit animation an announcement, so the whole caption was
+ * re-read while the number counted up.
+ */
 export function ImageInfo({ image }: ImageInfoProps) {
   return (
-    <div className="text-center text-white px-6 max-w-2xl mx-auto h-24 flex flex-col justify-center">
+    <div aria-live="polite" className="min-w-0 text-center lg:text-left">
+      <h2 className="text-pretty font-semibold text-[1.0625rem] text-white leading-tight tracking-[-0.025em] sm:text-lg [text-shadow:0_1px_12px_oklch(0%_0_0_/_0.4)]">
+        {image.title}
+      </h2>
       {/*
-        The live region covers the caption only. Including the view counter
-        made every tick of its digit animation an announcement, so the whole
-        caption was re-read while the number counted up.
+        Two lines, always, at every width.
+
+        Descriptions run to one line or two depending on the sentence, and
+        the caption bar is laid out below the photograph — so the bar's
+        height is subtracted from the image's. Three photographs in fourteen
+        were 18px taller here, which meant selecting one of them resized the
+        photograph above and moved the credit and the whole thumbnail dock
+        with it.
+
+        Reserving the taller of the two costs a line of air under the short
+        captions and buys a caption that never moves. `line-clamp-2` closes
+        the other side, so a long description from a future contributor
+        cannot reopen the same gap — and the clamp is what makes this a
+        guarantee rather than a bet on how people write.
       */}
-      <div aria-live="polite">
-        <h2 className="font-semibold text-lg sm:text-xl mb-1.5 text-white tracking-[-0.02em] text-pretty leading-tight [text-shadow:0_1px_12px_oklch(0%_0_0_/_0.4)]">
-          {image.title}
-        </h2>
-        <p className="text-[0.8125rem] sm:text-sm text-white/65 leading-snug mb-2.5 text-balance">
-          {image.description}
-        </p>
-      </div>
-      <div className="flex justify-center items-center">
-        <ViewCount
-          imageId={image.id}
-          variant="gallery"
-          className="opacity-80 hover:opacity-100 transition-opacity duration-200"
-        />
-      </div>
+      <p className="mt-1 line-clamp-2 min-h-9 text-pretty text-[0.8125rem] text-white/55 leading-snug">
+        {image.description}
+      </p>
     </div>
   );
 }

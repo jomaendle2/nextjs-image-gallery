@@ -42,3 +42,16 @@ next-env.d.ts
 
 # Playwright MCP screenshots
 .playwright-mcp/
+.tmp-fixtures/
+
+# Review screenshots taken at the repo root during UI work
+/*.png
+
+# Ralph loop session state
+.claude/ralph-loop.local.md
+
+# Agent skills installed by `npx skills add` — local tooling, not app code
+.agents/
+.junie/
+skills-lock.json
+.claude/skills/

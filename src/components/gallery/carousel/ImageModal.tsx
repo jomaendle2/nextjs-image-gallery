@@ -1,12 +1,16 @@
 "use client";
 
-import { X, ZoomIn, ZoomOut } from "lucide-react";
+import { X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ViewCount } from "@/components/gallery/ViewCount";
 import { GlassButton } from "@/components/ui/glass-button";
 import type { GalleryImage } from "@/data/galleryData";
+import { photoAltText } from "@/lib/photos/alt-text";
+import { trapTab } from "./focus-trap";
 import { usePanZoom } from "./usePanZoom";
+import { useSwipeDismiss } from "./useSwipeDismiss";
+import { ViewerCaption } from "./ViewerCaption";
+import { ViewerControls } from "./ViewerControls";
 
 /**
  * Must stay in step with the `viewer-*-exit` animations in globals.css: the
@@ -17,16 +21,15 @@ const CLOSE_ANIMATION_MS = 220;
 
 interface ImageModalProps {
   image: GalleryImage;
-  isOpen: boolean;
   onClose: () => void;
 }
 
-export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
+export function ImageModal({ image, onClose }: ImageModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previouslyFocusedRef = useRef<Element | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
@@ -40,20 +43,16 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     handlePointerMove,
     handlePointerUp,
     handleDoubleClick,
-  } = usePanZoom(isOpen);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-      setIsLoaded(false);
-      setIsClosing(false);
-    }
-  }, [isOpen]);
+  } = usePanZoom();
 
   const handleClose = useCallback(() => {
+    // A close already under way owns the exit. Without this, a swipe that
+    // dismisses and the click the browser synthesises after it would each
+    // start a timer, and the second would call `onClose` again after the
+    // modal had already gone.
+    if (closeTimerRef.current) {
+      return;
+    }
     setIsClosing(true);
     // Held in a ref so unmounting, or reopening before the exit animation
     // finishes, cannot land a stale `setIsClosing(false)` on the next modal.
@@ -77,18 +76,43 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
     setIsLoaded(true);
   }, []);
 
-  // Escape to close, scroll lock, and focus handling while open.
-  useEffect(() => {
-    if (!isOpen) {
+  const isZoomed = scale > 1;
+  const swipe = useSwipeDismiss({
+    isZoomed,
+    onDismiss: handleClose,
+    surfaceRef: dialogRef,
+  });
+
+  const handleBackdropClick = useCallback(() => {
+    if (swipe.consumeSwipe()) {
       return;
     }
+    handleClose();
+  }, [handleClose, swipe.consumeSwipe]);
 
-    previouslyFocusedRef.current = document.activeElement;
+  /*
+   * Escape to close, scroll lock, and focus handling.
+   *
+   * Runs once, because the modal is mounted only while it is open — so
+   * "what had focus before" is a local rather than a ref that has to
+   * survive re-renders.
+   */
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
     closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         handleClose();
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog = dialogRef.current;
+      if (dialog && trapTab(dialog, event)) {
+        event.preventDefault();
       }
     };
 
@@ -100,17 +124,12 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       // Send focus back to wherever the user left it.
-      if (previouslyFocusedRef.current instanceof HTMLElement) {
-        previouslyFocusedRef.current.focus();
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
       }
     };
-  }, [isOpen, handleClose]);
+  }, [handleClose]);
 
-  if (!isOpen) {
-    return null;
-  }
-
-  const isZoomed = scale > 1;
   // Toolbar, close button and caption all arrive and leave together, behind
   // the photograph.
   const chrome = isClosing ? "viewer-chrome-exit" : "viewer-chrome-enter";
@@ -121,8 +140,12 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
    * ~90vw bitmap: the image gets bigger but no sharper, which reads as the
    * zoom being broken. Capped at 300vw so we never request the 4K source
    * for a small step.
+   *
+   * 100 rather than 90 since the image lost its margin on small screens; the
+   * hint may overshoot the desktop layout by a tenth, which costs at most one
+   * srcset step and never the other way round.
    */
-  const zoomedSizes = `${Math.min(Math.round(90 * scale), 300)}vw`;
+  const zoomedSizes = `${Math.min(Math.round(100 * scale), 300)}vw`;
 
   return (
     <div
@@ -131,7 +154,19 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       className={`fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl ${
         isClosing ? "viewer-backdrop-exit" : "viewer-backdrop-enter"
       }`}
+      onPointerCancel={swipe.onPointerCancel}
+      onPointerDown={swipe.onPointerDown}
+      onPointerMove={swipe.onPointerMove}
+      onPointerUp={swipe.onPointerUp}
       style={{
+        /*
+         * Vertical drags have to reach the handlers above rather than being
+         * claimed by the browser, so `pan-y` cannot be on the list. What the
+         * browser keeps is `pinch-zoom`: the viewer's own zoom is a feature,
+         * not a replacement for the one a visitor uses because they need to.
+         * While zoomed the whole surface belongs to the pan gesture.
+         */
+        touchAction: isZoomed ? "none" : "pinch-zoom",
         /*
          * The gallery's colour, dimmed almost to black.
          *
@@ -146,6 +181,7 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
          */
         backgroundColor: `color-mix(in srgb, color-mix(in oklab, ${image.bgColor} 38%, oklch(7% 0 0)) 90%, transparent)`,
       }}
+      ref={dialogRef}
       role="dialog"
     >
       {/*
@@ -157,65 +193,45 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       <button
         aria-label="Close full screen view"
         className="absolute inset-0 cursor-default"
-        onClick={handleClose}
+        onClick={handleBackdropClick}
         tabIndex={-1}
         type="button"
       />
 
-      {/* Close button */}
-      <GlassButton
-        aria-label="Close modal"
-        className={`absolute top-4 right-4 z-10 p-2 rounded-full ${chrome}`}
-        onClick={handleClose}
-        ref={closeButtonRef}
-      >
-        <X size={24} />
-      </GlassButton>
+      {/*
+        Close button.
 
-      {/* Toolbar */}
-      <div className={`absolute top-4 left-4 z-10 flex gap-2 ${chrome}`}>
+        The inset lives on this wrapper rather than on the button: `safe-t-4`
+        is padding, and padding on a `size="icon"` button is the thing that
+        makes it 44px. See `ViewerControls`, which pins its cluster to the
+        opposite corner the same way.
+      */}
+      <div className="pointer-events-none absolute top-0 right-0 z-10 safe-x-4 safe-t-4">
         <GlassButton
-          aria-label="Zoom in"
-          className="p-2 rounded-full"
-          onClick={zoomIn}
+          aria-label="Close full screen view"
+          /*
+            `size="icon"` rather than `p-2`. `cn` is twMerge, so a padding
+            utility in `className` overrides the variant's own — which made
+            the close button of the full-screen viewer 40px wide, under the
+            44px floor this codebase documents and checks everywhere else.
+          */
+          className={`pointer-events-auto ${chrome}`}
+          onClick={handleClose}
+          ref={closeButtonRef}
+          size="icon"
         >
-          <ZoomIn size={20} />
-        </GlassButton>
-        <GlassButton
-          aria-label="Zoom out"
-          className="p-2 rounded-full"
-          onClick={zoomOut}
-        >
-          <ZoomOut size={20} />
-        </GlassButton>
-        <GlassButton
-          aria-label="Reset view"
-          className="px-3 py-2 rounded-full"
-          onClick={reset}
-        >
-          Reset
+          <X size={24} />
         </GlassButton>
       </div>
 
-      {/* Image Info - positioned in bottom right corner */}
-      <div className={`absolute bottom-4 right-4 left-4 z-10 ${chrome}`}>
-        <div className="mx-auto max-w-md glass-thick rounded-[20px] px-4 py-3.5">
-          <h2 className="font-semibold text-base mb-1 text-white tracking-[-0.02em]">
-            {image.title}
-          </h2>
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-[0.8125rem] text-white/65 leading-relaxed">
-              {image.description}
-            </p>
-            <ViewCount
-              className="text-white/80"
-              imageId={image.id}
-              shouldIncrement={false}
-              variant="modal"
-            />
-          </div>
-        </div>
-      </div>
+      <ViewerControls
+        chrome={chrome}
+        onReset={reset}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+      />
+
+      <ViewerCaption chrome={chrome} image={image} />
 
       {/*
         Pan surface: a drag region, not an activation target. Every action it
@@ -251,11 +267,36 @@ export function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
           ref={contentRef}
           style={{
             transition: isDragging ? "none" : "transform 0.3s ease-out",
+            /*
+             * The photograph itself never hands its touches to the browser.
+             *
+             * Pinch has to start at 1×, and a two-finger gesture on an
+             * element with the default touch-action is claimed by the
+             * browser for page zoom before a single `pointermove` is
+             * delivered — so the viewer would never see the gesture it is
+             * now able to handle. Only the image is claimed this way; the
+             * backdrop around it still behaves normally.
+             */
+            touchAction: "none",
           }}
         >
           <Image
-            alt={image.title}
-            className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain select-none"
+            alt={photoAltText(image)}
+            /*
+             * `dvh`, not `vh`: on iOS Safari `vh` resolves against the
+             * *large* viewport, the one that exists only once the URL bar
+             * has scrolled away, so 90vh reaches under browser chrome that
+             * is still on screen. The dynamic unit is what the rest of the
+             * codebase uses.
+             *
+             * Full width below `sm`, 90% above it. The 10% margin is a
+             * desktop manner — it separates the photograph from the edge of
+             * a large screen. On a portrait phone it was buying nothing: the
+             * carousel behind renders this same photograph at 342px and the
+             * viewer at 351px, so "full screen" was a 2.6% enlargement that
+             * cost a fresh download. The margin is where the difference was.
+             */
+            className="max-w-[100vw] max-h-[90dvh] sm:max-w-[90vw] w-auto h-auto object-contain select-none"
             draggable={false}
             onLoad={handleLoad}
             placeholder="blur"

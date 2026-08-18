@@ -1,7 +1,34 @@
-# the beauty of earth.
+# the beauty of earth
 
-A full-screen photo gallery. Next.js App Router, React 19, Tailwind v4,
-view counts in Neon Postgres.
+A full-screen photo gallery, open to a small set of invited photographers.
+Next.js App Router, React 19, Tailwind v4. Photographs live in Vercel Blob;
+metadata, contributors and view counts in Neon Postgres.
+
+See [docs/CONTRIBUTING-PHOTOS.md](docs/CONTRIBUTING-PHOTOS.md) for how
+contributions work and what an operator has to set up, and
+[docs/quality-audit.md](docs/quality-audit.md) for the production-readiness
+record — what was found, what was decided, and what is deliberately not done.
+
+## Routes
+
+| Route | What it is |
+| --- | --- |
+| `/` | The gallery: every published photograph, newest first behind a pinned opener |
+| `/photo/<id>` | One photograph, with its own metadata and social card |
+| `/photographers` | Everyone contributing, and the way in for anyone who wants to |
+| `/by/<slug>` | A photographer's work as a contact sheet |
+| `/by/<slug>/slideshow` | The same work in the viewer |
+| `/globe` | The gallery by place, for photographs whose photographer marked one. A grouped list of links that works with no JavaScript, with a canvas globe over it |
+| `/feed.xml` | The whole gallery, as a subscription |
+| `/by/<slug>/feed.xml` | One photographer, as a subscription |
+| `/contribute` | Sign in, for invited photographers |
+| `/contribute/photos` | A contributor's own photographs |
+| `/contribute/apply` | The public application form |
+| `/contribute/admin` | Owner only; 404 for everyone else |
+
+`sitemap.xml`, `robots.txt` and `manifest.webmanifest` are generated from the
+same data rather than written by hand, so a new photographer or photograph
+appears in them without anyone remembering to.
 
 ## Getting started
 
@@ -12,10 +39,36 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-`DATABASE_URL` (a Neon connection string) is required. The view-count API
-creates its table on first call.
+### Environment
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | Neon connection string. |
+| `BLOB_READ_WRITE_TOKEN` | yes | Vercel Blob store. Set automatically once the store is linked to the project. |
+| `SITE_URL` | **production build fails without it** | Canonical origin. Every link the site emails is built from this and **never** from the request `Host` header, so a magic link cannot be pointed at an attacker's domain. Falls back to `VERCEL_PROJECT_PRODUCTION_URL`, then localhost — which is why production refuses to build without it rather than emailing people an unfamiliar domain. |
+| `RESEND_API_KEY` | **production build fails without it** | In development a missing key prints messages to the terminal, which is how you read a sign-in link locally. In production it throws. |
+| `EMAIL_FROM` | **production build fails without it** | The verified sender, e.g. `contact@thebeautyof.earth`. Required alongside the key: with either missing nothing sends. |
+| `CRON_SECRET` | for the weekly reminder | Vercel sends it as `Authorization: Bearer …` to `/api/cron/announce-reminder`. Without it the route refuses to run rather than becoming a public way to ring the owner's inbox. |
+| `AI_GATEWAY_API_KEY` | for suggested details | The Vercel AI Gateway key behind "Suggest details". **Set it explicitly in production.** Without it the code falls back to `VERCEL_OIDC_TOKEN`, which works on a linked machine and expires after hours — and the failure is silent: `aiSuggestionsConfigured()` simply stops returning true, the button stops rendering, and nobody is told the feature is gone. It is a spending credential, so set a budget on the gateway itself: the route's rate limit is per-instance and in-memory, which bounds requests per instance and not cost. |
+| `MAPTILER_KEY` | for the map picker | Tiles for the location picker and the hint map. Without it both render a "map unavailable" notice and coordinates can still be typed by hand, so it degrades honestly — but the hint map is a blank panel. Read on the server and passed down as a prop, never as `NEXT_PUBLIC_*`, so the key stays out of every client bundle. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MEMBERSHIP_PRICE_ID` | for membership | With any of them missing the membership offer is hidden and the webhook rejects events, rather than half-selling something. See `docs/launch-checklist.md` §2. |
+
+`vercel env pull .env.local` fetches the first two. Then apply the schema:
+
+```bash
+npm run db:migrate
+```
+
+The migrations are additive and idempotent — re-running them is a no-op.
 
 ## Scripts
+
+See **[docs/how-it-works.md](docs/how-it-works.md)** for what each service
+does, how to sign in as admin, and how to test the membership end to end;
+**[docs/launch-checklist.md](docs/launch-checklist.md)** for what must be set
+before sharing the site; **[docs/next-version.md](docs/next-version.md)** for
+what was deliberately left out and what triggers each; and **[docs/security-architecture.md](docs/security-architecture.md)**
+for the invariants `src/lib/security.test.ts` enforces.
 
 | Script | What it does |
 | --- | --- |
@@ -26,14 +79,48 @@ creates its table on first call.
 | `npm run lint:fix` | Same, applying every safe fix |
 | `npm run format` | Format only |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest unit tests |
+| `npm run db:migrate` | Apply the additive schema (safe to re-run) |
+| `npm run db:import-assets` | One-off import of the original photos (already run) |
+
+Operational scripts. Every one carries the loader flags it needs, so there
+is nothing to remember at the command line:
+
+| Command | What it does |
+| --- | --- |
+| `npm run smoke` | Every suite below that needs no arguments. |
+| `npm run smoke:pages` | Each page renders, signed in and out. Catches a server component that throws. |
+| `npm run smoke:invite` | The invite quota, including two concurrent claims racing for one invitation. |
+| `npm run smoke:upload` | The ingest path. Mints its own session; nothing to paste. |
+| `npm run smoke:membership` | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
+| `npm run smoke:portal` | The member's side: real customer, real session, real cookie. |
+| `npm run smoke:email -- you@example.com` | Sends one of every email template. The address is required, because this one really sends. |
+| `npm run probe:scale` | Measures the authoring page at 50–600 photographs. Inserts drafts, reads the page, deletes them. |
+| `npm run stripe:portal-setup` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
+| `npm run mint-link -- you@example.com` | Break-glass sign-in link when mail is down. |
+
+## Design
+
+[DESIGN.md](DESIGN.md) is the design system: the two registers (the viewer
+and the reading pages), the colour tokens, the shared components to reach
+for before writing classes, and the mistakes that have actually been made
+here. The mechanical half of it is enforced by `src/lib/design.test.ts` and
+`src/app/manifest.test.ts` rather than left as prose.
 
 ## Toolchain
 
 Biome 2 replaces ESLint and Prettier and does linting, formatting and
 import sorting in one pass. The configuration is deliberately strict:
-381 rules across a11y, complexity, correctness, performance, security,
-style and suspicious, plus the `next`, `react`, `project` and `types`
-domains. `types` enables the rules that need type inference.
+395 rules across a11y, complexity, correctness, performance, security,
+style and suspicious — every rule the schema offers that is not written for
+Vue, Qwik or Solid — plus the `next`, `react`, `project` and `types`
+domains. `types` enables the rules that need type inference. Twelve are off,
+each for a reason given below.
+
+Rules absent from `biome.json` fall back to the recommended preset rather
+than to "on", which is how the six test-hygiene rules — `noFocusedTests`,
+`noSkippedTests` and friends — went missing. A stray `.only` could have kept
+CI green while running a single test.
 
 TypeScript runs with `strict` plus `noUncheckedIndexedAccess`,
 `verbatimModuleSyntax`, `noImplicitOverride` and

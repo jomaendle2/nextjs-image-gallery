@@ -6,24 +6,50 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/preflight.mts && node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/migrate.mts && next build",
     "start": "next start",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/migrate.mts",
+    "smoke:upload": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-upload.mts",
+    "smoke:membership": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-membership.mts",
+    "smoke:portal": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-portal.mts",
+    "smoke:email": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-email.mts",
+    "stripe:portal-setup": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/setup-billing-portal.mts",
+    "probe:scale": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/scale-probe.mts",
+    "smoke:pages": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-pages.mts",
+    "smoke:invite": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-invite.mts",
+    "smoke": "npm run smoke:invite && npm run smoke:pages && npm run smoke:upload && npm run smoke:membership && npm run smoke:portal",
+    "mint-link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts",
+    "db:backfill-pins": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/backfill-pins.mts",
+    "db:import-assets": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
+    "auth:link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@number-flow/react": "^0.6.2",
+    "@radix-ui/react-dialog": "^1.1.23",
     "@tanstack/react-query": "^5.101.4",
+    "@vercel/blob": "^2.8.0",
     "@vercel/speed-insights": "^2.0.0",
+    "ai": "^7.0.66",
     "clsx": "^2.1.1",
+    "exifr": "^7.1.3",
     "lucide-react": "^1.31.0",
+    "maplibre-gl": "^6.4.0",
+    "nanoid": "^6.0.1",
     "next": "16.3.1",
     "next-plausible": "^3.12.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "tailwind-merge": "^3.6.0"
+    "sharp": "^0.35.3",
+    "stripe": "^22.5.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
@@ -33,6 +59,7 @@
     "@types/react-dom": "^19.2.4",
     "tailwindcss": "^4.3.3",
     "tailwindcss-motion": "^1.1.1",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }

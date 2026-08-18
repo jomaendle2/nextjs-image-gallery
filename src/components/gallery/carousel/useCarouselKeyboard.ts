@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseCarouselKeyboardProps {
   onNext: () => void;
   onPrevious: () => void;
-  onClose?: () => void;
 }
 
 /** Elements that act on Space themselves and must keep it. */
@@ -20,20 +19,38 @@ const isInteractive = (target: EventTarget | null) =>
 export function useCarouselKeyboard({
   onNext,
   onPrevious,
-  onClose,
 }: UseCarouselKeyboardProps) {
   const [isDisabledState, setIsDisabledState] = useState(false);
 
+  /*
+   * Mirrors of the render values, so the listener below can be attached once
+   * and stay attached — the same shape `useCarouselScroll` uses, and for the
+   * same reason.
+   *
+   * `onNext` and `onPrevious` are rebuilt by the carousel on every index
+   * change, because both close over the current index. With those in the
+   * dependency array the effect re-ran on every navigation: a `keydown`
+   * listener removed from `window` and a fresh one added, once per photograph,
+   * for a handler whose behaviour never changes. Holding an arrow key down
+   * churned the listener at the key repeat rate.
+   */
+  const onNextRef = useRef(onNext);
+  onNextRef.current = onNext;
+  const onPreviousRef = useRef(onPrevious);
+  onPreviousRef.current = onPrevious;
+  const isDisabledRef = useRef(isDisabledState);
+  isDisabledRef.current = isDisabledState;
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isDisabledState) {
+      if (isDisabledRef.current) {
         return; // Ignore key events if disabled
       }
 
       switch (event.key) {
         case "ArrowRight":
           event.preventDefault();
-          onNext();
+          onNextRef.current();
           break;
         case " ": // Spacebar
           /*
@@ -48,15 +65,11 @@ export function useCarouselKeyboard({
             break;
           }
           event.preventDefault();
-          onNext();
+          onNextRef.current();
           break;
         case "ArrowLeft":
           event.preventDefault();
-          onPrevious();
-          break;
-        case "Escape":
-          event.preventDefault();
-          onClose?.();
+          onPreviousRef.current();
           break;
         default:
           break;
@@ -67,7 +80,7 @@ export function useCarouselKeyboard({
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onNext, onPrevious, onClose, isDisabledState]);
+  }, []);
 
   return {
     setIsDisabled: setIsDisabledState,

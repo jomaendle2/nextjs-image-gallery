@@ -1,16 +1,14 @@
 "use client";
 
-import {
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef } from "react";
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-/** The API reports ids as strings; the gallery keys them as numbers. */
+/**
+ * Photo ids are nanoids. Rows written before contributors existed carry the
+ * old numeric ids, so both shapes have to compare equal — see `sameId`.
+ */
 interface ViewCountRow {
   image_id: string | number;
   view_count: number;
@@ -19,15 +17,12 @@ interface ViewCountRow {
 interface UseViewCountReturn {
   viewCount: number;
   incrementView: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
 }
 
-const viewCountKeys = {
-  all: ["viewCount"] as const,
-};
+/** One key for the whole table: every count arrives in a single request. */
+const VIEW_COUNTS = ["viewCount"] as const;
 
-const incrementViewCount = async (imageId: number): Promise<number> => {
+const incrementViewCount = async (imageId: string): Promise<number> => {
   const response = await fetch("/api/views", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -54,23 +49,20 @@ const fetchAllViewCounts = async (): Promise<ViewCountRow[]> => {
 const sameId = (a: string | number, b: string | number) =>
   String(a) === String(b);
 
-export function prefetchAllViewCounts(queryClient: QueryClient) {
-  return queryClient.prefetchQuery({
-    queryKey: viewCountKeys.all,
-    queryFn: fetchAllViewCounts,
-    staleTime: STALE_TIME_MS,
-  });
-}
+/*
+ * `prefetchAllViewCounts` used to live here, called once from
+ * `QueryProvider`'s mount effect. It is gone because it never did anything:
+ * `ViewCount` renders on first paint and `useQuery` below declares the same
+ * `queryKey`, `queryFn` and `staleTime`, so React Query recognised the two
+ * as one query and threw away the second. A prefetch is only worth having
+ * for data that is *not* about to be asked for.
+ */
 
-export function useViewCount(imageId: number): UseViewCountReturn {
+export function useViewCount(imageId: string): UseViewCountReturn {
   const queryClient = useQueryClient();
 
-  const {
-    data: viewCount = 0,
-    isLoading,
-    error: queryError,
-  } = useQuery({
-    queryKey: viewCountKeys.all,
+  const { data: viewCount = 0 } = useQuery({
+    queryKey: VIEW_COUNTS,
     queryFn: fetchAllViewCounts,
     // `select` previously returned undefined for an image with no row yet,
     // which the return type claimed was a number.
@@ -87,20 +79,17 @@ export function useViewCount(imageId: number): UseViewCountReturn {
    */
   const writeCount = useCallback(
     (nextCount: number) => {
-      queryClient.setQueryData<ViewCountRow[]>(
-        viewCountKeys.all,
-        (rows = []) => {
-          const existing = rows.find((row) => sameId(row.image_id, imageId));
-          if (!existing) {
-            return [...rows, { image_id: imageId, view_count: nextCount }];
-          }
-          return rows.map((row) =>
-            sameId(row.image_id, imageId)
-              ? { ...row, view_count: nextCount }
-              : row,
-          );
-        },
-      );
+      queryClient.setQueryData<ViewCountRow[]>(VIEW_COUNTS, (rows = []) => {
+        const existing = rows.find((row) => sameId(row.image_id, imageId));
+        if (!existing) {
+          return [...rows, { image_id: imageId, view_count: nextCount }];
+        }
+        return rows.map((row) =>
+          sameId(row.image_id, imageId)
+            ? { ...row, view_count: nextCount }
+            : row,
+        );
+      });
     },
     [queryClient, imageId],
   );
@@ -115,10 +104,40 @@ export function useViewCount(imageId: number): UseViewCountReturn {
     await mutateAsync();
   }, [mutateAsync]);
 
-  return {
-    viewCount,
-    incrementView,
-    isLoading: isLoading || incrementMutation.isPending,
-    error: queryError?.message ?? incrementMutation.error?.message ?? null,
-  };
+  return { viewCount, incrementView };
+}
+
+/**
+ * Records that a photograph was looked at. Renders nothing, shows nothing.
+ *
+ * This used to live inside `ViewCount`, which was fine while the count was
+ * displayed under the photograph it counted. It stopped being fine when the
+ * count moved into the details panel: the write would then only have happened
+ * when somebody opened the panel, so the number would have measured panel
+ * opens and called them views.
+ *
+ * The guard is keyed by image id rather than by mount, because the carousel
+ * reuses one instance across every photograph — a per-mount flag would count
+ * the first photograph and nothing after it.
+ */
+export function useRecordView(imageId: string): void {
+  const { incrementView } = useViewCount(imageId);
+
+  const recorded = useRef(new Set<string>());
+  // Held in a ref so the effect can call the current version without listing
+  // it as a dependency and re-firing on every render.
+  const incrementRef = useRef(incrementView);
+  incrementRef.current = incrementView;
+
+  useEffect(() => {
+    if (!imageId || recorded.current.has(imageId)) {
+      return;
+    }
+    recorded.current.add(imageId);
+    incrementRef.current().catch((error: unknown) => {
+      // Allow a later visit to retry.
+      recorded.current.delete(imageId);
+      console.error("Failed to increment view count:", error);
+    });
+  }, [imageId]);
 }

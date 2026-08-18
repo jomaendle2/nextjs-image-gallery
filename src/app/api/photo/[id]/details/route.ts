@@ -1,0 +1,97 @@
+import { after, NextResponse } from "next/server";
+import { getCurrentMember } from "@/lib/auth/session";
+import { recordMemberView } from "@/lib/members/repository";
+import { getMemberDetails } from "@/lib/photos/repository";
+import { memberDetailsLimiter } from "@/lib/rate-limit";
+
+/**
+ * The member-only half of a photograph.
+ *
+ * A separate request rather than fields on the page, and that is the whole
+ * security design. Gating in a component only hides what was already sent:
+ * `precise_location` in the page payload is readable by anyone who opens
+ * the view-source, subscription or not. These columns are therefore never
+ * selected by `listPublishedPhotos`, and this is the only route that reads
+ * them.
+ *
+ * Keeping it out of the page has a second benefit. The gallery is
+ * statically rendered and cached; a server component reading the session to
+ * decide what to render would make every anonymous visitor pay for a
+ * feature that serves subscribers — the same reasoning that keeps
+ * authentication out of middleware in this codebase.
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<NextResponse> {
+  const member = await getCurrentMember();
+  if (member === null) {
+    /*
+     * 403 rather than 404: the photograph exists and the reader can see it.
+     * What is missing is a membership, and saying so is the point — this is
+     * the response the interface turns into an invitation.
+     */
+    return NextResponse.json({ member: false }, { status: 403 });
+  }
+
+  /*
+   * Limited, now that this returns a coordinate as well as prose.
+   *
+   * The gap was defensible while the payload was two sentences: awkward to
+   * scrape, near worthless in aggregate. An exact point is the opposite —
+   * machine-actionable and worth exactly as much as the number of them you
+   * can collect — so one member with a loop is the threat this feature
+   * introduced, and the limit is what answers it.
+   *
+   * Keyed by the member, not the address: an anonymous caller was already
+   * refused above, and a member on a shared connection should not be limited
+   * by their neighbours.
+   */
+  if (!memberDetailsLimiter.check(member.email)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again shortly." },
+      { status: 429 },
+    );
+  }
+
+  const { id } = await params;
+  const details = await getMemberDetails(id);
+  if (details === null) {
+    return NextResponse.json({ error: "No such photograph." }, { status: 404 });
+  }
+
+  /*
+   * Counted here because this is the moment a member actually receives the
+   * thing they pay for. Aggregate per photograph per day — see the note on
+   * the table — so it can divide a revenue pool later without becoming a
+   * record of what any one person looked at.
+   *
+   * `after` rather than a bare floating promise. Detached work started
+   * without it races the response: the function can be frozen or reclaimed
+   * the moment the body is sent, so the Neon round trip may simply never
+   * land. That was silently losing views, and these numbers are the input to
+   * dividing money between photographers — an undercount nobody can detect
+   * is worse than a slow response.
+   */
+  after(async () => {
+    try {
+      await recordMemberView(id);
+    } catch (error) {
+      console.error("Could not record a member view:", error);
+    }
+  });
+
+  /*
+   * Never stored by anything between here and the member who asked.
+   * The response varies by session cookie, and the one thing that must not
+   * happen is a shared cache holding a member's copy and handing it to the
+   * next anonymous reader. Vercel does not cache route handlers by default,
+   * so this changes nothing today — it is here so that a future edge cache,
+   * a proxy, or a browser back-button does not turn a correct gate into a
+   * leak without anybody editing this file.
+   */
+  return NextResponse.json(
+    { member: true, ...details },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+}

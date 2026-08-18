@@ -1,0 +1,67 @@
+export interface Member {
+  email: string;
+  stripe_customer_id: string;
+  status: string;
+  current_period_end: string | null;
+}
+
+/**
+ * The two questions a membership status answers, kept apart from the
+ * database that stores it.
+ *
+ * These decide who sees paid content and who may be charged again, and they
+ * live here rather than in `repository.ts` so they can be tested without a
+ * connection string. A rule about access should not need Postgres to be
+ * running before anybody can check that it is right.
+ */
+
+/**
+ * True when the subscription entitles somebody to member-only content.
+ *
+ * `active` and `trialing` both count; `past_due` deliberately does not.
+ * Stripe keeps retrying a failed payment for days, and continuing to serve
+ * paid content through that window is a decision, not a default — the
+ * period end is the honest boundary.
+ */
+export function isActive(member: Member | null): boolean {
+  if (member === null) {
+    return false;
+  }
+  if (member.status !== "active" && member.status !== "trialing") {
+    return false;
+  }
+  return (
+    member.current_period_end === null ||
+    new Date(member.current_period_end).getTime() > Date.now()
+  );
+}
+
+/*
+ * `incomplete` is deliberately absent, and it is the one that took thought.
+ * It looks like it belongs — Stripe considers the subscription to exist —
+ * but it is the status where the first payment never cleared, so nothing has
+ * been billed. Including it left somebody whose card was declined with no
+ * access and no way to try again until Stripe expired the attempt a day
+ * later: the worst possible answer to a failed payment.
+ */
+const LIVE_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  // Collection paused, subscription intact — resuming bills.
+  "paused",
+]);
+
+/**
+ * Whether a new checkout would duplicate a subscription that already bills.
+ *
+ * Deliberately wider than `isActive`, and the difference is the point.
+ * `past_due` does not grant access — Stripe is still retrying the card — but
+ * it very much still bills, so offering checkout again would charge somebody
+ * twice for the same month the moment the retry cleared. Access and billing
+ * are different questions and are asked separately.
+ */
+export function hasLiveSubscription(member: Member | null): boolean {
+  return member !== null && LIVE_STATUSES.has(member.status);
+}

@@ -1,0 +1,420 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Hint } from "@/lib/ai/hint";
+import { OUR_FAULT_MESSAGE, type SuggestionRecord } from "@/lib/ai/stream";
+import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
+import {
+  type FillableField,
+  fillsFrom,
+  type SuggestionStage,
+  stageOf,
+  suggestionNote,
+  type TouchedField,
+} from "./fill";
+import { pointText } from "./LocationPicker";
+import { readNdjson } from "./ndjson";
+import { openSuggestion } from "./suggestRequest";
+
+/**
+ * Asking a model to look at a photograph, and putting its answer into the
+ * form — the two sentences as they are written, the places only if somebody
+ * clicks one.
+ *
+ * All of the mechanism, so that `SuggestDetails` and `PlaceChoices` are
+ * markup. What lives here is the part with a shape worth reading on its own:
+ * a stream arriving into boxes somebody may already have typed in, and the
+ * bookkeeping that lets all of it be taken back.
+ *
+ * The two text fields are written through the DOM rather than through state,
+ * because they are uncontrolled — `defaultValue`, which is what keeps
+ * `PhotoCard` memoized so a keystroke in the search box does not re-render
+ * fifty rows. There is no React value to set; the input is where the text
+ * lives. The coordinate field is the exception and is handled as one: it is
+ * controlled inside `LocationPicker`, so it is changed by handing that
+ * component a value rather than by writing to the element.
+ */
+
+/** The id prefix the coordinate field uses, which is not its field name. */
+const PIN_PREFIX = "pin";
+
+/**
+ * The inputs, found by id — the same mechanism `PhotoEditForm` uses to move
+ * the cursor to a refused field.
+ *
+ * The `instanceof` pair is not ceremony. `getElementById` will happily return
+ * whatever else has claimed that id, and writing `.value` onto an element
+ * with no such property fails silently and for ever.
+ */
+function fieldElement(
+  field: TouchedField,
+  photoId: string,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const prefix = field === "pin" ? PIN_PREFIX : field;
+  const element = document.getElementById(`${prefix}-${photoId}`);
+  return element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement
+    ? element
+    : null;
+}
+
+/** A line off the wire, once we have decided it is one of ours. */
+function asRecord(value: unknown): SuggestionRecord | null {
+  return typeof value === "object" && value !== null && "type" in value
+    ? (value as SuggestionRecord)
+    : null;
+}
+
+/**
+ * A value for the picker's controlled field, stamped so that the same one
+ * can be sent twice.
+ *
+ * The stamp is a counter rather than a clock. Two chips accepted inside the
+ * same millisecond would collide on `Date.now()`, and a counter cannot.
+ */
+let proposals = 0;
+function proposal(text: string): { text: string; at: number } {
+  proposals += 1;
+  return { text, at: proposals };
+}
+
+export interface Suggesting {
+  /** What the model is doing, or null when it is not doing anything. */
+  stage: SuggestionStage | null;
+  /** The sentence under the fields once an answer has landed. */
+  note: string | null;
+  /** What went wrong, in words meant for the person who pressed the button. */
+  error: string | null;
+  /** Whether there is anything to put back. */
+  canUndo: boolean;
+  /** The places on offer, or none. Rendered as chips, never written. */
+  places: PlaceGuess[];
+  /** Whether an answer has landed, so an empty list can be said out loud. */
+  answered: boolean;
+  ask: (hint: Hint) => void;
+  undo: () => void;
+  /** Put a candidate's name in the Location field. */
+  takeName: (place: PlaceGuess) => void;
+  /** Put a candidate's coordinates in the picker, and open it. */
+  takePoint: (place: PlaceGuess) => void;
+  /** The picker's controlled value, when something has been offered to it. */
+  proposed: { text: string; at: number } | null;
+}
+
+export function useSuggestion(
+  photoId: string,
+  /**
+   * That the form has changed under the photographer.
+   *
+   * The form retires its last "Published." on any `change` event, and setting
+   * `.value` from script fires none — so a stale success message would sit
+   * under the fields it no longer describes. This is that event, by hand.
+   */
+  onFilled: () => void,
+): Suggesting {
+  const [stage, setStage] = useState<SuggestionStage | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [places, setPlaces] = useState<PlaceGuess[]>([]);
+  const [answered, setAnswered] = useState(false);
+  const [proposed, setProposed] = useState<{ text: string; at: number } | null>(
+    null,
+  );
+
+  /**
+   * The run in flight, so it can be called off.
+   *
+   * There is at most one: `ask` aborts whatever it finds here before it
+   * starts, and the cleanup below aborts on the way out. Without it a run
+   * outlived the row that started it — `PhotoList` renders only the photos
+   * matching the current search and filter, so a single keystroke in the
+   * search box unmounts an open form mid-stream.
+   */
+  const running = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => () => {
+      running.current?.abort();
+    },
+    [],
+  );
+
+  /**
+   * What each field said before this feature first changed it.
+   *
+   * A ref rather than state: it is written on every chunk and read only when
+   * something is put back, so making it state would re-render the row for
+   * each token of a title nobody is looking at through React.
+   *
+   * **Not cleared when the button is pressed again**, which it used to be —
+   * and that was a way to lose text for good. A second run would replace the
+   * map wholesale, so the values from before the *first* run became
+   * unreachable and Undo put the form back to the first suggestion rather
+   * than to what the photographer had written. Entries are recorded on first
+   * write and removed only by being restored, so this map always holds the
+   * form as it stood before any of this started.
+   */
+  const before = useRef(new Map<TouchedField, string>());
+
+  /**
+   * The fields *this* run wrote by itself.
+   *
+   * Separate from the map above because the two questions differ. A failed
+   * run undoes what that run did; Undo undoes everything the feature has
+   * done since it was last pressed. A place somebody accepted from a chip
+   * two runs ago belongs to the second answer and not to the first.
+   */
+  const touched = useRef(new Set<FillableField>());
+
+  /** Remember what a field held, the first time this feature changes it. */
+  const remember = useCallback((field: TouchedField, current: string) => {
+    if (!before.current.has(field)) {
+      before.current.set(field, current);
+    }
+    setCanUndo(true);
+  }, []);
+
+  const write = useCallback(
+    (suggestion: Partial<PhotoSuggestion>) => {
+      for (const [field, value] of fillsFrom(suggestion)) {
+        const element = fieldElement(field, photoId);
+        if (element !== null) {
+          remember(field, element.value);
+          touched.current.add(field);
+          element.value = value;
+        }
+      }
+    },
+    [photoId, remember],
+  );
+
+  /** Put back the fields named, and forget that they were ever written. */
+  const putBack = useCallback(
+    (fields: Iterable<TouchedField>) => {
+      for (const field of fields) {
+        const original = before.current.get(field);
+        if (original !== undefined) {
+          /*
+           * The pin goes back through the picker rather than through the
+           * element, because that field is controlled: writing `.value` on
+           * it would be overwritten by the next render, and the photographer
+           * would watch their coordinate reappear.
+           */
+          if (field === "pin") {
+            setProposed(proposal(original));
+          } else {
+            const element = fieldElement(field, photoId);
+            if (element !== null) {
+              element.value = original;
+            }
+          }
+          before.current.delete(field);
+          touched.current.delete(field as FillableField);
+        }
+      }
+      setCanUndo(before.current.size > 0);
+    },
+    [photoId],
+  );
+
+  /**
+   * The validated answer replaces whatever the stream had been showing.
+   *
+   * And a field *this run* wrote that the final answer does not name is put
+   * back rather than left holding a prefix. Only this run's automatic
+   * writes are swept: a place the photographer accepted from a chip is
+   * theirs, and a sweep that reached it would take a decision back out of
+   * the form because a later token arrived.
+   */
+  const settle = useCallback(
+    (final: PhotoSuggestion, salvaged = false) => {
+      write(final);
+      setPlaces(final.places);
+      /*
+       * `answered` is what lets the empty list say "nothing in the frame
+       * pointed anywhere" out loud, so a salvaged run must not set it: that
+       * run's places were discarded by `salvage`, not absent from the
+       * photograph, and the sentence would be a false claim about somebody's
+       * own picture. Nothing is said instead, which is the honest amount.
+       */
+      setAnswered(!salvaged);
+
+      const kept = new Set(fillsFrom(final).map(([field]) => field));
+      putBack([...touched.current].filter((field) => !kept.has(field)));
+
+      setNote(suggestionNote());
+    },
+    [write, putBack],
+  );
+
+  /**
+   * The stream, record by record, until it ends or says it cannot go on.
+   *
+   * An `error` record is re-thrown rather than handled here so that there is
+   * one place that decides what a failed run does to the form — the `catch`
+   * below, which puts every field this run wrote back. A stream that dies
+   * halfway and a request that never connected leave the page in the same
+   * state, which is the state the error message promises.
+   */
+  /** What one record off the wire does to the form. */
+  const apply = useCallback(
+    (record: SuggestionRecord | null) => {
+      if (record?.type === "partial") {
+        setStage(stageOf(record.value));
+        write(record.value);
+        if (record.value.places !== undefined) {
+          setPlaces(record.value.places);
+        }
+      } else if (record?.type === "done") {
+        settle(record.value, record.salvaged === true);
+      } else if (record?.type === "error") {
+        throw new Error(record.message);
+      }
+    },
+    [write, settle],
+  );
+
+  const consume = useCallback(
+    async (body: ReadableStream<Uint8Array>, signal: AbortSignal) => {
+      for await (const line of readNdjson(body)) {
+        /*
+         * The abandoned run stops writing here.
+         *
+         * `write` reaches the inputs through `document.getElementById`, so a
+         * run whose row has been unmounted does not fail — it finds whatever
+         * element now carries that id. Filtering the dashboard and reopening
+         * the same row mounts a *fresh* form, and the old run would type into
+         * it: no "Suggesting…" label, no Undo button, and the photographer's
+         * own text overwritten with no way back, because all of that state
+         * belonged to the dead hook. The signal is what separates the run
+         * that owns these fields from one that has been replaced.
+         */
+        if (signal.aborted) {
+          return;
+        }
+
+        apply(asRecord(line));
+      }
+    },
+    [apply],
+  );
+
+  const ask = useCallback(
+    (hint: Hint) => {
+      /*
+       * Whatever was running stops now.
+       *
+       * Pressing the button twice used to leave two live streams writing to
+       * the same three inputs, and the loser could land last.
+       */
+      running.current?.abort();
+      const controller = new AbortController();
+      running.current = controller;
+      const { signal } = controller;
+
+      setError(null);
+      setNote(null);
+      setStage("looking");
+      setPlaces([]);
+      setAnswered(false);
+      touched.current = new Set();
+
+      const asking = async () => {
+        const body = await openSuggestion(photoId, hint, signal);
+        onFilled();
+        await consume(body, signal);
+      };
+
+      asking()
+        .catch((cause: unknown) => {
+          /*
+           * An abandoned run says nothing and puts nothing back.
+           *
+           * It has already been replaced by a newer run or its row is gone,
+           * so both halves of the ordinary failure path would be wrong here:
+           * `putBack` would restore this run's remembered values over fields
+           * the *newer* run is currently writing, and the error notice would
+           * accuse the feature of failing when the photographer simply
+           * pressed the button again.
+           */
+          if (signal.aborted) {
+            return;
+          }
+
+          /*
+           * The form goes back to what it said before the button was
+           * pressed. The message promises that nothing has been changed
+           * either way, and a half-written title left in the box would make
+           * that untrue.
+           */
+          putBack([...touched.current]);
+          setPlaces([]);
+          setAnswered(false);
+          setNote(null);
+          setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
+        })
+        .finally(() => {
+          if (signal.aborted) {
+            return;
+          }
+          setStage(null);
+          onFilled();
+        });
+    },
+    [photoId, onFilled, consume, putBack],
+  );
+
+  const undo = useCallback(() => {
+    putBack([...before.current.keys()]);
+    setNote(null);
+    onFilled();
+  }, [putBack, onFilled]);
+
+  /**
+   * A chip click is an edit like any other.
+   *
+   * Which is the whole reason it can be offered at all: the model's guess
+   * reaches the Location field the same way a typed word does, and leaves
+   * the same way. Recorded before the write, so Undo has somewhere to put
+   * the previous place back.
+   */
+  const takeName = useCallback(
+    (place: PlaceGuess) => {
+      const element = fieldElement("location", photoId);
+      if (element === null) {
+        return;
+      }
+      remember("location", element.value);
+      element.value = place.name;
+      onFilled();
+    },
+    [photoId, remember, onFilled],
+  );
+
+  const takePoint = useCallback(
+    (place: PlaceGuess) => {
+      if (place.point === null) {
+        return;
+      }
+      remember("pin", fieldElement("pin", photoId)?.value ?? "");
+      setProposed(proposal(pointText(place.point)));
+      onFilled();
+    },
+    [photoId, remember, onFilled],
+  );
+
+  return {
+    stage,
+    note,
+    error,
+    canUndo,
+    places,
+    answered,
+    ask,
+    undo,
+    takeName,
+    takePoint,
+    proposed,
+  };
+}
