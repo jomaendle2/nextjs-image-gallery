@@ -15,6 +15,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { PlaceGuess } from "@/lib/ai/suggestion";
+import { MAX_PHOTO_TAGS, type PhotoTag } from "@/lib/photos/tags";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import {
   type PhotoField,
@@ -28,6 +29,7 @@ import type { Marks } from "./marks";
 import { PlaceChoices } from "./PlaceChoices";
 import { PublicFields } from "./PublicFields";
 import { SuggestDetails } from "./SuggestDetails";
+import { TagChoices } from "./TagChoices";
 import { setUnsaved } from "./unsaved";
 import { useSuggestion } from "./useSuggestion";
 
@@ -159,6 +161,50 @@ export function PhotoEditForm({
   );
   const retireMessage = useCallback(() => setStale(true), []);
   const awaitMessage = useCallback(() => setStale(false), []);
+
+  /*
+   * The subjects this photograph carries, which is form state rather than
+   * DOM state.
+   *
+   * Everything else in this form is an uncontrolled input with a
+   * `defaultValue`, read back by the action out of `FormData` — which is the
+   * right shape for a box somebody types in. A set of chips is not: there is
+   * no single element holding it, the same tag has to render pressed in one
+   * place and absent from another, and the count has to gate the controls.
+   * So it is held here and submitted as hidden inputs.
+   *
+   * Seeded from the row and never re-seeded. A photograph whose tags change
+   * on the server while somebody is editing it is the same conflict as a
+   * title that does, and this form has always answered that the same way:
+   * what you are looking at is what you will save.
+   */
+  const [tags, setTags] = useState<PhotoTag[]>(photo.tags);
+
+  const toggleTag = useCallback(
+    (tag: PhotoTag) => {
+      setTags((current) => {
+        if (current.includes(tag)) {
+          return current.filter((each) => each !== tag);
+        }
+        /*
+         * A press that would be the sixth does nothing rather than pushing
+         * the oldest out. The chip is disabled, so this is unreachable by
+         * mouse — it is here for the keyboard and for the moment between a
+         * suggestion landing and the render that dims it.
+         */
+        return current.length >= MAX_PHOTO_TAGS ? current : [...current, tag];
+      });
+      /*
+       * By hand, for the reason `useSuggestion` documents about setting
+       * `.value` from script: this changes what a save would write, but it
+       * fires no `change` event, so without this the form's last
+       * "Changes saved." would sit under a set of subjects it never saw —
+       * and `UnsavedGuard` would let the page be left with them unsaved.
+       */
+      retireMessage();
+    },
+    [retireMessage],
+  );
 
   /*
    * `stale` already means "changed since the last save", which is exactly the
@@ -317,6 +363,14 @@ export function PhotoEditForm({
         }
         marks={marks}
         photo={photo}
+        subjects={
+          <TagChoices
+            chosen={tags}
+            onToggle={toggleTag}
+            photoId={photo.id}
+            suggested={suggesting.tags}
+          />
+        }
         suggest={aiOffered ? <SuggestDetails suggesting={suggesting} /> : null}
       />
 

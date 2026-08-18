@@ -2,6 +2,7 @@ import { Output, streamText } from "ai";
 import { z } from "zod";
 import type { PhotoExif } from "@/lib/photos/derive";
 import { exifLine } from "@/lib/photos/exif-line";
+import { MAX_PHOTO_TAGS, PHOTO_TAGS } from "@/lib/photos/tags";
 import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
 
 /**
@@ -193,6 +194,31 @@ const SUGGESTION_SCHEMA = z.object({
         "answer, not a failure. Give a second entry only when it is a real " +
         "alternative somebody might pick instead of the first, never to pad " +
         "the list.",
+    ),
+  /*
+   * After the places, so the streamed form settles from the top down: two
+   * sentences, then the chips under the Location field, then the chips at
+   * the foot of the group. A list that materialises above something already
+   * on screen moves the thing somebody is reading.
+   *
+   * An enum rather than free text, which is the decision `tags.ts` exists to
+   * explain: a model asked for subjects in its own words returns "coast",
+   * "coastal" and "shoreline" for three pictures of one thing, and a browse
+   * page built on that has three entries of one photograph each. Handing
+   * over the vocabulary makes an off-list answer impossible rather than
+   * merely unwelcome.
+   */
+  tags: z
+    .array(z.enum(PHOTO_TAGS))
+    .max(MAX_PHOTO_TAGS)
+    .describe(
+      "The subjects this photograph is actually of, most central first, " +
+        "chosen only from the list. Pick what somebody looking for this " +
+        "kind of photograph would search for — what the picture is *of*, " +
+        "not everything visible in it. A beach with two palms at the edge " +
+        "of the frame is 'beach' and 'coast', not 'palms'. Two or three is " +
+        "usually right; an empty list is better than a wrong one, and there " +
+        "is no credit for filling the quota.",
     ),
 });
 

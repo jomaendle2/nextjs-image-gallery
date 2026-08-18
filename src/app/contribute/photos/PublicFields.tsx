@@ -27,6 +27,7 @@ export function PublicFields({
   marks,
   suggest,
   choices,
+  subjects,
 }: {
   photo: OwnPhotoRow;
   marks: Marks;
@@ -51,6 +52,18 @@ export function PublicFields({
    * particular. They are buttons: nothing here writes until one is clicked.
    */
   choices: ReactNode;
+  /**
+   * The subject chips, which sit at the foot of the group rather than beside
+   * a field.
+   *
+   * There is no input for them to sit under — they *are* the control — and
+   * the foot is where they belong for the same reason the places belong
+   * under Location: a photographer works down this fieldset, and what a
+   * photograph is *of* is the last public thing to decide, after the words
+   * that say it. Below the backdrop swatch so the row of colour and the row
+   * of chips do not compete on one line.
+   */
+  subjects: ReactNode;
 }) {
   return (
     <fieldset className="space-y-3">
@@ -135,6 +148,8 @@ export function PublicFields({
           />
         </div>
       </div>
+
+      {subjects}
     </fieldset>
   );
 }

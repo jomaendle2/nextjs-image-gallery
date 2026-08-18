@@ -450,5 +450,31 @@ export const MIGRATIONS: readonly string[] = [
    *
    * Verified against production immediately before merging: 22 rows, 0 null.
    */
+  /*
+   * Subjects, as an array column rather than a join table.
+   *
+   * `photo_tags` was the other option and is the one a schema textbook
+   * reaches for. It buys referential integrity against a `tags` table and a
+   * cheap `GROUP BY` for counting — neither of which is worth a second table
+   * here, because the vocabulary is not data. It is a `const` in
+   * `src/lib/photos/tags.ts` that the model is handed as an enum, so there
+   * is nothing for a foreign key to protect: a value outside the list cannot
+   * be produced by the model and is dropped by `readPhotoTags` before it
+   * reaches this column.
+   *
+   * What is left is one-to-few — at most five short strings per row, on a
+   * table of tens — read on every dashboard row and written by one action.
+   * A column travels with the row those reads already fetch; a join table
+   * would add a query to each of them to answer a question the row could
+   * have answered itself.
+   *
+   * `NOT NULL DEFAULT '{}'` so every read is an array and no caller has to
+   * decide what a null list of subjects means. GIN is what makes the browse
+   * pages in `docs/next-version.md` a query rather than a scan, and it costs
+   * nothing to add now while the table is small.
+   */
+  "ALTER TABLE photos ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';",
+  "CREATE INDEX IF NOT EXISTS photos_tags_idx ON photos USING GIN (tags);",
+
   "ALTER TABLE photos ALTER COLUMN display_url SET NOT NULL;",
 ];

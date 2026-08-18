@@ -31,6 +31,7 @@ function suggestion(over: Partial<PhotoSuggestion> = {}): PhotoSuggestion {
     title: "Low tide at Praia da Marinha",
     description: "Limestone arches over a pale beach at the end of the day.",
     places: [place()],
+    tags: [],
     ...over,
   };
 }

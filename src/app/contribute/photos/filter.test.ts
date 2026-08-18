@@ -28,6 +28,7 @@ function photo(over: Partial<OwnPhotoRow>): OwnPhotoRow {
     width: 1200,
     height: 800,
     blur_data_url: "data:image/webp;base64,x",
+    tags: [],
     bg_color: "#000000",
     title: "",
     description: "",

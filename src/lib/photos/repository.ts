@@ -93,7 +93,7 @@ const OWN_COLUMNS = `
   p.id, p.display_url AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
-  p.is_opener, p.precise_location, p.technique, p.is_specimen,
+  p.is_opener, p.precise_location, p.technique, p.is_specimen, p.tags,
   p.precise_lat, p.precise_lng, p.coarse_lat, p.coarse_lng,
   p.author_id,
   c.display_name AS author_name, c.slug AS author_slug
@@ -571,6 +571,14 @@ export async function publishPhoto(
              technique = ${input.technique},
              is_specimen = ${input.is_specimen},
              bg_color = ${input.bg_color},
+             /*
+              * Cast, because the driver sends a JS array as a Postgres array
+              * literal only when it is told what kind — an untyped empty
+              * array is ambiguous and errors rather than clearing the
+              * column, which is exactly the case a photographer removing
+              * their last tag produces.
+              */
+             tags = ${input.tags}::text[],
              precise_lat = ${exact?.lat ?? null},
              precise_lng = ${exact?.lng ?? null},
              coarse_lat = ${coarse?.lat ?? null},

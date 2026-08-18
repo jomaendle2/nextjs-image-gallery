@@ -1,4 +1,5 @@
 import type { PhotoExif } from "./derive";
+import type { PhotoTag } from "./tags";
 
 /**
  * A point a photographer marked, at whatever precision the holder is
@@ -103,6 +104,14 @@ export interface OwnPhotoRow {
   coarse_lng: number | null;
   /** Offered as the public example on `/membership`. */
   is_specimen: boolean;
+  /**
+   * Subjects, from the closed list in `tags.ts`. Empty until somebody picks.
+   *
+   * Typed as the narrow union even though it is read straight out of a
+   * `TEXT[]` column, because nothing else can get in: the only writer is
+   * `publishPhoto`, and the only caller of that runs `readPhotoTags` first.
+   */
+  tags: PhotoTag[];
   author_id: string;
   author_name: string;
   author_slug: string;
@@ -149,6 +158,14 @@ export interface PublishInput {
    * At most one photograph holds this; setting it clears the others.
    */
   is_specimen: boolean;
+  /**
+   * Subjects the photographer confirmed, replacing whatever was there.
+   *
+   * A whole list rather than an add and a remove, because the form submits
+   * the set it is holding — the chips are a picture of this column, so the
+   * save is the same shape as what somebody sees.
+   */
+  tags: PhotoTag[];
 }
 
 /**
