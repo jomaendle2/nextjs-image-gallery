@@ -1,4 +1,4 @@
-import type { PhotoSuggestion } from "@/lib/ai/suggestion";
+import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 
 /**
  * What a suggestion does to a form, decided away from the form.
@@ -132,4 +132,31 @@ const NOTHING_SAVED =
 
 export function suggestionNote(): string {
   return NOTHING_SAVED;
+}
+
+/**
+ * The place to write into an empty Location field without a click, or null.
+ *
+ * `PlaceChoices` was built on "the guess lands on a button, not in a box",
+ * and that rule was written when the box might hold something. When the box
+ * is empty and the model said `high`, the choice on offer was "click the
+ * obviously right chip or leave a blank" — a click carrying no information.
+ * The consent already happened: pressing "Suggest details" is the ask, and
+ * this is part of the answer arriving.
+ *
+ * The two guards carry the old rule's remaining weight. A field with
+ * anything in it is never touched — a typed word beats a guess — and a `low`
+ * guess still lands on a chip, because "less sure" written into a field
+ * reads as a fact once it is there.
+ */
+export function locationToFill(
+  places: readonly PlaceGuess[],
+  currentValue: string,
+): string | null {
+  const [top] = places;
+  return top !== undefined &&
+    top.confidence === "high" &&
+    currentValue.trim() === ""
+    ? top.name
+    : null;
 }

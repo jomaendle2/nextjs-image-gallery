@@ -6,6 +6,7 @@ import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
 import {
   type FillableField,
   fillsFrom,
+  locationToFill,
   type SuggestionStage,
   stageOf,
   suggestionNote,
@@ -242,9 +243,24 @@ export function useSuggestion(
       const kept = new Set(fillsFrom(final).map(([field]) => field));
       putBack([...touched.current].filter((field) => !kept.has(field)));
 
+      /*
+       * A place the model is sure of fills an empty Location field by
+       * itself — the decision lives in `locationToFill`, where it is
+       * testable; this is only the write. Undo covers it like every other
+       * write, through the same `remember`.
+       */
+      const location = fieldElement("location", photoId);
+      if (location !== null) {
+        const name = locationToFill(final.places, location.value);
+        if (name !== null) {
+          remember("location", location.value);
+          location.value = name;
+        }
+      }
+
       setNote(suggestionNote());
     },
-    [write, putBack],
+    [write, putBack, photoId, remember],
   );
 
   /**
