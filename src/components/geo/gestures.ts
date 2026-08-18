@@ -95,24 +95,43 @@ export function attachGestures(
   };
 
   /**
-   * The point between two fingers, in the centre-relative pixels the
-   * projection works in — what a reader is pinching *at*.
+   * A client point in the centre-relative pixels everything about the sphere
+   * works in.
+   *
+   * `project`, `unproject` and `markNear` all measure from the middle of the
+   * canvas, because that is where the sphere is; the DOM measures from the
+   * top left of the viewport. The three places that cross that boundary —
+   * the hit test, the wheel and the pinch — wrote the same four terms out
+   * each time, which is three chances to drop a `/ 2`.
+   */
+  const onSphere = (clientX: number, clientY: number) => {
+    const box = canvas.getBoundingClientRect();
+    return {
+      x: clientX - box.left - box.width / 2,
+      y: clientY - box.top - box.height / 2,
+      /*
+       * Handed back with the point, for the one caller that also converts
+       * the other way — the hover card is positioned in canvas-local pixels
+       * against a mark measured in centre-relative ones. Sharing the single
+       * measurement keeps a layout read off every `pointermove`, and means
+       * the two directions cannot disagree about a box that changed between
+       * them.
+       */
+      box,
+    };
+  };
+
+  /**
+   * The point between two fingers — what a reader is pinching *at*.
    *
    * `pointers` holds client coordinates, because that is what a pinch's
-   * distance needs and distance does not care where the origin is. Anything
-   * that has to land on the sphere does, so the conversion happens here
-   * rather than at the two call sites that would each have to remember it.
+   * distance needs and distance does not care where the origin is.
    */
   const midpoint = (): { x: number; y: number } | undefined => {
     const [a, b] = [...pointers.values()];
-    if (a === undefined || b === undefined) {
-      return undefined;
-    }
-    const box = canvas.getBoundingClientRect();
-    return {
-      x: (a.x + b.x) / 2 - box.left - box.width / 2,
-      y: (a.y + b.y) / 2 - box.top - box.height / 2,
-    };
+    return a === undefined || b === undefined
+      ? undefined
+      : onSphere((a.x + b.x) / 2, (a.y + b.y) / 2);
   };
 
   /**
@@ -206,11 +225,11 @@ export function attachGestures(
    * render per mark entered rather than one per pixel moved.
    */
   const selectAt = (event: PointerEvent, clearing: boolean) => {
-    const box = canvas.getBoundingClientRect();
+    const { box, ...at } = onSphere(event.clientX, event.clientY);
     const near = markNear(
       refs.marks.current,
-      event.clientX - box.left - box.width / 2,
-      event.clientY - box.top - box.height / 2,
+      at.x,
+      at.y,
       event.pointerType === "mouse" ? HOVER_RADIUS : TAP_RADIUS,
     );
 
@@ -402,16 +421,12 @@ export function attachGestures(
     refs.settled.current = true;
     const delta =
       event.deltaMode === 1 ? event.deltaY * LINE_HEIGHT : event.deltaY;
-    /*
-     * The pointer's place on the canvas, so the wheel zooms towards whatever
-     * it is over rather than towards the middle of the ocean. Centre-relative,
-     * which is the frame `project` and `unproject` both work in.
-     */
-    const box = canvas.getBoundingClientRect();
-    applyZoom(refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM), {
-      x: event.clientX - box.left - box.width / 2,
-      y: event.clientY - box.top - box.height / 2,
-    });
+    // Where the pointer is, so the wheel zooms towards whatever it is over
+    // rather than towards the middle of the ocean.
+    applyZoom(
+      refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM),
+      onSphere(event.clientX, event.clientY),
+    );
   };
 
   /*
