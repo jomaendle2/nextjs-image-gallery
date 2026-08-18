@@ -42,8 +42,10 @@ one. **The gate should be deleted the day preview gets its own branch
 database.**
 
 Worth confirming while you are in the dashboard: what the Neon
-point-in-time-recovery retention actually is. Nothing in this repo records a
-backup or restore story for either the database or the blobs.
+point-in-time-recovery retention actually is. The commands for a manual
+`pg_dump` floor, and the note that blobs are covered by none of it, are in
+`docs/launch-checklist.md`; the retention number itself still has to be read
+off the dashboard and written down there.
 
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
 branch per preview is a dashboard setting, not code.
@@ -159,6 +161,51 @@ nudge, which you would notice, and Vercel logs the failed invocation.
 Guards that fire on non-problems are the ones people learn to bypass.
 
 ---
+
+## Left at the wrong depth, deliberately
+
+Four things the production-readiness branch fixed at a shallower level than
+they deserve, each with the deeper version named. They are here rather than
+in a review thread because a comment in a diff is read once.
+
+- **`database.ts` throws at module scope.** `src/lib/database.ts` raises on
+  import when `DATABASE_URL` is unset, so importing anything that touches it
+  ties an unrelated module to a connection string — including a statically
+  rendered legal page, and every unit test of a file that merely imports it.
+  `src/lib/auth/ttl.ts` exists partly to dodge this once. The fix is a lazy
+  `sql` that resolves the variable on first query rather than at import,
+  moving the failure from load time to use time. **Trigger:** the next value
+  that has to be extracted from a database-adjacent module to be readable
+  elsewhere. Do that rather than extracting a third one.
+
+- **The globe is one derivation cached twice.** `/globe/page.tsx` and
+  `/api/globe/route.ts` both call `listGlobePoints()` and `groupIntoCells()`,
+  and both declare `revalidate = 3600`. Publishing now clears both, but only
+  because `revalidateFeeds` names both — the dots and the card that appears
+  when you hover one are the same data behind two independent caches, and the
+  bug that hid a new photograph's card for an hour was that list being one
+  entry short. The fix is one cached function tagged `globe` and invalidated
+  by `revalidateTag`. Nothing in this repo uses tags yet.
+  **Trigger:** a third surface wanting the same data, or the list missing an
+  entry a second time.
+
+- **The destructive-script guard is opt-in.** `confirmDestructive()` has to
+  be imported and called, so a new script that writes to production is
+  unguarded until somebody remembers. Every one of them shares the same
+  `node --import ./scripts/alias-loader.mjs … --env-file=.env.local` prefix
+  in `package.json`; the host print belongs there, or in `harness.mts`, where
+  forgetting is impossible. Note that `scripts/migrate.mts` must stay
+  unguarded whatever happens — it runs on `vercel-build`, and a guard there
+  refuses every production deploy. **Trigger:** the next destructive script.
+
+- **`membershipConfigured()` is read at eight server call sites**, threaded
+  as a prop into `SiteNav` and `GalleryTopBar`, provided as a context to the
+  carousel, called directly by `SiteFooter`, and hardcoded to `true` on
+  `/membership` to work around the prop's default. Four mechanisms for one
+  boolean. `ImageCarousel` now requires the prop so it cannot be silently
+  forgotten; `SiteNav` still defaults to false. The fix is one provider high
+  enough to cover the pages that need it. **Trigger:** a fifth mechanism, or
+  the next page that renders a nav without the flag.
 
 ## Worth doing, no deadline
 

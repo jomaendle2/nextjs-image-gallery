@@ -6,31 +6,41 @@ import { alternates } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: "Terms — the beauty of earth.",
-  description: "What a membership is, what it costs, and how to end it.",
+  description:
+    "What a membership is, what it costs, how to end it, and what publishing here means.",
   alternates: alternates("/terms"),
 };
 
 /**
- * The terms of the membership, and the withdrawal notice German law requires
- * beside them.
+ * The terms of the membership, the withdrawal notice German law requires
+ * beside them, and what a photographer agrees to by publishing here.
  *
- * Deliberately short. These govern one thing — a five-euro subscription that
- * shows you two extra fields — and padding that out with clauses borrowed
- * from a software licence would obscure the parts that actually bind
- * somebody.
+ * Deliberately short. These govern a five-euro subscription that shows you
+ * two extra fields, and the handful of things a photographer's own work gets
+ * used for — and padding that out with clauses borrowed from a software
+ * licence would obscure the parts that actually bind somebody.
+ *
+ * **The contributor section is a draft for the operator to review and edit.**
+ * It was written by reading what the code actually does — the two feeds, the
+ * composited share card, the announcement, the blob store — rather than from
+ * a template, which makes it accurate about this site and unreviewed as law.
+ * Everything it describes was already happening; nothing here is a new right
+ * being taken. It said "these terms cover the membership only" while a
+ * photographer had no written account of any of it.
  */
 export default function TermsPage() {
   return (
     <LegalPage
-      subtitle="What a membership is, what it costs, and how to end it."
+      subtitle="What a membership is, what it costs, how to end it, and what publishing here means."
       title="Terms"
-      updated="15 August 2026"
+      updated="18 August 2026"
     >
       <Section heading="Who you are contracting with">
         <p>
           {OPERATOR.name}, whose full details are in the{" "}
-          <TextLink href="/imprint">imprint</TextLink>. These terms cover the
-          membership only. Reading the gallery requires no agreement with
+          <TextLink href="/imprint">imprint</TextLink>. These terms cover two
+          things: a membership, and publishing your photographs here as an
+          invited contributor. Reading the gallery requires no agreement with
           anybody.
         </p>
       </Section>
@@ -116,6 +126,40 @@ export default function TermsPage() {
           neither to the images nor to the locations you can now read. Do not
           republish either. If you want to use a photograph, write to the
           photographer; several are reachable from their page here.
+        </p>
+      </Section>
+
+      <Section heading="If you publish photographs here">
+        <p>
+          Your photographs stay yours. Nothing here transfers copyright, and you
+          can unpublish or delete any of them at any time from your own page.
+          What you give is permission to show them, and only in the places this
+          site shows things.
+        </p>
+        <p>
+          Those places are: the gallery and your own page; the RSS feed and the
+          sitemap; a share card generated for links to your page, which places
+          up to three of your photographs side by side; and one announcement
+          email to people who asked to hear when new work appears. Your name,
+          the site address you gave us, and anything you wrote about a
+          photograph appear alongside it. The files themselves are stored with
+          Vercel, listed with everyone else in the{" "}
+          <TextLink href="/privacy">privacy notice</TextLink>.
+        </p>
+        <p>
+          What we do not do: sell them, licence them to anybody else, or hand
+          them to a third party for anything but the storage and delivery
+          described in that notice. A model is shown a photograph only when you
+          press the button that asks it for a suggestion, and it is shown the
+          published copy, never the file off your camera.
+        </p>
+        <p>
+          Publish only work that is yours to publish, and that you are willing
+          to have read by anybody. If you ask us to remove you, we delete your
+          photographs, the stored files behind them, and your account. Copies
+          already sent by email or held in somebody else&rsquo;s cache are
+          beyond anybody&rsquo;s reach, which is true of everything ever
+          published and is the reason to be sure before pressing publish.
         </p>
       </Section>
 

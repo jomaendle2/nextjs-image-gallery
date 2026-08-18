@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "author": "Jo Mändle",
   "private": true,
+  "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -23,10 +24,11 @@
     "probe:scale": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/scale-probe.mts",
     "smoke:pages": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-pages.mts",
     "smoke:invite": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-invite.mts",
-    "smoke": "npm run smoke:invite && npm run smoke:pages && npm run smoke:upload && npm run smoke:membership && npm run smoke:portal",
+    "smoke": "npm run smoke:invite -- --apply && npm run smoke:pages -- --apply && npm run smoke:upload -- --apply && npm run smoke:membership -- --apply && npm run smoke:portal -- --apply",
     "mint-link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts",
     "db:backfill-pins": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/backfill-pins.mts",
     "db:import-assets": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
+    "db:erase-contributor": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/erase-contributor.mts",
     "auth:link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"
   },
   "dependencies": {

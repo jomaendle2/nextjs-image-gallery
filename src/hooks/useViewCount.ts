@@ -108,6 +108,47 @@ export function useViewCount(imageId: string): UseViewCountReturn {
 }
 
 /**
+ * How long one reader's view of one photograph counts for.
+ *
+ * Long enough that a reload, a back button, or coming back after lunch does
+ * not count again; short enough that somebody returning tomorrow does. The
+ * number is a shape rather than a budget.
+ */
+const VIEW_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
+const VIEW_PREFIX = "beauty-of-earth:viewed:";
+
+/**
+ * Whether this browser has already counted this photograph recently.
+ *
+ * `localStorage` rather than the in-memory `Set` alone, because the `Set` is
+ * emptied by every reload — so the number counted page loads, and holding
+ * down a refresh key ran it up as fast as the rate limiter allowed.
+ *
+ * Wrapped in try/catch and treated as "not seen" on failure. Private
+ * browsing, a storage quota, and a blocked third-party context all throw
+ * here, and a view counter must never be the thing that breaks a page.
+ * Failing towards counting is the right direction: an over-count is a
+ * slightly wrong ambient number, an exception is a blank gallery.
+ */
+function seenRecently(imageId: string): boolean {
+  try {
+    const last = Number(localStorage.getItem(`${VIEW_PREFIX}${imageId}`) ?? 0);
+    return Number.isFinite(last) && Date.now() - last < VIEW_COOLDOWN_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markSeen(imageId: string): void {
+  try {
+    localStorage.setItem(`${VIEW_PREFIX}${imageId}`, String(Date.now()));
+  } catch {
+    // Nothing to do, and nothing worth telling anybody about.
+  }
+}
+
+/**
  * Records that a photograph was looked at. Renders nothing, shows nothing.
  *
  * This used to live inside `ViewCount`, which was fine while the count was
@@ -118,7 +159,8 @@ export function useViewCount(imageId: string): UseViewCountReturn {
  *
  * The guard is keyed by image id rather than by mount, because the carousel
  * reuses one instance across every photograph — a per-mount flag would count
- * the first photograph and nothing after it.
+ * the first photograph and nothing after it. It is *also* held in
+ * `localStorage`, because a per-session flag counted every reload.
  */
 export function useRecordView(imageId: string): void {
   const { incrementView } = useViewCount(imageId);
@@ -130,13 +172,20 @@ export function useRecordView(imageId: string): void {
   incrementRef.current = incrementView;
 
   useEffect(() => {
-    if (!imageId || recorded.current.has(imageId)) {
+    if (!imageId || recorded.current.has(imageId) || seenRecently(imageId)) {
       return;
     }
     recorded.current.add(imageId);
+    markSeen(imageId);
     incrementRef.current().catch((error: unknown) => {
-      // Allow a later visit to retry.
+      // Allow a later visit to retry. Both guards are lifted, or the failure
+      // would silently cost this photograph its view for the whole cooldown.
       recorded.current.delete(imageId);
+      try {
+        localStorage.removeItem(`${VIEW_PREFIX}${imageId}`);
+      } catch {
+        // Already unavailable; `seenRecently` will say "not seen" anyway.
+      }
       console.error("Failed to increment view count:", error);
     });
   }, [imageId]);

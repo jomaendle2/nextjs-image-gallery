@@ -10,9 +10,31 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { META } from "@/components/ui/field";
 import { glassControl } from "@/components/ui/glass-button";
+import {
+  mayDisplayStale,
+  nextSessionAccess,
+  type PhotoAccess,
+} from "@/lib/members/access";
+import { useMembershipOffered } from "../MembershipOffer";
 
 interface Details {
-  member: boolean;
+  /**
+   * Why this reader is seeing what they are seeing.
+   *
+   * This was `member: boolean` and could not stay one. A photographer
+   * reading their own notes is not a member, and answering `true` would have
+   * been a lie the client then cached as a *session* fact — one look at
+   * their own photograph and every other photograph in the tab would hold a
+   * blank line waiting for content that was never coming.
+   */
+  access: PhotoAccess;
+  /**
+   * Whether anybody is signed in at all, sent with a refusal.
+   *
+   * Only meaningful on a 403. See `nextSessionAccess`: a refusal settles the
+   * session only for somebody who is not signed in.
+   */
+  signedIn?: boolean;
   precise_location?: string | null;
   technique?: string | null;
   /**
@@ -97,20 +119,58 @@ function useSessionIsMember(): boolean | null {
 export function MemberDetails({ photoId }: { photoId: string }) {
   const client = useQueryClient();
   const sessionIsMember = useSessionIsMember();
+  const membershipOffered = useMembershipOffered();
+
+  /**
+   * Records what one answer settled about the session, if anything.
+   *
+   * Both exits from the query wrote this, and a rule applied in two places is
+   * a rule that eventually differs between them — which here would mean the
+   * refusal path and the success path disagreeing about whether a signed-in
+   * reader's "no" is final. `nextSessionAccess` returns null for "still
+   * unknown", and null must leave the cached value alone rather than
+   * overwrite it.
+   */
+  const settle = (answer: PhotoAccess, signedIn: boolean) => {
+    const known = nextSessionAccess(answer, signedIn);
+    if (known !== null) {
+      client.setQueryData(SESSION_MEMBER_KEY, known);
+    }
+  };
 
   const { data, isPlaceholderData, isError } = useQuery({
     queryKey: ["photoDetails", photoId],
     queryFn: async (): Promise<Details> => {
       const response = await fetch(`/api/photo/${photoId}/details`);
       if (response.status === 403) {
-        client.setQueryData(SESSION_MEMBER_KEY, false);
-        return { member: false };
+        /*
+         * A 403 that carries no JSON body is still a refusal.
+         *
+         * This used to return a fixed object and could not fail. Reading the
+         * body is what `signedIn` needs, but Deployment Protection, a
+         * firewall rule and an edge-level block all answer 403 with HTML —
+         * and a rejected `json()` lands in `isError` with `retry: false`,
+         * which would show "This did not load." to every reader instead of
+         * the membership invitation. Unparseable means "refused, and nothing
+         * learned about the session", which is the safe reading of both.
+         */
+        const refusal = await response
+          .json()
+          .then((parsed: unknown) => parsed as Details)
+          .catch(() => ({ access: "none" }) as Details);
+        /*
+         * A refusal, and whether it is final. `nextSessionAccess` returns
+         * null for a signed-in reader, which leaves the flag unknown and the
+         * query enabled — the next photograph may be one of theirs.
+         */
+        settle("none", refusal.signedIn === true);
+        return { access: "none" };
       }
       if (!response.ok) {
         throw new Error("Could not load the details.");
       }
       const details = (await response.json()) as Details;
-      client.setQueryData(SESSION_MEMBER_KEY, details.member);
+      settle(details.access, true);
       return details;
     },
     staleTime: 5 * 60 * 1000,
@@ -146,18 +206,39 @@ export function MemberDetails({ photoId }: { photoId: string }) {
    * this row only where something exists, so an empty space here is now
    * provably wrong rather than merely ambiguous.
    */
-  if (isError) {
-    return (
-      <div>
-        <p className={META}>Where exactly, and how</p>
-        <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
-          This did not load. Reloading the page will try again.
-        </p>
-      </div>
-    );
-  }
+  const content = isError ? (
+    <div>
+      <p className={META}>Where exactly, and how</p>
+      <p className="mt-1.5 text-[0.9375rem] text-white/55 leading-relaxed">
+        This did not load. Reloading the page will try again.
+      </p>
+    </div>
+  ) : (
+    body(
+      whatToShow(data, isPlaceholderData, sessionIsMember),
+      membershipOffered,
+    )
+  );
 
-  return body(whatToShow(data, isPlaceholderData, sessionIsMember));
+  /*
+   * The rule above the row, owned by the thing that decides whether there is
+   * a row.
+   *
+   * `PhotoDetails` used to draw it, around this component, whenever the
+   * photograph had member details at all — so when this renders nothing, a
+   * bare hairline and sixteen pixels of dead space were left at the bottom of
+   * the panel. That was always visible for a moment while a member's request
+   * was in flight, and became the *resting* state the moment hiding the
+   * teaser was possible: membership is not on sale, so every photograph with
+   * notes showed an anonymous reader a line under nothing.
+   *
+   * A separator is a statement that two things are separate. Only the
+   * component that knows whether the second thing exists can make it.
+   */
+  if (content === null) {
+    return null;
+  }
+  return <div className="border-white/[0.08] border-t pt-4">{content}</div>;
 }
 
 /**
@@ -165,9 +246,10 @@ export function MemberDetails({ photoId }: { photoId: string }) {
  * photograph.
  *
  * The two cases differ because the two fields differ in what they describe.
- * Membership is a property of the session, so a stale `member` flag is still
- * true or false for this photograph and the invitation can stay put rather
- * than blinking on every swipe. A location belongs to one photograph, and
+ * Membership is a property of the session, so a stale refusal is still a
+ * refusal for this photograph and the invitation can stay put rather than
+ * blinking on every swipe. `mayDisplayStale` draws that line, and it holds an
+ * author's answer back exactly like a member's: both belong to one photograph. A location belongs to one photograph, and
  * showing the previous one's under the next — even for a tenth of a second —
  * would be quietly wrong in the one place this site promises precision.
  *
@@ -184,11 +266,9 @@ function whatToShow(
   isStale: boolean,
   sessionIsMember: boolean | null,
 ): Details | undefined {
-  if (data !== undefined && !isStale) {
-    return data;
-  }
-  // Stale: safe for a non-member's invitation, never for a member's location.
-  if (data !== undefined && !data.member) {
+  // The second half is the stale case: safe for a non-member's invitation,
+  // never for a member's or an author's location.
+  if (data !== undefined && (!isStale || mayDisplayStale(data.access))) {
     return data;
   }
   /*
@@ -198,7 +278,7 @@ function whatToShow(
    * depend on the photograph at all, so it renders immediately instead of
    * blinking out for a round trip on every first visit.
    */
-  return sessionIsMember === false ? { member: false } : undefined;
+  return sessionIsMember === false ? { access: "none" } : undefined;
 }
 
 /**
@@ -239,59 +319,78 @@ function ExactPoint({ pin }: { pin: { lat: number; lng: number } }) {
   );
 }
 
-function body(data: Details | undefined): ReactNode {
+/**
+ * The offer, for a reader who is entitled to none of it.
+ *
+ * Its own component rather than a branch inside `body`, which had grown past
+ * what one function should decide: three refusals and two shapes of content,
+ * with the longest comment in the file sitting in the middle of it.
+ */
+function Teaser(): ReactNode {
+  return (
+    <div>
+      <p className={META}>Where exactly, and how</p>
+      {/*
+      A claim about the photograph in front of the reader, and now it is
+      true of that photograph.
+
+      This sentence has been through both failures. It began as an
+      assertion — "the photographer wrote down the spot and how the picture
+      was made" — under every photograph alike, on a gallery where all
+      three member fields were empty on all fourteen published rows: an
+      offer against a bare shelf, where the site asks for money. It was
+      then softened into a claim about photographers in general, which was
+      honest but sold nothing, and was marked as the stopgap it was.
+
+      `PhotoDetails` now renders this row only where `hasMemberDetails` is
+      true, so the concrete claim is back and earns its place.
+
+      Two words are doing the work of a second bit, so that there is only
+      one. "Recorded" is true of both acts the paid fields hold — typing a
+      sentence and marking a point on a map — where "written down" was
+      prose language for what is, on every photograph published so far, a
+      coordinate. And the "or" is what one bit buys: what crosses into a
+      public payload is that *something* exists, never which of the three
+      fields it is, because a payload distinguishing them would be
+      reporting on the paid columns field by field. Naming both
+      possibilities and letting the reader find out which by joining is a
+      smaller price than that.
+
+      "Than the page shows" is there because "more" otherwise has nothing
+      to be more than. The panel above it is the comparison.
+    */}
+      <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
+        The photographer recorded more about this one than the page shows: where
+        exactly it was taken, or how the picture was made. Members can read it.
+      </p>
+      <Link
+        className={glassControl(
+          "mt-3 inline-flex min-h-11 items-center px-4 py-2 text-sm text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
+        )}
+        href="/membership"
+      >
+        See what a membership shows
+      </Link>
+    </div>
+  );
+}
+
+function body(data: Details | undefined, offered: boolean): ReactNode {
   if (data === undefined) {
     return null;
   }
 
-  if (!data.member) {
-    return (
-      <div>
-        <p className={META}>Where exactly, and how</p>
-        {/*
-          A claim about the photograph in front of the reader, and now it is
-          true of that photograph.
-
-          This sentence has been through both failures. It began as an
-          assertion — "the photographer wrote down the spot and how the picture
-          was made" — under every photograph alike, on a gallery where all
-          three member fields were empty on all fourteen published rows: an
-          offer against a bare shelf, where the site asks for money. It was
-          then softened into a claim about photographers in general, which was
-          honest but sold nothing, and was marked as the stopgap it was.
-
-          `PhotoDetails` now renders this row only where `hasMemberDetails` is
-          true, so the concrete claim is back and earns its place.
-
-          Two words are doing the work of a second bit, so that there is only
-          one. "Recorded" is true of both acts the paid fields hold — typing a
-          sentence and marking a point on a map — where "written down" was
-          prose language for what is, on every photograph published so far, a
-          coordinate. And the "or" is what one bit buys: what crosses into a
-          public payload is that *something* exists, never which of the three
-          fields it is, because a payload distinguishing them would be
-          reporting on the paid columns field by field. Naming both
-          possibilities and letting the reader find out which by joining is a
-          smaller price than that.
-
-          "Than the page shows" is there because "more" otherwise has nothing
-          to be more than. The panel above it is the comparison.
-        */}
-        <p className="mt-1.5 text-[0.9375rem] text-white/60 leading-relaxed">
-          The photographer recorded more about this one than the page shows:
-          where exactly it was taken, or how the picture was made. Members can
-          read it.
-        </p>
-        <Link
-          className={glassControl(
-            "mt-3 inline-flex min-h-11 items-center px-4 py-2 text-sm text-white/85 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80",
-          )}
-          href="/membership"
-        >
-          See what a membership shows
-        </Link>
-      </div>
-    );
+  if (data.access === "none") {
+    /*
+     * Nothing on sale, nothing to sell.
+     *
+     * A photographer filling in "Where you stood" — the field `FirstRun`
+     * spends a paragraph teaching them about — turned their own photograph
+     * into an advertisement for a tier that does not exist, whose button led
+     * to a page reading "Not open yet". The flag was already threaded into
+     * this carousel and stopped at the top bar.
+     */
+    return offered ? <Teaser /> : null;
   }
 
   const location = data.precise_location?.trim() ?? "";
@@ -310,6 +409,30 @@ function body(data: Details | undefined): ReactNode {
     );
   }
 
+  return <Written location={location} pin={pin} technique={technique} />;
+}
+
+/**
+ * What the photographer actually wrote, in whichever combination they wrote
+ * it.
+ *
+ * Separated from `body` for the same reason `Teaser` is: `body` decides *who
+ * sees what*, and once a third reason to see something was added, mixing that
+ * decision with four independent "did they fill this one in" checks put the
+ * whole thing past what one function should hold.
+ *
+ * Every field is optional and independent — a pin with no words, words with
+ * no pin, a technique alone — so each renders or does not on its own.
+ */
+function Written({
+  location,
+  technique,
+  pin,
+}: {
+  location: string;
+  technique: string;
+  pin: { lat: number; lng: number } | null;
+}): ReactNode {
   return (
     <div className="space-y-4">
       {location === "" && pin === null ? null : (

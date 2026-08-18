@@ -87,9 +87,23 @@ export default async function InvitePage() {
                 className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 border-white/[0.06] border-b pb-2 text-sm"
                 key={person.slug}
               >
-                <TextLink href={`/by/${person.slug}`}>
-                  {person.display_name}
-                </TextLink>
+                {/*
+                  No link where there is nothing behind it.
+
+                  `/by/{slug}` for a photographer who has published nothing is
+                  an empty page, and offering it next to the words "nothing
+                  published yet" is offering a click that answers a question
+                  already answered in the same row. `/photographers` withholds
+                  it too, though it gets there differently — an inner join
+                  simply never lists them.
+                */}
+                {person.published_count === 0 ? (
+                  <span>{person.display_name}</span>
+                ) : (
+                  <TextLink href={`/by/${person.slug}`}>
+                    {person.display_name}
+                  </TextLink>
+                )}
                 <span className="text-white/55 text-xs">
                   {person.published_count === 0
                     ? "nothing published yet"

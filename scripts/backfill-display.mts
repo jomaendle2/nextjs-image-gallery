@@ -13,6 +13,11 @@ import process from "node:process";
 import { put } from "@vercel/blob";
 import { sql } from "../src/lib/database.ts";
 import { deriveFromBuffer } from "../src/lib/photos/derive.ts";
+import { confirmDestructive } from "./guard.mts";
+
+confirmDestructive(
+  "upload a display blob per photograph and rewrite their rows in this database",
+);
 
 const MB = 1024 * 1024;
 
@@ -54,9 +59,23 @@ async function backfill(
     contentType: "image/jpeg",
   });
 
+  /*
+   * Both columns, which this wrote only one of.
+   *
+   * `display_pathname` was added later and backfilled by a regex in the
+   * migration — stripping the scheme and host off `display_url`. That worked,
+   * and left this script writing rows the migration would then have to repair
+   * on the next deploy. Since "every photograph has a display copy" is now an
+   * invariant rather than a hope (`display_url` is `NOT NULL`), the script
+   * that creates one writes everything that describes it.
+   *
+   * `display.pathname` from the `put` result rather than a second regex over
+   * the URL: it is the value the store itself used.
+   */
   await sql`
     UPDATE photos
     SET display_url = ${display.url},
+        display_pathname = ${display.pathname},
         width = ${derived.width},
         height = ${derived.height},
         blur_data_url = ${derived.blur_data_url}

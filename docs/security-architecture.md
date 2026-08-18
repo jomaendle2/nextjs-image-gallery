@@ -197,7 +197,7 @@ shape genuinely varies by account API version — but then:
 
 With no provider configured, `send()` printed the message and returned
 success. In production that meant magic-link tokens — each a valid
-credential for fifteen minutes — written into the platform log, while the
+credential for the life of the link — written into the platform log, while the
 person was told to check an inbox nothing had been sent to.
 
 **Rule:** a development convenience must be gated on being in development.

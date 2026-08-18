@@ -160,11 +160,13 @@ export function PhotoDetails({ image }: { image: GalleryImage }) {
           gate itself is untouched: this hides an offer, it does not decide
           who may read anything.
         */}
-        {image.hasMemberDetails ? (
-          <div className="border-white/[0.08] border-t pt-4">
-            <MemberDetails photoId={image.id} />
-          </div>
-        ) : null}
+        {/*
+          The divider moved into `MemberDetails`, which is the only thing that
+          knows whether it has anything to separate. Drawn here, it appeared
+          whenever the photograph had notes — including when the panel below
+          it rendered nothing at all.
+        */}
+        {image.hasMemberDetails ? <MemberDetails photoId={image.id} /> : null}
 
         {/*
           The exposure line, no longer hidden below `sm`. It was hidden there

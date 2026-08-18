@@ -15,6 +15,7 @@ import { GalleryTopBar } from "./carousel/GalleryTopBar";
 import { ImageModal } from "./carousel/ImageModal";
 import { useCarouselKeyboard } from "./carousel/useCarouselKeyboard";
 import { useCarouselScroll } from "./carousel/useCarouselScroll";
+import { MembershipOffer } from "./MembershipOffer";
 
 /** How many images to keep mounted on each side of the current one. */
 const BUFFER_SIZE = 2;
@@ -33,13 +34,23 @@ interface ImageCarouselProps {
    */
   contributor?: GalleryAuthor;
   /**
-   * Whether membership is on sale, so the top bar can offer it.
+   * Whether membership is on sale, for the top bar and for everything under
+   * the provider below.
    *
    * Threaded from the server page rather than read here: this file is
    * `"use client"`, and `GalleryTopBar` explains at its own top why that makes
    * an environment read there silently wrong.
+   *
+   * **Required, with no default.** It was `membershipOffered?: boolean` with
+   * `= false`, and that default is exactly how the slideshow page came to
+   * render this without it: forgetting the prop produced the correct-looking
+   * behaviour on two pages and the wrong one on the third, with nothing to
+   * notice. A source-text test now catches it, but a compiler error is
+   * better than a test, and the fail-closed default belongs where it cannot
+   * be forgotten instead — on the context, which is what a subtree with no
+   * provider reads.
    */
-  membershipOffered?: boolean;
+  membershipOffered: boolean;
   initialIndex?: number;
 }
 
@@ -47,7 +58,7 @@ export function ImageCarousel({
   images,
   contributor,
   initialIndex = 0,
-  membershipOffered = false,
+  membershipOffered,
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -148,7 +159,19 @@ export function ImageCarousel({
   const end = Math.min(images.length - 1, currentIndex + BUFFER_SIZE);
 
   return (
-    <>
+    /*
+      The one producer of the flag for everything below.
+
+      `GalleryTopBar` takes it as a prop a few lines down and always did.
+      What could not reach it was `MemberDetails`, four hops away and inside a
+      module-level helper — so a photograph with a member-only note advertised
+      a paid tier that leads to a page saying "Not open yet".
+
+      Wrapping the whole fragment rather than only `<main>`: the modal is a
+      sibling of `<main>`, not a child, and there is no reason for the one
+      subtree that renders over the photograph to be the one that cannot ask.
+    */
+    <MembershipOffer offered={membershipOffered}>
       {/*
         No backdrop-blur on this layer. It used to blur the whole viewport
         behind an opaque fill: full-frame compositing work every frame for
@@ -377,6 +400,6 @@ export function ImageCarousel({
       {isModalOpen ? (
         <ImageModal image={currentImage} onClose={handleModalClose} />
       ) : null}
-    </>
+    </MembershipOffer>
   );
 }

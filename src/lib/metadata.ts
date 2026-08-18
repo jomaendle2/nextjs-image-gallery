@@ -14,15 +14,23 @@ import type { Metadata } from "next";
  * only imperative, and the only emoji — so the site's single piece of
  * marketing copy was also the only sentence not in its voice. The manifest's
  * was already right, and says something true that the other did not: the
- * photographs come from a small group of invited people, which is the whole
- * proposition.
+ * photographs come from invited people, which is the whole proposition.
+ *
+ * It said "a small group of" until the homepage was promising a group that
+ * `/photographers` disproved in two taps, with one name on it. Deleting the
+ * word is the fix, not a count: this string is a manifest field, a feed field
+ * and an OG tag as well as a sentence, and a number in it would be a
+ * cache-invalidation problem across all six surfaces for the benefit of the
+ * one that a human reads. What remains is true at one photographer and at
+ * ten, so it never has to be revisited — and *invited*, the proposition the
+ * sentence exists to state, survives.
  *
  * Here rather than in any of the five, because a sentence typed in five
  * places is a sentence with five versions eventually — the same reason
  * `--color-surface` and the manifest's colours became one value each.
  */
 export const SITE_DESCRIPTION =
-  "Photographs from around the world, by a small group of invited photographers.";
+  "Photographs from around the world, by invited photographers.";
 
 /**
  * The `alternates` block for a page, with the feed link kept attached.

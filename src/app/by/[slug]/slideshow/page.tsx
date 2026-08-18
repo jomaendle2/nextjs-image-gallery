@@ -7,6 +7,7 @@ import {
   getContributorBySlug,
   listPublicContributorSlugs,
 } from "@/lib/auth/contributors";
+import { membershipConfigured } from "@/lib/members/offer";
 import { contributorAlternates } from "@/lib/metadata";
 
 export const revalidate = 3600;
@@ -114,6 +115,7 @@ export default async function ContributorSlideshow({ params }: PageProps) {
         siteUrl: contributor.site_url,
       }}
       images={images}
+      membershipOffered={membershipConfigured()}
     />
   );
 }

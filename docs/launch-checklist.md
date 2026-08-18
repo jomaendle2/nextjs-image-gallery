@@ -203,6 +203,63 @@ UPDATE photos SET announced_at = now() WHERE published_at IS NOT NULL;
 
 ---
 
+## 4a. Before the five invitations — operator actions
+
+Everything in this section is a dashboard or a shell, not code. The code side
+of each is already done.
+
+### Take one backup, and write down the retention
+
+`docs/next-version.md` says outright that no backup or restore story exists,
+and migrations now run on every production build. One `pg_dump` is a
+known-good floor that costs a minute:
+
+```
+pg_dump "$DATABASE_URL" --no-owner --no-privileges -Fc -f beauty-$(date +%F).dump
+```
+
+Keep it somewhere that is not Neon and not this repository. Restore is
+`pg_restore -d "$TARGET_URL" beauty-YYYY-MM-DD.dump` against a **branch**,
+never against production, and the point of writing that down is that nobody
+reads a restore command for the first time during an incident.
+
+Then read the actual point-in-time-recovery window in the Neon dashboard and
+record it here, replacing this sentence — "Neon has PITR" is not a retention
+policy, a number of days is. **Blobs are not covered by any of this.** Vercel
+Blob has no snapshot, so a deleted blob is gone; that is the argument for
+`--apply` on every destructive script rather than for a backup.
+
+### Run destructive scripts against a branch, not production
+
+Every `db:*` and `smoke:*` script loads `.env.local`, which points at
+production. They now print the host and refuse without `--apply`:
+
+```
+npm run smoke:invite                 # prints the target, refuses
+npm run smoke:invite -- --apply      # runs
+```
+
+Create a Neon branch, put its connection string in `.env.local`, and run them
+there. The guard makes the target visible; it cannot choose it for you.
+
+### Erasing somebody
+
+`npm run db:erase-contributor -- someone@example.com` lists what would go and
+changes nothing. Adding `--apply` deletes their photographs, both stored files
+per photograph, their sessions and tokens, and their row — and tells you if
+they held the opening photograph, which nothing reassigns automatically.
+
+### Environment variables
+
+- **Remove `STRIPE_MCP_KEY`** from production. It is a live Stripe credential
+  that no code in `src/` or `scripts/` reads.
+- **Add `CRON_SECRET`.** Without it the Monday reminder is a hard 500 — it
+  fails closed, correctly, and does nothing.
+- **Add `MAPTILER_KEY`** (see §1), or both map surfaces stay a plain line
+  saying there is no map.
+
+---
+
 ## 5. What to expect the first week
 
 The parts most likely to surprise you, all deliberate:

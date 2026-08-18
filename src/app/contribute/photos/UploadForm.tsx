@@ -11,6 +11,7 @@ import {
 } from "react";
 import { SECTION_HEADING } from "@/components/ui/field";
 import { Notice } from "@/components/ui/Notice";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@/lib/photos/caps";
 import { BatchSummary, UploadList } from "./UploadList";
 import {
   type Attempt,
@@ -24,7 +25,6 @@ import { useDropZone } from "./useDropZone";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/avif";
 const ACCEPTED_TYPES = new Set(ACCEPT.split(","));
-const MAX_BYTES = 25 * 1024 * 1024;
 
 /**
  * Uploads straight from the browser to Blob, then asks the server to read the
@@ -109,8 +109,8 @@ export function UploadForm() {
   /** One file, start to finish. Never throws; reports through `setStatus`. */
   const runOne = useCallback(
     async (file: File, index: number) => {
-      if (file.size > MAX_BYTES) {
-        setStatus(index, "failed", "Larger than 25 MB.");
+      if (file.size > MAX_UPLOAD_BYTES) {
+        setStatus(index, "failed", `Larger than ${MAX_UPLOAD_MB} MB.`);
         return;
       }
 
@@ -279,12 +279,12 @@ export function UploadForm() {
     >
       <h2 className={SECTION_HEADING}>Add photographs</h2>
       <p className="mt-1 mb-4 text-sm text-white/55">
-        Drag them here, or choose them below. JPEG, PNG, WebP or AVIF, up to 25
-        MB each. Upload the full-size originals — they are stored exactly as you
-        sent them. Camera and exposure details are read from the file; the GPS
-        block is never read, and the copy the gallery publishes carries no
-        metadata at all. Where a photograph was taken is only ever something you
-        add afterwards, on the photograph itself.
+        Drag them here, or choose them below. JPEG, PNG, WebP or AVIF, up to{" "}
+        {MAX_UPLOAD_MB} MB each. Upload the full-size originals — they are
+        stored exactly as you sent them. Camera and exposure details are read
+        from the file; the GPS block is never read, and the copy the gallery
+        publishes carries no metadata at all. Where a photograph was taken is
+        only ever something you add afterwards, on the photograph itself.
       </p>
 
       <input

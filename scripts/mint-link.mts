@@ -27,6 +27,7 @@
  */
 import process from "node:process";
 import { mintLoginToken } from "../src/lib/auth/tokens.ts";
+import { LOGIN_TTL_MINUTES } from "../src/lib/auth/ttl.ts";
 import { siteOrigin } from "../src/lib/site-url.ts";
 
 const [, , emailArg] = process.argv;
@@ -46,5 +47,5 @@ if (secret === null) {
   process.exit(1);
 }
 
-console.log("Sign-in link (works once, valid 15 minutes):");
+console.log(`Sign-in link (works once, valid ${LOGIN_TTL_MINUTES} minutes):`);
 console.log(`${siteOrigin()}/contribute/verify?token=${secret}`);

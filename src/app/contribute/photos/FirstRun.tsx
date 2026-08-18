@@ -63,7 +63,21 @@ function Step({
  * uploaded: the thing being explained is the round trip, and somebody with ten
  * drafts and no published photograph has not finished it yet.
  */
-export function FirstRun() {
+export function FirstRun({
+  membershipOffered,
+}: {
+  /**
+   * Whether anybody can actually buy a membership right now.
+   *
+   * Read on the server by the page and handed down, the same way the tile key
+   * and the AI offer are — this file has no business calling
+   * `membershipConfigured()` itself. Without it the zero state told a brand
+   * new photographer that three of their fields were "for people who pay for
+   * a membership" while nobody could pay, which is the first thing they read
+   * and the first thing they could catch the site being wrong about.
+   */
+  membershipOffered: boolean;
+}) {
   return (
     <section className="mb-8 rounded-3xl border border-white/[0.08] p-6">
       <h2 className={SECTION_HEADING}>Nobody reviews any of this</h2>
@@ -85,9 +99,9 @@ export function FirstRun() {
           description says what is in it.
         </Step>
         <Step n={3} title="Publish it">
-          The photograph joins the gallery, your own page, the feed and the
-          globe. You can unpublish it, edit it and publish it again as often as
-          you like.
+          The photograph joins the gallery, your own page, the feed, the globe,
+          and the queue for the next message to the mailing list. You can
+          unpublish it, edit it and publish it again as often as you like.
         </Step>
       </ol>
 
@@ -95,11 +109,12 @@ export function FirstRun() {
         <p className={META}>The “Members only” block</p>
         <p className={`mt-1.5 ${BODY_SMALL}`}>
           Every photograph has one: where you stood, how you made it, and the
-          spot on a map. Those are for people who pay for a membership, and
-          leaving all three empty costs you nothing. A marked spot is the one
-          exception — it is stored twice, and the blunt half, somewhere in a
-          square about {CELL_KM} km across, is public. That is the dot the globe
-          draws. The form says so again where you fill it in.
+          spot on a map. Those are for people who pay for a membership
+          {membershipOffered ? "" : ", which nobody can do yet"}, and leaving
+          all three empty costs you nothing. A marked spot is the one exception
+          — it is stored twice, and the blunt half, somewhere in a square about{" "}
+          {CELL_KM} km across, is public. That is the dot the globe draws. The
+          form says so again where you fill it in.
         </p>
       </div>
     </section>

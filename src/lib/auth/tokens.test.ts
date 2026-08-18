@@ -55,13 +55,13 @@ vi.mock("@/lib/members/repository", () => ({
   memberExists: (email: string) => memberExists(email),
 }));
 
-const {
-  consumeLoginToken,
-  invitationUrl,
-  INVITE_TTL_MINUTES,
-  LOGIN_TTL_MINUTES,
-  mintLoginToken,
-} = await import("./tokens");
+const { consumeLoginToken, invitationUrl, mintLoginToken } = await import(
+  "./tokens"
+);
+// The two durations moved to a module with no imports, so that the mail
+// templates and the privacy policy can state them without pulling in a
+// database connection. They are read from their definer, not re-exported.
+const { INVITE_TTL_MINUTES, LOGIN_TTL_MINUTES } = await import("./ttl");
 const { hashSecret } = await import("./secrets");
 
 beforeEach(() => {

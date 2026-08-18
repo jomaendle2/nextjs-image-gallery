@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage, Section } from "@/app/legal/LegalPage";
 import { TextLink } from "@/components/ui/TextLink";
+import { LOGIN_TTL_MINUTES } from "@/lib/auth/ttl";
 import { OPERATOR, PROCESSORS } from "@/lib/legal";
 import { alternates } from "@/lib/metadata";
 
@@ -222,7 +223,8 @@ export default function PrivacyPage() {
           are kept while they are being considered and for a year after, so we
           do not ask twice. Membership records are kept for as long as tax law
           requires us to keep the invoice, which in Germany is ten years.
-          Sign-in links expire after fifteen minutes and can be used once.
+          Sign-in links expire after {LOGIN_TTL_MINUTES} minutes and can be used
+          once.
         </p>
       </Section>
 

@@ -21,7 +21,12 @@
 import process from "node:process";
 import { generateSecret, hashSecret } from "../src/lib/auth/secrets.ts";
 import { sql } from "../src/lib/database.ts";
+import { confirmDestructive } from "./guard.mts";
 import { check, finish } from "./harness.mts";
+
+confirmDestructive(
+  "create and delete contributors and photographs in this database",
+);
 
 const [, , originArg] = process.argv;
 const origin = originArg ?? "http://localhost:3000";

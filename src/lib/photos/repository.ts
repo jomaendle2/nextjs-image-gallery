@@ -66,7 +66,7 @@ const ID_LENGTH = 12;
  * which is measurable at three hundred photographs and invisible at fourteen.
  */
 const FEED_COLUMNS = `
-  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.id, p.display_url AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
   p.coarse_lat, p.coarse_lng,
@@ -90,7 +90,7 @@ const FEED_COLUMNS = `
  * of them is the person who marked the point.
  */
 const OWN_COLUMNS = `
-  p.id, COALESCE(p.display_url, p.blob_url) AS blob_url,
+  p.id, p.display_url AS blob_url,
   p.width, p.height, p.blur_data_url, p.bg_color,
   p.title, p.description, p.location, p.exif, p.published_at,
   p.is_opener, p.precise_location, p.technique, p.is_specimen,
@@ -186,18 +186,60 @@ export async function listAllPhotos(): Promise<OwnPhotoRow[]> {
  * Returns nulls rather than nothing for a photograph whose photographer has
  * filled in none of them: a member is entitled to know there is nothing to
  * know, which is different from being told they cannot see it.
+ *
+ * `asAuthor` is the second way in, and it is an optional parameter rather
+ * than a second exported function on purpose: `security.test.ts` enumerates
+ * every caller of these columns by matching the substring `getMemberDetails(`,
+ * and a name like `getOwnMemberDetails` would not contain it — it would slip
+ * past the exact test that exists to notice a new reader of the paid columns.
+ * One name keeps the census honest.
  */
-export async function getMemberDetails(id: string): Promise<{
+export async function getMemberDetails(
+  id: string,
+  asAuthor: { contributorId: string; isOwner: boolean } | null = null,
+): Promise<{
   precise_location: string | null;
   technique: string | null;
   pin: Pin | null;
 } | null> {
-  const rows = await sql`
-    SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
-    FROM photos p JOIN contributors c ON c.id = p.author_id
-    WHERE p.id = ${id} AND p.published_at IS NOT NULL
-      AND c.revoked_at IS NULL;
-  `;
+  /*
+   * Two disjoint queries, and the separation is the security property.
+   *
+   * The tempting version adds ownership as a disjunct to the existing
+   * WHERE — `(published AND not revoked) OR author`. That would mean any
+   * signed-in contributor could read the paid columns of every published
+   * photograph on the site, because the first half is true for all of them
+   * regardless of who is asking. It would silently widen access from
+   * "members" to "anyone holding a contributor session": the exact opposite
+   * of this change, wearing its clothes.
+   *
+   * So the author branch drops the public conditions entirely and asks a
+   * different question — *is this row mine* — and a non-owner contributor
+   * gets zero rows and falls through to the route's 403.
+   *
+   * `published_at IS NOT NULL` is deliberately absent from it. A photographer
+   * expects "my own writing, always", and the first thing anybody invited
+   * here does is preview a draft before publishing it.
+   *
+   * The owner reads any row for the same reason they can edit any row: the
+   * `isOwner` cast is explicit because Postgres will not infer a boolean
+   * parameter's type from its use inside an `OR`.
+   */
+  const rows =
+    asAuthor === null
+      ? await sql`
+          SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
+          FROM photos p JOIN contributors c ON c.id = p.author_id
+          WHERE p.id = ${id} AND p.published_at IS NOT NULL
+            AND c.revoked_at IS NULL;
+        `
+      : await sql`
+          SELECT p.precise_location, p.technique, p.precise_lat, p.precise_lng
+          FROM photos p
+          WHERE p.id = ${id}
+            AND (p.author_id = ${asAuthor.contributorId}
+                 OR ${asAuthor.isOwner}::boolean);
+        `;
   const [row] = rows;
   if (row === undefined) {
     return null;
@@ -292,7 +334,7 @@ export async function listGlobeThumbnails(): Promise<
   const rows = await sql`
     SELECT DISTINCT ON (p.coarse_lat, p.coarse_lng)
            p.coarse_lat, p.coarse_lng,
-           COALESCE(p.display_url, p.blob_url) AS url,
+           p.display_url AS url,
            p.width, p.height, p.bg_color
     FROM photos p JOIN contributors c ON c.id = p.author_id
     WHERE p.published_at IS NOT NULL AND c.revoked_at IS NULL
@@ -632,12 +674,17 @@ export interface PhotoSource {
   /**
    * The re-encoded copy, and never `blob_url` beside it.
    *
-   * Every other read in this file coalesces the two — `COALESCE(display_url,
-   * blob_url)` — because a page wants whichever image exists. This one must
-   * not: the original upload is stored exactly as the camera wrote it, GPS
-   * block included, and it is the one file here that may not be sent to a
-   * third party. Null for a row old enough to have no display copy, which
-   * the caller answers by declining rather than by falling back.
+   * Every other read in this file used to coalesce the two —
+   * `COALESCE(display_url, blob_url)` — because a page wants whichever image
+   * exists. This one never could: the original upload is stored exactly as
+   * the camera wrote it, GPS block included, and it is the one file here that
+   * may not be sent to a third party.
+   *
+   * The distinction has since become moot in the safe direction — the column
+   * is `NOT NULL` and nothing coalesces any more — but the type stays
+   * nullable and the caller still declines rather than falling back. A
+   * declining suggestion button is a small annoyance; the alternative failure
+   * is a photographer's GPS coordinates at a model provider.
    */
   display_url: string | null;
   exif: PhotoExif | null;

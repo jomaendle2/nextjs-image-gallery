@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useFocusOnSuccess } from "@/hooks/useFocusOnSuccess";
+import { OPERATOR } from "@/lib/legal";
 import { type ApplyState, apply } from "./actions";
 
 const INITIAL: ApplyState = { tone: "idle", message: null };
@@ -46,9 +47,9 @@ export function ApplyForm() {
           Application received
         </h2>
         <p className="mt-2 text-pretty text-sm text-white/60 leading-relaxed">
-          Jo looks at every one personally, so a reply takes a few days rather
-          than a few minutes. If it is a yes, you will get an email with a link
-          to sign in and publish your first photograph.
+          {OPERATOR.name} looks at every one personally, so a reply takes a few
+          days rather than a few minutes. If it is a yes, you will get an email
+          with a link to sign in and publish your first photograph.
         </p>
       </div>
     );

@@ -25,6 +25,11 @@
 import process from "node:process";
 import { sql } from "../src/lib/database.ts";
 import { coarsen } from "../src/lib/photos/coarsen.ts";
+import { confirmDestructive } from "./guard.mts";
+
+confirmDestructive(
+  "rewrite coarse coordinates on existing photographs in this database",
+);
 
 const PINS: Record<string, { at: [number, number]; note: string }> = {
   "1": { at: [-8.8206, 115.0889], note: "Bali — Uluwatu coast" },
