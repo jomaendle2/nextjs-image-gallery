@@ -1,3 +1,4 @@
+import { createMagnifier } from "./magnify";
 import {
   HOVER_RADIUS,
   type Mark,
@@ -5,8 +6,6 @@ import {
   onSphere,
   TAP_RADIUS,
 } from "./marks";
-import { FILL } from "./sphere";
-import { clampZoom, createAim, LINE_HEIGHT, WHEEL_ZOOM } from "./zoom";
 
 /**
  * Every way a hand can move the globe: drag, pinch, wheel, point.
@@ -127,43 +126,18 @@ export function attachGestures(
     }
   };
 
-  const aim = createAim();
-
-  const applyZoom = (next: number, at?: { x: number; y: number }) => {
-    const clamped = clampZoom(next);
-    if (clamped === refs.zoomed.current) {
-      return;
-    }
-
-    /*
-     * Turn towards whatever the reader pointed at, so magnifying arrives
-     * somewhere rather than filling the porthole with the ocean that happened
-     * to be in the middle. `focusedView` decides; this only applies it.
-     */
-    if (at !== undefined) {
-      const box = canvas.getBoundingClientRect();
-      const aimed = aim.towards({
-        from: {
-          spin: refs.dragged.current,
-          tilt: refs.tilted.current,
-          zoom: refs.zoomed.current,
-        },
-        pointer: at,
-        porthole: (Math.min(box.width, box.height) / 2) * FILL,
-        tiltLimit: TILT_LIMIT,
-        to: clamped,
-      });
-      if (aimed !== null) {
-        refs.dragged.current = aimed.spin;
-        refs.tilted.current = aimed.tilt;
-      }
-    }
-
-    refs.zoomed.current = clamped;
-    dropSelection();
-    refs.reportZoom.current?.(clamped);
-    wake();
-  };
+  /*
+   * Zoom lives next door. `dropSelection` and `wake` are handed across
+   * because magnifying does both, and the aim is handed back because a drag
+   * has to invalidate it — see `onMove`.
+   */
+  const { applyZoom, forgetAim, onWheel, onDoubleClick } = createMagnifier({
+    canvas,
+    dropSelection,
+    refs,
+    tiltLimit: TILT_LIMIT,
+    wake,
+  });
 
   /*
    * Measured against the distance the gesture *started* at rather than
@@ -252,7 +226,7 @@ export function attachGestures(
       dropSelection();
       // A drag moves the globe out from under the zoom's anchor, so the
       // next zoom recaptures rather than aiming at a stale place.
-      aim.forget();
+      forgetAim();
     }
 
     refs.dragged.current += (event.clientX - fromX) * step;
@@ -387,28 +361,6 @@ export function attachGestures(
   };
 
   /*
-   * Wheel and pinch both go through `applyZoom`, and both are only offered
-   * to the expanded globe. `passive: false` because this calls
-   * `preventDefault` — without the flag the browser assumes it will not and
-   * scrolls the page as well as zooming the sphere.
-   */
-  const onWheel = (event: WheelEvent) => {
-    if (!refs.live.current) {
-      return;
-    }
-    event.preventDefault();
-    refs.settled.current = true;
-    const delta =
-      event.deltaMode === 1 ? event.deltaY * LINE_HEIGHT : event.deltaY;
-    // Where the pointer is, so the wheel zooms towards whatever it is over
-    // rather than towards the middle of the ocean.
-    applyZoom(
-      refs.zoomed.current * Math.exp(-delta * WHEEL_ZOOM),
-      onSphere(canvas, event.clientX, event.clientY),
-    );
-  };
-
-  /*
    * A pointer arriving is enough to stop the spin, before it has clicked
    * anything. The alternative — letting hover work on a turning globe —
    * makes every mark a moving target, and the drift is fast enough to lose
@@ -432,6 +384,7 @@ export function attachGestures(
   canvas.addEventListener("pointercancel", onUp);
   canvas.addEventListener("pointerenter", onEnter);
   canvas.addEventListener("wheel", onWheel, { passive: false });
+  canvas.addEventListener("dblclick", onDoubleClick);
 
   return () => {
     canvas.removeEventListener("pointerdown", onDown);
@@ -440,5 +393,6 @@ export function attachGestures(
     canvas.removeEventListener("pointercancel", onUp);
     canvas.removeEventListener("pointerenter", onEnter);
     canvas.removeEventListener("wheel", onWheel);
+    canvas.removeEventListener("dblclick", onDoubleClick);
   };
 }

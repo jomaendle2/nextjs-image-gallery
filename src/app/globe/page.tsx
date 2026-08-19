@@ -15,7 +15,12 @@ import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { membershipConfigured } from "@/lib/members/offer";
 import { alternates } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
-import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
+import {
+  groupIntoCells,
+  groupIntoPlaces,
+  labelFor,
+  toGlobePoints,
+} from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
 import { photoTitle } from "@/lib/photos/title";
 import { count } from "@/lib/plural";
@@ -52,7 +57,20 @@ export const metadata: Metadata = {
  * The doc says so too.
  */
 export default async function GlobePage() {
+  /*
+   * Two groupings, deliberately, because the page and the globe beside it are
+   * answering different questions.
+   *
+   * `cells` are coarsened points — one dot each, every one within a kilometre
+   * of where a photograph was taken, which is what makes magnifying the globe
+   * worth doing. `places` are what a reader would name: cells near each other
+   * and sharing a region, gathered under one heading. Two cells forty
+   * kilometres apart in Bali are two dots and one place, and collapsing them
+   * into a single dot to make the list read properly would put that dot
+   * twenty kilometres from either photograph.
+   */
   const cells = groupIntoCells(await listGlobePoints());
+  const places = groupIntoPlaces(cells);
   const photographs = cells.reduce(
     (total, cell) => total + cell.photos.length,
     0,
@@ -80,12 +98,12 @@ export default async function GlobePage() {
 
           <h1 className={`mt-1.5 ${PAGE_TITLE}`}>Where these were taken</h1>
           <p className={`mt-1 ${META}`}>
-            {`${count(cells.length, "place")} · ${count(photographs, "photograph")}`}
+            {`${count(places.length, "place")} · ${count(photographs, "photograph")}`}
           </p>
         </header>
 
         <main className="mt-10">
-          {cells.length === 0 ? (
+          {places.length === 0 ? (
             <p className={`max-w-prose text-pretty ${BODY}`}>
               No photographer has marked a place yet. When one does, it will
               appear here.{" "}
@@ -120,12 +138,15 @@ export default async function GlobePage() {
                 a keyboard is the button that opens it.
               */}
               <div className="mx-auto w-full max-w-[26rem] lg:max-w-[32rem]">
-                <GlobeStage points={toGlobePoints(cells)} />
+                <GlobeStage
+                  places={places.length}
+                  points={toGlobePoints(cells)}
+                />
               </div>
 
               <ul className="mt-14 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-                {cells.map((cell) => (
-                  <li key={cell.key}>
+                {places.map((place) => (
+                  <li key={place.key}>
                     {/*
                       `SECTION_HEADING`, even though there are forty of these
                       rather than three.
@@ -139,12 +160,12 @@ export default async function GlobePage() {
                       is the only `h2` on the page. A sixth size to say
                       "heading, but in a column" is how five of them got here.
                     */}
-                    <h2 className={SECTION_HEADING}>{labelFor(cell)}</h2>
+                    <h2 className={SECTION_HEADING}>{labelFor(place)}</h2>
                     <p className={`mt-1 ${META}`}>
-                      {count(cell.photos.length, "photograph")}
+                      {count(place.photos.length, "photograph")}
                     </p>
                     <ul className="mt-2.5 space-y-1">
-                      {cell.photos.map((photo) => (
+                      {place.photos.map((photo) => (
                         <li key={photo.id}>
                           {/*
                             `standalone`, because tapping one of these is the

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type GlobeCell,
   groupIntoCells,
+  groupIntoPlaces,
   labelFor,
   toGlobePoints,
 } from "./globe";
@@ -178,6 +179,125 @@ describe("what a cell is called", () => {
   it("still names a cell nobody wrote a location for", () => {
     const [cell] = groupIntoCells([row({ location: null })]);
     expect(labelFor(cell as GlobeCell)).toBe("Somewhere unnamed");
+  });
+});
+
+describe("gathering cells into the places a person would name", () => {
+  /*
+   * Every case below is a real pair from the published set, with its measured
+   * distance in the name. That is deliberate: this rule exists because of
+   * what the data actually looks like, and a fixture invented to suit the
+   * rule would not have caught the border case that shaped it.
+   */
+  const cells = (entries: readonly [string, number, number][]): GlobeCell[] =>
+    entries.flatMap(([location, lat, lng], index) =>
+      groupIntoCells([
+        row({ coarse_lat: lat, coarse_lng: lng, id: `p${index}`, location }),
+      ]),
+    );
+
+  it("gathers two cells that share a region and sit 40 km apart", () => {
+    // The bug this rule was written for: `/globe` showed "Near Bali,
+    // Indonesia" twice, because a kilometre-wide cell splits what a
+    // hundred-kilometre one used to swallow.
+    const places = groupIntoPlaces(
+      cells([
+        ["Bali, Indonesia", -8.7028, 115.1637],
+        ["Bali, Indonesia", -8.3405, 115.092],
+      ]),
+    );
+    expect(places).toHaveLength(1);
+    expect(labelFor(places[0] ?? { labels: [] })).toBe("Near Bali, Indonesia");
+  });
+
+  it("gathers a narrower name into the wider one it sits inside", () => {
+    const places = groupIntoPlaces(
+      cells([
+        ["Bali, Indonesia", -8.7028, 115.1637],
+        ["Uluwatu, Bali, Indonesia", -8.8291, 115.0849],
+      ]),
+    );
+    expect(places).toHaveLength(1);
+    expect(labelFor(places[0] ?? { labels: [] })).toBe(
+      "Near Bali and Uluwatu, Indonesia",
+    );
+  });
+
+  /*
+   * The case that rules out distance on its own, and the reason this
+   * predicate looks at names at all.
+   *
+   * Glaciar Perito Moreno and Torres del Paine National Park are 53 km
+   * apart — nearer than the two Bali cells above — and in different
+   * countries. Any radius wide enough to gather Bali gathers these too, so
+   * without the shared-name half of the rule `/globe` would grow a heading
+   * that merges Argentina and Chile: a worse bug than the duplicate it was
+   * introduced to fix.
+   */
+  it("keeps two nearby places in different countries apart", () => {
+    const places = groupIntoPlaces(
+      cells([
+        ["Glaciar Perito Moreno, Argentina", -50.4967, -73.1377],
+        ["Torres del Paine National Park, Chile", -50.9423, -73.4068],
+      ]),
+    );
+    expect(places).toHaveLength(2);
+  });
+
+  it("keeps two cells in one country apart when they are far apart", () => {
+    const places = groupIntoPlaces(
+      cells([
+        ["Sagres, Portugal", 37.0, -8.94],
+        ["Vila Nova de Milfontes, Portugal", 37.72, -8.78],
+      ]),
+    );
+    expect(places).toHaveLength(2);
+  });
+
+  /*
+   * Transitivity, which the Bali cluster needs and no single pair provides:
+   * the two "Bali, Indonesia" cells are 40 km apart and Uluwatu sits 1 km
+   * from one of them, so all three arrive under one heading through a chain.
+   */
+  it("gathers a chain of cells no two of which span the whole group", () => {
+    const places = groupIntoPlaces(
+      cells([
+        ["Bali, Indonesia", -8.7028, 115.1637],
+        ["Uluwatu, Bali, Indonesia", -8.8291, 115.0849],
+        ["Bali, Indonesia", -8.3405, 115.092],
+      ]),
+    );
+    expect(places).toHaveLength(1);
+    expect(places[0]?.photos).toHaveLength(3);
+  });
+
+  /*
+   * A photographer may mark a spot without naming it. Folding that into a
+   * neighbour would file the photograph under a place name its photographer
+   * chose not to give it.
+   */
+  it("never gathers an unnamed cell into a named one", () => {
+    const places = groupIntoPlaces(
+      cells([
+        ["Bali, Indonesia", -8.7028, 115.1637],
+        ["", -8.7031, 115.164],
+      ]),
+    );
+    expect(places).toHaveLength(2);
+  });
+
+  it("keeps every photograph exactly once", () => {
+    const built = cells([
+      ["Bali, Indonesia", -8.7028, 115.1637],
+      ["Uluwatu, Bali, Indonesia", -8.8291, 115.0849],
+      ["Taipei, Taiwan", 25.033, 121.5654],
+      ["Glaciar Perito Moreno, Argentina", -50.4967, -73.1377],
+    ]);
+    const total = groupIntoPlaces(built).reduce(
+      (sum, place) => sum + place.photos.length,
+      0,
+    );
+    expect(total).toBe(built.length);
   });
 });
 

@@ -155,6 +155,170 @@ export function toGlobePoints(cells: readonly GlobeCell[]): GlobePoint[] {
 }
 
 /**
+ * How near two cells have to be before they are spoken of as one place, and
+ * the other half of the rule.
+ *
+ * **This is not `CELL_KM`, and the difference is the whole point of the
+ * function below.** A coarsening cell answers "what is safe to publish"; a
+ * grouping radius answers "what would a person call one place". Those were
+ * the same number for as long as `CELL_KM` was 100, purely by accident — a
+ * hundred-kilometre cell happened to swallow a region, so grouping came free
+ * and nobody had to name it.
+ *
+ * Shrinking the cell to a kilometre for accuracy separated them, and the
+ * separation arrived as a bug: `/globe` grew two headings both reading "Near
+ * Bali, Indonesia", because two cells forty kilometres apart are two cells
+ * and one place. The fix is not a larger cell — that would hand back the
+ * accuracy the small one bought — but a second constant, doing the job the
+ * first one was never actually for.
+ *
+ * **Distance alone is not enough, and the data says so.** Measured over the
+ * published set, Glaciar Perito Moreno and Torres del Paine National Park sit
+ * 53 km apart across the Argentina–Chile border. Any radius wide enough to
+ * gather the Bali cells is wide enough to gather those two, and a heading
+ * merging two countries is a worse bug than the one being fixed.
+ *
+ * So a pair must be near *and* share a trailing part of their names —
+ * "California", "Thailand", "Bali, Indonesia". Place names in this data run
+ * narrowest-first, so a shared suffix is the region or country both sit in,
+ * which is precisely the thing that makes "one place" true. Names sharing
+ * nothing stay apart however close they are.
+ *
+ * 50 km because that is what the measured set asks for: it gathers Bali with
+ * Uluwatu at 1 km and with itself at 40, Koh Phangan with Koh Samui at 27,
+ * Half Moon Bay with San Francisco at 39 — and stops short of the border pair
+ * at 53. It is a judgement about headings, not about privacy, and nothing
+ * downstream of it can widen a published dot.
+ */
+const GROUP_KM = 50;
+
+/** Mean radius, which is all a proximity test needs. */
+const EARTH_KM = 6371;
+
+function kmBetween(a: GlobeCell, b: GlobeCell): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return EARTH_KM * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** The trailing parts two names have in common: "Bali, Indonesia" and none. */
+function sharedTail(first: string, second: string): number {
+  const a = first.split(",").map((part) => part.trim().toLowerCase());
+  const b = second.split(",").map((part) => part.trim().toLowerCase());
+  let shared = 0;
+  while (
+    shared < a.length &&
+    shared < b.length &&
+    a.at(-1 - shared) === b.at(-1 - shared)
+  ) {
+    shared += 1;
+  }
+  return shared;
+}
+
+/**
+ * Whether two cells belong under one heading: near enough, and named as part
+ * of the same larger place by whoever wrote the labels.
+ *
+ * An unnamed cell joins nothing. It has no region to share, and quietly
+ * folding "Somewhere unnamed" into a neighbour would put a photograph under a
+ * place name its photographer chose not to give it.
+ */
+function samePlace(a: GlobeCell, b: GlobeCell): boolean {
+  if (a.labels.length === 0 || b.labels.length === 0) {
+    return false;
+  }
+  if (kmBetween(a, b) > GROUP_KM) {
+    return false;
+  }
+  return a.labels.some((one) =>
+    b.labels.some((other) => sharedTail(one, other) > 0),
+  );
+}
+
+/**
+ * One or more cells that a reader would call a single place.
+ *
+ * **Cells are what the globe draws; places are what the page lists.** Keeping
+ * them as separate types rather than merging the cells outright is what lets
+ * both be right at once: the canvas still gets one dot per cell, each sitting
+ * within a kilometre of where a photograph was actually taken and worth
+ * magnifying to 16x, while the list beside it says "Near Bali and Uluwatu,
+ * Indonesia" once. Merging the cells instead would move every dot to a group
+ * centroid — up to twenty kilometres out for the Bali cluster, which is
+ * eleven pixels at the top of the zoom range, and exactly the drift the last
+ * three commits went to some trouble to remove.
+ */
+export interface GlobePlaceGroup {
+  key: string;
+  labels: string[];
+  photos: { id: string; title: string }[];
+}
+
+/**
+ * Gathers cells into the places a person would name, busiest first.
+ *
+ * Transitive by construction, which is what the Bali case needs: the two
+ * cells labelled "Bali, Indonesia" are 40 km apart and "Uluwatu, Bali,
+ * Indonesia" sits 1 km from one of them, so all three arrive under one
+ * heading through a chain rather than through any single pair being close.
+ *
+ * A linear scan over cells, quadratic in the worst case. That is the right
+ * shape here — this runs once per revalidation over a list measured in
+ * hundreds, and a spatial index would be more code than the thing it indexes.
+ * The threshold to revisit it is the same one `/api/globe` records for
+ * splitting its payload.
+ */
+export function groupIntoPlaces(
+  cells: readonly GlobeCell[],
+): GlobePlaceGroup[] {
+  const groups: GlobeCell[][] = [];
+
+  for (const cell of cells) {
+    const joined = groups.find((group) =>
+      group.some((member) => samePlace(member, cell)),
+    );
+    if (joined === undefined) {
+      groups.push([cell]);
+    } else {
+      joined.push(cell);
+    }
+  }
+
+  return groups
+    .map((group) => {
+      const labels: string[] = [];
+      for (const cell of group) {
+        for (const label of cell.labels) {
+          if (!labels.includes(label)) {
+            labels.push(label);
+          }
+        }
+      }
+      return {
+        // The busiest cell's key, so a group keeps a stable identity as long
+        // as its cells do — and one that is already a valid cell key.
+        key: (group[0] ?? { key: "" }).key,
+        labels,
+        photos: group.flatMap((cell) => cell.photos),
+      };
+    })
+    .sort(comparePlaces);
+}
+
+function comparePlaces(a: GlobePlaceGroup, b: GlobePlaceGroup): number {
+  if (a.photos.length !== b.photos.length) {
+    return b.photos.length - a.photos.length;
+  }
+  const byLabel = (a.labels[0] ?? "").localeCompare(b.labels[0] ?? "");
+  return byLabel === 0 ? a.key.localeCompare(b.key) : byLabel;
+}
+
+/**
  * What to call a cell in a sentence.
  *
  * "Near", always, and never the bare place name. The point is the centre of
@@ -174,7 +338,7 @@ export function toGlobePoints(cells: readonly GlobeCell[]): GlobePoint[] {
  * photographer may mark a spot without naming it, and the dot still belongs
  * on the map.
  */
-export function labelFor(cell: GlobeCell): string {
+export function labelFor(cell: { labels: readonly string[] }): string {
   const [first, second] = cell.labels;
   if (first === undefined) {
     return "Somewhere unnamed";
