@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useId } from "react";
-import { type FormState, IDLE } from "@/app/form-state";
 import { FIELD, LABEL, LABEL_HINT } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
+import { type FormState, IDLE } from "@/lib/form-state";
 
 /**
  * The three fields that bring a photographer into the gallery.

@@ -269,7 +269,25 @@
         "noParameterProperties": "error",
         "noProcessEnv": "off",
         "noRestrictedGlobals": "error",
-        "noRestrictedImports": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "maplibre-gl": {
+                "message": "Invariant I14, docs/architecture/security.md: the map library must never reach a public page. MapSurface.tsx is the one door in, and src/lib/security-location.test.ts pins it there."
+              },
+              "maplibre-gl/dist/maplibre-gl.css": {
+                "message": "As maplibre-gl itself. Import MapSurface.tsx."
+              },
+              "stripe": {
+                "message": "The SDK is ~19MB and Next traces imports, so a footer that merely asks whether payments exist would ship all of it. src/lib/stripe.ts constructs it; call membershipConfigured() from @/lib/members/offer instead. See docs/architecture/toolchain.md."
+              },
+              "@/lib/database": {
+                "message": "The SQL client is server-only, and authorisation lives in the WHERE clause. Go through a repository in src/lib/*/repository.ts. See docs/architecture/security.md, invariant I2."
+              }
+            }
+          }
+        },
         "noRestrictedTypes": "error",
         "noRootType": "error",
         "noShoutyConstants": "error",
@@ -484,6 +502,41 @@
   },
   "overrides": [
     {
+      "includes": ["src/lib/**", "src/hooks/**", "src/data/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app/**", "@/components/**"],
+                    "message": "Layering: src/lib is underneath src/app, not beside it. Move the shared thing down — @/app/form-state was the only one that reached up, and it is now @/lib/form-state."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/contribute/photos/MapSurface.tsx",
+        "src/lib/stripe.ts",
+        "src/app/api/stripe/**",
+        "src/lib/*/repository.ts",
+        "src/lib/auth/**",
+        "src/app/api/**",
+        "src/**/*.test.ts",
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": { "style": { "noRestrictedImports": "off" } }
+      }
+    },
+    {
       "includes": [
         "src/app/api/**",
         "src/lib/database.ts",
@@ -521,7 +574,11 @@
       }
     },
     {
-      "includes": ["src/**/*.test.ts", "src/lib/source-text.ts"],
+      "includes": [
+        "src/**/*.test.ts",
+        "src/lib/source-text.ts",
+        "src/lib/doc-text.ts"
+      ],
       "linter": {
         "rules": {
           "correctness": {

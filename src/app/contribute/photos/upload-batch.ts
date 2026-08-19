@@ -65,7 +65,14 @@ export function retryBatch(items: readonly Item[]): {
       return item;
     }
     again.push({ file: item.file, index });
-    return { ...item, status: "waiting" as const, error: undefined };
+    /*
+     * The key is dropped rather than set to `undefined`. `error` is optional
+     * because a waiting item has never had one, and under
+     * `exactOptionalPropertyTypes` those are two different states — an
+     * explicit `undefined` is a value, and this is the absence of one.
+     */
+    const { error: _cleared, ...rest } = item;
+    return { ...rest, status: "waiting" as const };
   });
   return { again, items: next };
 }

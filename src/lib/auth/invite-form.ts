@@ -1,5 +1,5 @@
-import { formText } from "@/app/form-state";
 import { MAX_NAME, MAX_URL } from "@/lib/applications/validate";
+import { formText } from "@/lib/form-state";
 import { looksLikeEmail, normaliseEmail, normaliseSiteUrl } from "./slug";
 
 export type InviteInput =

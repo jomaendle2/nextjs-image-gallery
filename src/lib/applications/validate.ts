@@ -1,9 +1,9 @@
-import { formText } from "@/app/form-state";
 import {
   looksLikeEmail,
   normaliseEmail,
   normaliseSiteUrl,
 } from "@/lib/auth/slug";
+import { formText } from "@/lib/form-state";
 
 /**
  * Validation for the public application form, kept pure and free of any

@@ -384,7 +384,7 @@ export const PhotoCard = memo(function PhotoCardRow({
 }: {
   photo: OwnPhotoRow;
   selected?: boolean;
-  onSelect?: (id: string, checked: boolean) => void;
+  onSelect?: ((id: string, checked: boolean) => void) | undefined;
   /** A stable string for the life of the page, so `memo` still holds. */
   mapStyleUrl: string | null;
   /** A boolean read on the server; stable for the same reason. */

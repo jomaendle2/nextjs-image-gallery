@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type FormState, failed, succeeded } from "@/app/form-state";
 import type { AnnounceOutcome } from "@/lib/announce-result";
 import { buildAnnouncement } from "@/lib/announcement";
 import { reviewApplication } from "@/lib/applications/repository";
@@ -20,6 +19,7 @@ import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
 import { invitationUrl } from "@/lib/auth/tokens";
 import { isOwner } from "@/lib/auth/types";
+import { type FormState, failed, succeeded } from "@/lib/form-state";
 import { toGalleryImage } from "@/lib/photos/map";
 import {
   listUnannouncedPhotos,

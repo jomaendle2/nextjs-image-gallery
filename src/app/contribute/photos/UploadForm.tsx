@@ -98,6 +98,21 @@ function openFreshDraft(
   router.refresh();
 }
 
+/**
+ * One item, at a new status, carrying a message only if there is one.
+ *
+ * The previous error is dropped rather than overwritten, which is what
+ * `{ ...item, status, error }` used to mean and no longer does: under
+ * `exactOptionalPropertyTypes` an explicit `undefined` is a value and an
+ * optional key's absence is a different state. Spreading over `item` without
+ * dropping first would leave a failure's message attached to the retry that
+ * succeeded.
+ */
+function restated(item: Item, status: ItemStatus, error?: string): Item {
+  const { error: _previous, ...rest } = item;
+  return { ...rest, status, ...(error === undefined ? {} : { error }) };
+}
+
 export function UploadForm() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +135,7 @@ export function UploadForm() {
     (index: number, status: ItemStatus, error?: string) => {
       setItems((previous) =>
         previous.map((item, i) =>
-          i === index ? { ...item, status, error } : item,
+          i === index ? restated(item, status, error) : item,
         ),
       );
     },

@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { type FormState, failed, succeeded } from "@/app/form-state";
 import { claimInvite } from "@/lib/auth/contributors";
 import { sendInvitation } from "@/lib/auth/email";
 import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
 import { invitationUrl } from "@/lib/auth/tokens";
+import { type FormState, failed, succeeded } from "@/lib/form-state";
 import { clientIp, inviteLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 
