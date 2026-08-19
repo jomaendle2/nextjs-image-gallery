@@ -38,6 +38,7 @@
  * this whole block should go.
  */
 import process from "node:process";
+import { deploymentEnv, isProduction } from "../src/lib/deployment.ts";
 import { MIGRATIONS } from "../src/lib/schema.ts";
 
 /**
@@ -48,10 +49,9 @@ import { MIGRATIONS } from "../src/lib/schema.ts";
  * keep working.
  */
 function mayMigrate(): boolean {
-  const env = process.env["VERCEL_ENV"];
   return (
-    env === undefined ||
-    env === "production" ||
+    deploymentEnv() === undefined ||
+    isProduction() ||
     process.env["ALLOW_PREVIEW_MIGRATIONS"] === "1"
   );
 }
@@ -59,7 +59,7 @@ function mayMigrate(): boolean {
 async function main(): Promise<void> {
   if (!mayMigrate()) {
     console.log(
-      `migrate: ${process.env["VERCEL_ENV"]} build, skipping ${MIGRATIONS.length} statements.\n` +
+      `migrate: ${deploymentEnv()} build, skipping ${MIGRATIONS.length} statements.\n` +
         "migrate: preview shares the production database — see the note in this file.\n" +
         "migrate: set ALLOW_PREVIEW_MIGRATIONS=1 to run them anyway.",
     );

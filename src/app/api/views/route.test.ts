@@ -27,8 +27,15 @@ const WRITE = /incrementViewCount\(imageId\)/;
 const READ = /getViewCount\(imageId\)/;
 
 describe("only production adds to a view count", () => {
+  /*
+   * Through the shared helper rather than a literal comparison, which this
+   * check used to pin. `VERCEL_ENV` was being read in five places with five
+   * predicates; a test that insisted on the literal here was one of the
+   * things holding that in place.
+   */
   it("the gate is the deployment environment, not a client's word for it", () => {
-    expect(route).toContain('process.env["VERCEL_ENV"] === "production"');
+    expect(route).toContain("isProduction()");
+    expect(route).toContain('from "@/lib/deployment"');
   });
 
   /*

@@ -566,6 +566,7 @@
     {
       "includes": [
         "src/app/api/**",
+        "src/lib/deployment.ts",
         "src/lib/database.ts",
         "src/lib/auth/**",
         "src/lib/photos/**",

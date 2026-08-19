@@ -27,8 +27,8 @@ npm test            # Vitest
 ```
 
 CI runs the last three on every push and pull request. Run them before you
-say you are done. Node 24 or newer, or every `.mts` script dies on a type
-annotation.
+say you are done. Node 22.18 or newer, or every `.mts` script dies on a type
+annotation; CI and Vercel build on 24.
 
 ## Rules that are not negotiable
 

@@ -116,6 +116,19 @@ page renders from it, so it is the one place worth changing.
 
 ---
 
+## One reading of the environment
+
+`VERCEL_ENV` is read in exactly one module, `src/lib/deployment.ts`, and
+`src/lib/deployment.test.ts` asserts that it stays that way. It reports
+`"production"` only on the live deployment; a preview reports `"preview"`,
+`vercel dev` reports `"development"`, and anything else — `npm run dev`, a
+test, an operational script — reports nothing at all.
+
+That last distinction is load-bearing rather than pedantic: `scripts/migrate.mts`
+runs the schema on a local machine (nothing) and on production, and refuses on
+a preview, so collapsing "no Vercel" into "development" would start migrating
+from `vercel dev`.
+
 ## Things that will bite you
 
 - **View counts do not move outside production, and that is deliberate.** A

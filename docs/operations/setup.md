@@ -10,10 +10,16 @@ npm run dev
 
 Open <http://localhost:3000>.
 
-Node 24 or newer. Older versions do not strip types from `.mts` without a
-flag the scripts do not pass, so every `db:*` and `smoke:*` command dies on a
-type annotation and reads like a broken script rather than a wrong runtime.
-`package.json` says so in `engines`.
+Node 22.18 or newer, which is what `engines` in `package.json` says. Below
+that, node does not strip types from `.mts` without a flag the scripts do not
+pass, so every `db:*` and `smoke:*` command dies on a type annotation and
+reads like a broken script rather than a wrong runtime.
+
+CI and Vercel build on 24, and that is the version to develop against. The
+floor is lower than the ceiling on purpose: `engines` is a hard gate — npm
+warns on it and Vercel refuses a build that does not satisfy it — so it
+states what actually breaks rather than what is preferred. Claiming 24 there
+would fail a deployment on a platform still offering 22.
 
 ## The database and the photographs
 

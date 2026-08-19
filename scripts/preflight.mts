@@ -23,6 +23,7 @@
  * deliberately unset teaches people to bypass it.
  */
 import process from "node:process";
+import { isProduction } from "../src/lib/deployment.ts";
 
 interface Required {
   name: string;
@@ -46,7 +47,7 @@ const REQUIRED: Required[] = [
 
 function main(): void {
   // Preview and development have working fallbacks and mail nobody.
-  if (process.env["VERCEL_ENV"] !== "production") {
+  if (!isProduction()) {
     console.log("preflight: not a production build, skipping.");
     return;
   }

@@ -1,10 +1,10 @@
-import process from "node:process";
 import { type NextRequest, NextResponse } from "next/server";
 import {
   getAllViewCounts,
   getViewCount,
   incrementViewCount,
 } from "@/lib/database";
+import { isProduction } from "@/lib/deployment";
 import { clientIp, createLimiter } from "@/lib/rate-limit";
 
 /**
@@ -20,17 +20,13 @@ import { clientIp, createLimiter } from "@/lib/rate-limit";
  * That is a quieter failure than a deleted row and a harder one to undo,
  * because nothing records which of the views were real.
  *
- * `VERCEL_ENV` is "production" only on the production deployment; a preview
- * reports "preview" and a local `next dev` reports nothing at all. Both of
- * the latter are people looking at their own work.
- *
  * Deliberately on the server rather than in `useViewCount`. The client cannot
  * be told which environment it is in without a `NEXT_PUBLIC_*` variable baked
  * into the bundle, and a count is a claim about how many people looked — the
  * tier that decides it should be the one nobody can edit.
  */
 function viewsAreCounted(): boolean {
-  return process.env["VERCEL_ENV"] === "production";
+  return isProduction();
 }
 
 /**
