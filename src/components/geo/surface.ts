@@ -50,3 +50,26 @@ export function fitSurface(
   canvas.height = height;
   return true;
 }
+
+/**
+ * The element's size in CSS pixels, re-read only when it changes.
+ *
+ * `getBoundingClientRect` is a layout read, so calling it inside a frame loop
+ * makes every frame flush style and layout before it can draw — for an answer
+ * that changes when the window is resized and at no other time. This keeps
+ * the last measurement and hands back a function to refresh it, which is what
+ * the `ResizeObserver` the caller already has is for.
+ */
+export function trackBox(element: Element): {
+  size: { width: number; height: number };
+  remeasure: () => void;
+} {
+  const size = { width: 0, height: 0 };
+  const remeasure = () => {
+    const rect = element.getBoundingClientRect();
+    size.width = rect.width;
+    size.height = rect.height;
+  };
+  remeasure();
+  return { size, remeasure };
+}

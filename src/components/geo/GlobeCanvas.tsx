@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { GlobePoint } from "@/lib/photos/globe";
 import { prefersReducedMotion } from "@/lib/prefers-reduced-motion";
+import { loadCoarseLand, loadFineLand, loadFinestLand } from "./coastline";
 import type { GestureRefs } from "./gestures";
 import type { Mark } from "./marks";
 import { placeMarks } from "./marks";
 import { simpleDrag } from "./simple-drag";
 import { type Detailed, FILL, type Land, paintSphere } from "./sphere";
-import { drawRatio, fitSurface } from "./surface";
+import { drawRatio, fitSurface, trackBox } from "./surface";
+import { FINEST_FROM } from "./zoom";
 
 /**
  * The globe, as an enhancement over the list that is already on the page.
@@ -44,57 +46,6 @@ const SPIN_PER_SECOND = 3.2;
  * enough to read as a sphere seen from somewhere rather than as a circle.
  */
 const DEFAULT_TILT = 20;
-
-/**
- * Fetches the four-times-finer coastline, once per session.
- *
- * A module-scoped promise rather than component state, so opening the globe a
- * second time is instant and two globes on one page cannot each pull it. The
- * `import()` is the whole point: nothing in the static graph names
- * `world-fine.ts`, so it is its own chunk and a reader who never expands the
- * globe never pays for it.
- *
- * **This function has to stay in this file, textually.** `world.test.ts`
- * asserts that the string `world-fine` appears in exactly one source file and
- * names that file as `components/geo/GlobeCanvas.tsx`. Moving these six lines
- * into `sphere.ts` alongside the rest of the coastline plumbing — which is
- * where they otherwise belong — turns a green suite red for a reason that
- * takes an hour to find.
- */
-let finePromise: Promise<Detailed> | null = null;
-function loadFineLand(): Promise<Detailed> {
-  finePromise ??= import("@/lib/geo/world-fine").then((module) => ({
-    land: module.WORLD_LAND_FINE,
-    borders: module.WORLD_BORDERS_FINE,
-  }));
-  return finePromise;
-}
-
-/**
- * The everyday coastline, fetched the same way and for the same reason.
- *
- * This one used to be a static import, and it was the single largest thing
- * on `/globe` — roughly twenty-eight kilobytes gzipped, about a seventh of
- * the page's JavaScript, spent on a canvas that is `aria-hidden` and sits
- * beside a complete list of links to the same photographs. Somebody who
- * cannot run the canvas, or will not, gets exactly the page they got before;
- * somebody who can gets the sphere a moment later than the text.
- *
- * That order is the right one and is worth stating, because it looks like a
- * regression from "instant" to "nearly instant". The globe is the decoration
- * and the list is the content: the coastline should never have been ahead of
- * the page in the queue.
- *
- * Module-scoped promise, like the fine set above, so a second globe on a
- * page joins the first one's request instead of making its own.
- */
-let coarsePromise: Promise<Land> | null = null;
-function loadCoarseLand(): Promise<Land> {
-  coarsePromise ??= import("@/lib/geo/world").then(
-    (module) => module.WORLD_LAND,
-  );
-  return coarsePromise;
-}
 
 interface GlobeCanvasProps {
   points: readonly GlobePoint[];
@@ -282,8 +233,43 @@ export function GlobeCanvas({
     };
   }, [detail]);
 
-  const drawn = useRef(detailed);
-  drawn.current = detailed;
+  /*
+   * The deep coastline replaces the fine one once it lands, and is asked for
+   * only when the reader has zoomed past what the fine one can draw.
+   *
+   * `deep` rather than a second slot in `detailed`: `paintSphere` wants one
+   * set of land and one set of borders, and choosing between them here keeps
+   * the painter from learning that there are tiers at all.
+   */
+  const [deep, setDeep] = useState<Detailed | null>(null);
+  const wantsDeep = detail === "fine" && zoom >= FINEST_FROM;
+  useEffect(() => {
+    if (!wantsDeep) {
+      return;
+    }
+    let alive = true;
+    loadFinestLand()
+      .then((finest) => {
+        if (alive) {
+          setDeep(finest);
+        }
+      })
+      .catch((cause: unknown) => {
+        /*
+         * A downgrade, not a failure — the fine coastline is already on
+         * screen and stays there. The reader gets a softer picture at high
+         * zoom rather than an error, which is the right trade for half a
+         * megabyte that may simply not have arrived.
+         */
+        console.error("Could not load the deep coastline:", cause);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [wantsDeep]);
+
+  const drawn = useRef(deep ?? detailed);
+  drawn.current = deep ?? detailed;
   const drawnCoarse = useRef(coarse);
   drawnCoarse.current = coarse;
 
@@ -314,30 +300,14 @@ export function GlobeCanvas({
     const holding: { current: number | null } = { current: null };
     let spun = 0;
 
-    /*
-     * The canvas's size in CSS pixels, measured when it changes rather than
-     * on every frame.
-     *
-     * `getBoundingClientRect` is a layout read, and calling it inside the
-     * loop made every frame flush style and layout before it could draw. The
-     * `ResizeObserver` below already exists and already knows when this
-     * changes, so the loop had been asking a question that was answered.
-     */
-    let cssWidth = 0;
-    let cssHeight = 0;
-    const measure = () => {
-      const rect = canvas.getBoundingClientRect();
-      cssWidth = rect.width;
-      cssHeight = rect.height;
-    };
-    measure();
+    /* Measured when the box changes, not per frame. See `trackBox`. */
+    const { size, remeasure } = trackBox(canvas);
 
     const render = (time: number) => {
       start ??= time;
 
       const ratio = drawRatio(globalThis.devicePixelRatio);
-      const width = cssWidth;
-      const height = cssHeight;
+      const { width, height } = size;
       fitSurface(canvas, width, height, ratio);
       /*
        * Two radii, and the whole of the zoom is the gap between them. `frame`
@@ -438,7 +408,7 @@ export function GlobeCanvas({
      * shipped.
      */
     const observer = new ResizeObserver(() => {
-      measure();
+      remeasure();
       wake();
     });
     observer.observe(canvas);
@@ -466,7 +436,7 @@ export function GlobeCanvas({
   // biome-ignore lint/correctness/useExhaustiveDependencies: repainting *is* the effect; a coastline or a zoom arriving is the only reason to
   useEffect(() => {
     repaint.current?.();
-  }, [detailed, coarse, zoom]);
+  }, [detailed, deep, coarse, zoom]);
 
   /*
    * Face the way it did when it opened.
@@ -509,7 +479,7 @@ export function GlobeCanvas({
      * `/globe` — a reader would swipe up and the page would sit there.
      */
     <canvas
-      className={`block aspect-square ${interactive ? "touch-none" : "touch-pan-y"} text-white ${className}`}
+      className={`block aspect-square ${interactive ? "touch-none" : "touch-pan-y"} text-(--globe-ink) ${className}`}
       ref={canvasRef}
     />
   );

@@ -19,6 +19,19 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
+import {
+  asLines,
+  fineFile,
+  finestFile,
+  globeFile,
+  type Point,
+  type Polygon,
+  pathFile,
+  provenanceOf,
+  round,
+  toLiteral,
+  toPath,
+} from "./world-files.mts";
 
 /**
  * Natural Earth 1:10m physical / land, the finest they publish. Public
@@ -80,10 +93,39 @@ const RECIPES = {
   globe: { tolerance: 0.28, minSpan: 0.6, places: 2 },
   fine: { tolerance: 0.07, minSpan: 0.22, places: 3 },
   /*
+   * The deep-zoom tier, and the only recipe here whose number was chosen by
+   * the zoom it has to survive rather than by the size it is drawn at.
+   *
+   * The ceiling on magnification is not arithmetic, it is vertex spacing: a
+   * globe stops being a coastline and starts being a polygon at the zoom
+   * where the gaps between points open past about 2.7 CSS pixels. Measured
+   * across this dataset, the median gap falls roughly with the tolerance —
+   *
+   *   0.07  → 0.245°  → 2.5x   (what `fine` supports, and today's ceiling)
+   *   0.045 → 0.170°  → 3.6x
+   *   0.03  → 0.126°  → 4.8x
+   *   0.02  → 0.094°  → 6.4x
+   *
+   * — so "let me look closer" costs vertices in direct proportion, and there
+   * is no clever tolerance that buys the zoom for free.
+   *
+   * 0.02 rather than 0.03 because the difference between them is a fifth of
+   * a megabyte on a file nobody downloads unless they have already pinched
+   * twice, and 6x is where the *marks* start being the limit instead of the
+   * coast — a hundred-kilometre-coarsened dot has no more to say at eight.
+   */
+  finest: { tolerance: 0.02, minSpan: 0.1, places: 3 },
+  /*
    * Borders are thinner than coasts and forgive more, and a lower span bar
    * keeps the small enclaves that make the picture read as real.
    */
   borders: { tolerance: 0.08, minSpan: 0.15, places: 3 },
+  /*
+   * Borders for the deep tier, refined in step with the coast beside them.
+   * A hand-drawn-looking border running alongside a precise coastline is the
+   * one artefact that would make the extra coastline detail look like a bug.
+   */
+  bordersFinest: { tolerance: 0.025, minSpan: 0.1, places: 3 },
 } as const;
 
 /**
@@ -124,9 +166,7 @@ const PATH_SOUTH = -56;
  */
 const ANTARCTIC = -60;
 
-type Point = [number, number];
 /** Exterior ring first, then any holes. Lakes are holes. */
-type Polygon = Point[][];
 
 interface Recipe {
   tolerance: number;
@@ -279,11 +319,6 @@ function simplify(ring: Point[], tolerance: number): Point[] {
   return ring.filter((_, index) => keep[index] === true);
 }
 
-function round(value: number, places: number): number {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
-}
-
 /**
  * Simplifies a whole polygon, keeping its holes.
  *
@@ -323,50 +358,6 @@ function prepare(
   return out;
 }
 
-/**
- * An SVG path in `x = lng + 180`, `y = 90 - lat`.
- *
- * Equirectangular, which is to say no projection at all — the consumer draws
- * a mark with the same two subtractions, so the picture and the point cannot
- * disagree about where anything is.
- *
- * Every ring of every polygon goes into one path, and the component fills it
- * with `evenodd`, which is what cuts the Caspian out. Winding order would do
- * the same under `nonzero`, but only if the source is consistent about it,
- * and trusting that is how a Caspian-shaped piece of land appears.
- *
- * Latitude is clamped into the drawn band rather than the ring being clipped
- * against it. Clipping properly means closing the cut edge along the crop
- * line; clamping lays the stray vertices flat along the edge, where the frame
- * covers them.
- */
-function toPath(polygons: Polygon[]): string {
-  const clamp = (lat: number): number =>
-    Math.min(PATH_NORTH, Math.max(PATH_SOUTH, lat));
-  return polygons
-    .flat()
-    .map((ring) =>
-      ring
-        .map(
-          ([x, y], index) =>
-            `${index === 0 ? "M" : "L"}${round(x + 180, 1)} ${round(90 - clamp(y), 1)}`,
-        )
-        .join("")
-        .concat("Z"),
-    )
-    .join("");
-}
-
-/** `[[ring, ring], [ring]]`, each ring a flat run of lng/lat pairs. */
-function toLiteral(polygons: Polygon[]): string {
-  return polygons
-    .map(
-      (polygon) =>
-        `  [${polygon.map((ring) => `[${ring.flat().join(",")}]`).join(",")}],`,
-    )
-    .join("\n");
-}
-
 function vertices(polygons: Polygon[]): number {
   return polygons.reduce(
     (total, polygon) =>
@@ -385,169 +376,72 @@ const borderResponse = await fetch(BORDERS);
 if (!borderResponse.ok) {
   throw new Error(`${BORDERS} answered ${borderResponse.status}`);
 }
-const borderLines = readLines((await borderResponse.json()) as GeoJson)
-  .filter((line) => span(line) >= RECIPES.borders.minSpan)
-  .filter((line) => !line.every(([, y]) => y <= ANTARCTIC))
-  .map((line) => simplify(line, RECIPES.borders.tolerance))
-  .filter((line) => line.length >= 2)
-  .map((line) =>
-    line.map(
-      ([x, y]): Point => [
-        round(x, RECIPES.borders.places),
-        round(y, RECIPES.borders.places),
-      ],
-    ),
-  );
+const borderJson = (await borderResponse.json()) as GeoJson;
+
+/** `prepare`, for open lines: no holes to keep and nothing to close. */
+function prepareLines(lines: Point[][], recipe: Recipe): Point[][] {
+  return lines
+    .filter((line) => span(line) >= recipe.minSpan)
+    .filter((line) => !line.every(([, y]) => y <= ANTARCTIC))
+    .map((line) => simplify(line, recipe.tolerance))
+    .filter((line) => line.length >= 2)
+    .map((line) =>
+      line.map(
+        ([x, y]): Point => [round(x, recipe.places), round(y, recipe.places)],
+      ),
+    );
+}
+
+const rawBorders = readLines(borderJson);
+const borderLines = prepareLines(rawBorders, RECIPES.borders);
+
+/*
+ * The same borders again at the deep tier's tolerance. Read once and
+ * simplified twice rather than fetched twice — the source is eighteen
+ * megabytes and the second pass is arithmetic.
+ */
+const borderLinesFinest = prepareLines(rawBorders, RECIPES.bordersFinest);
 
 const pathPolygons = prepare(all, RECIPES.path, PATH_NORTH);
 const globePolygons = prepare(all, RECIPES.globe);
 const finePolygons = prepare(all, RECIPES.fine);
+const finestPolygons = prepare(all, RECIPES.finest);
 
 const today = new Date().toISOString().slice(0, 10);
-const provenance = ` * Source: Natural Earth 1:10m physical / land (\\\`ne_10m_land\\\`), public
- * domain:
- * ${SOURCE}
- *
- * Generated ${today} by \\\`scripts/build-world.mts\\\`:
- *
- *     node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-world.mts
- *
- * **Do not edit by hand.** Re-run the script — it is the only record of where
- * these numbers came from, and a hand-edited coastline is one nobody can
- * check against anything.
- *
- * Biome does not format these files (see \\\`biome.json\\\`). Generated data laid
- * out one number per line would be a hundred thousand lines of diff nobody
- * reads.`;
 
-/*
- * Three files, not one, and the split is the performance guarantee.
- *
- * These are wildly different sizes and reach wildly different numbers of
- * pages. A single module with three exports would leave that entirely to
- * tree-shaking — which does work, and which nobody would notice had stopped
- * working, because the symptom is a slower page rather than a broken one.
- * Separate modules make it structural: a page that imports the path cannot
- * receive the globe, whatever the bundler decides.
- *
- *   world-path.ts  ~7 KB    every gallery page, for the mark in a detail sheet
- *   world.ts       ~24 KB   `/globe` only
- *   world-fine.ts  ~120 KB  fetched by `import()` when the globe is opened
- */
-
-const pathFile = `/**
- * The flat world, as one SVG path.
- *
-${provenance}
- */
-
-/**
- * The box \`WORLD_PATH\` is drawn in, as an SVG \`viewBox\`.
- *
- * Exported rather than typed into the component, because the two have to
- * agree exactly. The path is cropped to a band of latitude, and a component
- * assuming the full sphere would draw the band stretched over it and put
- * every mark in the wrong place.
- */
-export const WORLD_VIEW_BOX = "0 ${90 - PATH_NORTH} 360 ${PATH_NORTH - PATH_SOUTH}";
-
-/** The band the map covers. A point outside it must be clamped, not drawn. */
-export const WORLD_NORTH = ${PATH_NORTH};
-export const WORLD_SOUTH = ${PATH_SOUTH};
-
-/**
- * Land as one SVG path, where \`x = lng + 180\` and \`y = 90 - lat\`.
- *
- * **Must be filled with \`fill-rule: evenodd\`.** The Caspian is in here as an
- * inner ring, and under the default \`nonzero\` an inconsistently wound source
- * paints it as a piece of land in the middle of Asia.
- *
- * Its own module because it is the only part of this data that reaches every
- * gallery page, and it must not be able to drag the globe's coastline along
- * with it.
- */
-export const WORLD_PATH =
-  ${JSON.stringify(toPath(pathPolygons))};
-`;
-
-const file = `/**
- * The coastline of the world, for the globe.
- *
-${provenance}
- */
-
-/**
- * Land as polygons of closed rings of \`[lng, lat]\`, for the globe, which
- * projects them itself and needs points rather than a path.
- *
- * Three levels deep, and the middle one is the reason: a polygon is its
- * exterior followed by its holes, so the renderer can cut the Caspian out
- * instead of painting it. Flat number runs at the bottom — half the JSON
- * punctuation, and the consumer walks them two at a time anyway.
- *
- * Reached from \`/globe\` and nowhere else. The flat map lives in
- * \`world-path.ts\`, and keeping them apart is what stops a photograph's
- * detail sheet paying for a sphere it does not draw.
- */
-export const WORLD_LAND: readonly (readonly (readonly number[])[])[] = [
-${toLiteral(globePolygons)}
-];
-`;
-
-const fine = `/**
- * The same coastline, several times finer, for the expanded globe only.
- *
-${provenance}
- */
-
-/**
- * **Never import this statically.** It is several times the size of
- * everything else in \`src/lib/geo\` put together, and it exists for one
- * interaction: opening the globe full-screen, where the sphere is twice the
- * diameter and a fourteenth of a degree stops being invisible.
- * \`GlobeCanvas\` fetches it with a dynamic \`import()\` on that click and never
- * before, which is the same bargain the contributor page makes with the map
- * library.
- *
- * \`world.test.ts\` asserts both halves: this file is much larger than
- * \`world.ts\`, and nothing in the codebase reaches it except by \`import()\`.
- */
-export const WORLD_LAND_FINE: readonly (readonly (readonly number[])[])[] = [
-${toLiteral(finePolygons)}
-];
-
-/**
- * Country borders as open polylines of \`[lng, lat]\`, flat pairs like the
- * coastline.
- *
- * Open, and it matters: these are strokes, never fills. Closing them would
- * turn every shared border into two overlapping country outlines, which is
- * twice the ink and twice the data for a worse picture.
- *
- * Drawn far fainter than the coast. A coastline is a fact about the planet
- * and a border is a fact about people, and on a photograph gallery's globe
- * the planet is the subject — these are here so that somewhere reads as
- * somewhere, not so anybody can measure a claim.
- */
-export const WORLD_BORDERS_FINE: readonly (readonly number[])[] = [
-${borderLines.map((line) => `  [${line.flat().join(",")}],`).join("\n")}
-];
-`;
-
+const provenance = provenanceOf(SOURCE, today);
 const geo = join(import.meta.dirname, "..", "src", "lib", "geo");
-writeFileSync(join(geo, "world-path.ts"), pathFile);
-writeFileSync(join(geo, "world.ts"), file);
-writeFileSync(join(geo, "world-fine.ts"), fine);
+const bodies = {
+  path: pathFile(
+    provenance,
+    JSON.stringify(toPath(pathPolygons, PATH_NORTH, PATH_SOUTH)),
+    PATH_NORTH,
+    PATH_SOUTH,
+  ),
+  globe: globeFile(provenance, toLiteral(globePolygons)),
+  fine: fineFile(provenance, toLiteral(finePolygons), asLines(borderLines)),
+  finest: finestFile(
+    provenance,
+    toLiteral(finestPolygons),
+    asLines(borderLinesFinest),
+  ),
+};
+
+writeFileSync(join(geo, "world-path.ts"), bodies.path);
+writeFileSync(join(geo, "world.ts"), bodies.globe);
+writeFileSync(join(geo, "world-fine.ts"), bodies.fine);
+writeFileSync(join(geo, "world-finest.ts"), bodies.finest);
 
 console.log(
   [
-    "wrote world-path.ts, world.ts and world-fine.ts",
+    "wrote world-path.ts, world.ts, world-fine.ts and world-finest.ts",
     `  path:  ${pathPolygons.length} shapes, ${toPath(pathPolygons).length} chars`,
     `  globe: ${globePolygons.length} shapes, ${vertices(globePolygons)} points`,
     `  fine:  ${finePolygons.length} shapes, ${vertices(finePolygons)} points`,
     `  bord:  ${borderLines.length} lines`,
-    `  world-path.ts ${gzipSync(pathFile).length} gzipped  (every gallery page)`,
-    `  world.ts      ${gzipSync(file).length} gzipped  (/globe only)`,
-    `  world-fine.ts ${gzipSync(fine).length} gzipped  (on demand)`,
+    `  world-path.ts ${gzipSync(bodies.path).length} gzipped  (every gallery page)`,
+    `  world.ts      ${gzipSync(bodies.globe).length} gzipped  (/globe only)`,
+    `  world-fine.ts ${gzipSync(bodies.fine).length} gzipped  (on demand)`,
+    `  world-finest.ts ${gzipSync(bodies.finest).length} gzipped  (deep zoom only)`,
   ].join("\n"),
 );

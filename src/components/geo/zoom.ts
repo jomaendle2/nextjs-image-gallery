@@ -11,50 +11,61 @@ import { unproject } from "./projection";
  */
 
 /**
- * The two magnifications, and the ceiling the wheel and the pinch stop at.
+ * The magnifications, and the ceiling the wheel and the pinch stop at.
  *
- * `MAX_ZOOM` is where the finer data runs out rather than where the
- * arithmetic does, and the number is measured rather than assumed. This
- * paragraph used to claim a vertex every 0.07 degrees. Counting all 28,622
- * of them puts the median gap in `world-fine` at **0.264 degrees**, so the
- * data is nearly four times coarser than it was credited with.
+ * `MAX_ZOOM` is where the data runs out rather than where the arithmetic
+ * does, and the number is measured rather than assumed. A globe stops being
+ * a coastline and starts being a polygon at the zoom where its vertices open
+ * past roughly **2.7 CSS pixels** apart on screen — that figure is the whole
+ * constraint, and everything below is arithmetic from it.
  *
- * The overlay is `min(96vw, 74dvh)` and the sphere fills `FILL` of it, so on
- * a 1512x787 laptop the radius at 2.5x is about 640 CSS pixels — and that
- * median gap lands a little under **3 CSS pixels** apart. Past this the globe
- * magnifies a polygon rather than a coast.
+ * The ceiling used to be 2.5, set by `world-fine`, whose 27,000 vertices sit
+ * a median 0.245 degrees apart: on a laptop the sphere's radius at 2.5x is
+ * about 640 CSS pixels, which puts that median gap a little under three
+ * pixels. Exactly at the limit, which is why it was the limit.
  *
- * Both numbers are measured rather than reasoned about, which is the point:
- * the figure they replaced was wrong for long enough to be quoted as a
- * constraint, and a constraint nobody can reproduce is a guess with a
- * decimal point.
+ * It is now 6, because there is a finer coastline to spend. `world-finest`
+ * cuts the median gap to 0.094 degrees, and the same arithmetic gives out at
+ * about 6.4x. Measured across the dataset by `scripts/build-world.mts`:
  *
- * That is why "more zoom" is not the answer to wanting a closer look: more
- *range* would show the reader the seams. What helps is more *stops* inside
- * the same range, and arriving somewhere worth looking at — see
- * `zoomFocus` in `gestures.ts`, which turns the point under the pointer
- * toward the middle as the sphere grows.
+ *   world-fine     0.245°  →  2.5x
+ *   world-finest   0.094°  →  6.4x
  *
- * **Four stops, evenly spaced.** With only 1 and 2.5, one press of `+` took
- * the whole sphere to maximum magnification — and since zoom magnifies
- * whatever sits at the centre, and the centre is usually open ocean, the
- * result was a featureless near-black disc with every mark off frame. The
- * most discoverable control on the overlay made the page look broken in one
- * click. Three intermediate presses of half a step each read as getting
- * closer to something, and give the focus drift somewhere to happen
- * gradually rather than all at once.
+ * **More zoom is not a setting, it is more coastline.** That is worth saying
+ * plainly because it looks like a constant somebody could have raised at any
+ * point: raising it without the data underneath produces a smooth, confident
+ * picture of vertices that were never surveyed, which is worse than refusing
+ * to magnify — the reader cannot tell invented detail from measured detail.
+ * The half-megabyte behind this number is what makes it honest.
+ *
+ * **Six stops of one, still evenly spaced.** The old four covered a range of
+ * 1.5 in steps of half; these cover a range of five in steps of one, which
+ * keeps the rule that "+" always means the same amount of closer. It costs
+ * five presses to cross the whole range rather than three — the right way
+ * round, because the range is more than three times longer and a press that
+ * covered a fifth of it would be the jump the even-steps rule exists to
+ * prevent.
+ *
+ * What still does not scale past here is the *marks*. A public pin is
+ * coarsened to a hundred kilometres before it is stored, so beyond about six
+ * the coastline keeps improving while the dots stop meaning anything more
+ * precise — and a globe that invites a closer look at a dot it cannot place
+ * is making a promise the privacy model deliberately breaks.
  */
-export const ZOOM_STOPS = [1, 1.5, 2, 2.5] as const;
+export const ZOOM_STOPS = [1, 2, 3, 4, 5, 6] as const;
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 2.5;
+export const MAX_ZOOM = 6;
 
 /**
- * How much of a wheel a doubling is worth.
+ * The zoom past which `world-fine` is no longer enough.
  *
- * Exponential rather than additive, so a notch means the same thing at both
- * ends: zooming in and straight back out returns to where it started instead
- * of drifting, which additive steps do not.
+ * `GlobeCanvas` watches this to decide when to fetch `world-finest`, so the
+ * half-megabyte is spent by the reader who zooms rather than by the one who
+ * opens the globe. Set at the old ceiling, which is precisely where the old
+ * data stopped having anything more to say.
  */
+export const FINEST_FROM = 2.5;
+
 export const WHEEL_ZOOM = 0.0015;
 
 /** Firefox reports wheel deltas in lines rather than pixels. */
@@ -135,10 +146,46 @@ export function focusedView({
    * How much of what was left of the range this step used. At the top there
    * is nothing left to consume, so the share is forced to one and the last
    * step lands the target dead centre rather than asymptotically near it.
+   *
+   * **Measured multiplicatively, because zoom is multiplicative.** A wheel
+   * notch scales the magnification rather than adding to it, and the sphere's
+   * radius scales with it — so what "half way there" means has to be counted
+   * the same way, or the turning falls behind the growing.
+   *
+   * The linear version of this line was correct while the range ran 1 to 2.5
+   * and wrong the moment it ran to 6, in a way that only a longer range
+   * exposes: the residual angle a step leaves behind is multiplied by a
+   * radius that keeps growing, so a target could sit further from the middle
+   * in pixels after forty notches than after twenty while the angle between
+   * them quietly shrank. `zoom.test.ts` measures pixels, which is what the
+   * reader sees, and it caught this.
    */
-  const remaining = MAX_ZOOM - from.zoom;
-  const share =
-    remaining <= 0.001 ? 1 : Math.min(1, (to - from.zoom) / remaining);
+  const span = Math.log(MAX_ZOOM / from.zoom);
+  const progress =
+    span <= 0.001 ? 1 : Math.min(1, Math.log(to / from.zoom) / span);
+
+  /*
+   * A floor under that share, tied to how much bigger the sphere just got.
+   *
+   * Magnifying multiplies the radius, so a target left off-centre is carried
+   * further from the middle *in pixels* by the same step that brought it
+   * closer *in degrees*. `1 - from/to` is the share at which those two
+   * exactly cancel for a target near the middle, where the projection is
+   * close to linear in the angle.
+   *
+   * It does not cancel them near the limb, and it is worth being exact about
+   * that rather than claiming a guarantee: out there the projection is a
+   * sine, it flattens, and a target that starts most of a hemisphere away
+   * still drifts outward in pixels for the first few notches before coming
+   * back — measured, over a wheel run from 1 to 6, it peaks about a sixth
+   * further out around the third notch and is dead centre by the tenth.
+   *
+   * What the floor buys is a much smaller hump: without it the same run
+   * peaks nearly twice as far out. What guarantees the arrival is `progress`
+   * reaching one at the top of the range. The two together are why
+   * `zoom.test.ts` can assert that the *angle* never grows.
+   */
+  const share = Math.min(1, Math.max(progress, 1 - from.zoom / to));
 
   /*
    * Spin is cyclic, and the way round matters: +350 degrees and -10 put the

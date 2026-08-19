@@ -26,7 +26,7 @@ import {
  */
 
 const ALPHA_BODY = 0.05;
-const ALPHA_LAND = 0.1;
+const ALPHA_LAND = 0.16;
 const ALPHA_COAST = 0.26;
 const ALPHA_BORDER = 0.11;
 const ALPHA_GRATICULE = 0.07;
