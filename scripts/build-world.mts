@@ -102,11 +102,11 @@ const RECIPES = {
    * across this dataset, the median gap falls roughly with the tolerance —
    *
    *   0.07  → 0.245°  →  2.5x   (what `fine` supports)
-   *   0.02  → 0.069°  →  6x     (the previous ceiling)
+   *   0.02  → 0.069°  →  6x
+   *   0.015 → 0.055°  →  8x     (here)
    *   0.012 → 0.049°  → 12x
-   *   0.008 → 0.038°  → 16x     (here)
-   *   0.005 → 0.029°  → 20x
-   *   0      →  0.014°  → 30x   (the raw source, and the end of the road)
+   *   0.008 → 0.038°  → 16x
+   *   0      → 0.014°  → 30x    (the raw source, and the end of the road)
    *
    * — so "let me look closer" costs vertices in direct proportion, and there
    * is no clever tolerance that buys the zoom for free.
@@ -117,18 +117,20 @@ const RECIPES = {
    * different source — OSM coastline — not a smaller tolerance. Anything
    * beyond would be smooth, confident, and invented.
    *
-   * 0.008 lands at 16x for 736KB gzipped, against 414KB for the 6x that came
-   * before. Roughly 320KB for two and a half times the magnification, on a
-   * file nobody downloads unless they have already pinched twice.
+   * **The tolerance is set by the zoom ceiling, and the ceiling is set by the
+   * marks rather than by the coast.** This briefly ran at 0.008, which buys a
+   * coastline good for 16x — and 16x was too far, for a reason that has
+   * nothing to do with coastlines. `coarsen.ts` publishes a point up to 71km
+   * from where a photograph was taken, on purpose and permanently. That error
+   * is invisible at 1x and about four dot-widths at 16x, so magnifying past
+   * the coast's honest limit produced a globe whose *land* got sharper while
+   * its *dots* visibly wandered off the places they name.
    *
-   * What does *not* scale with it is the **marks**. A public pin is coarsened
-   * to a hundred kilometres before it is stored, so past about 6x the
-   * coastline keeps improving while the dots stop meaning anything more
-   * precise. That is a deliberate privacy floor rather than a limitation to
-   * fix, and it is why the coast is what deep zoom is for: at 16x a reader is
-   * looking at a fjord, not at where somebody stood.
+   * So the ceiling is 8x, and this is the tolerance that 8x needs — no finer.
+   * Detail past what the reader can reach is weight nobody can see, which is
+   * the same argument that keeps this file off the everyday path at all.
    */
-  finest: { tolerance: 0.008, minSpan: 0.1, places: 3 },
+  finest: { tolerance: 0.015, minSpan: 0.1, places: 3 },
   /*
    * Borders are thinner than coasts and forgive more, and a lower span bar
    * keeps the small enclaves that make the picture read as real.
@@ -139,7 +141,7 @@ const RECIPES = {
    * A hand-drawn-looking border running alongside a precise coastline is the
    * one artefact that would make the extra coastline detail look like a bug.
    */
-  bordersFinest: { tolerance: 0.01, minSpan: 0.1, places: 3 },
+  bordersFinest: { tolerance: 0.019, minSpan: 0.1, places: 3 },
 } as const;
 
 /**

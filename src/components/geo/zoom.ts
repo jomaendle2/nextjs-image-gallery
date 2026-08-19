@@ -23,7 +23,7 @@ import { unproject } from "./projection";
  * between neighbouring vertices:
  *
  *   world-fine     0.245°  →  2.5x
- *   world-finest   0.038°  →  16x
+ *   world-finest   0.055°  →  8x
  *   the raw source 0.014°  →  30x
  *
  * **More zoom is not a setting, it is more coastline.** That is worth saying
@@ -31,7 +31,7 @@ import { unproject } from "./projection";
  * point: raising it without the data underneath produces a smooth, confident
  * picture of vertices that were never surveyed, which is worse than refusing
  * to magnify — the reader cannot tell invented detail from measured detail.
- * The megabyte behind this number is what makes it honest.
+ * The half-megabyte behind this number is what makes it honest.
  *
  * **And there is an end to it.** The last row is the raw Natural Earth 10m
  * source with no simplification at all, and 10m is the finest they publish.
@@ -39,26 +39,35 @@ import { unproject } from "./projection";
  * dataset stops knowing anything, and going deeper would mean a different
  * source rather than a smaller tolerance.
  *
+ * **But the coast is not what sets this number — the marks are, and they run
+ * out first.** This ran at 16x for exactly one commit, on a coastline that
+ * genuinely supports it, and the result was a globe full of dots in the wrong
+ * places. `coarsen.ts` publishes a point up to 71km from where the
+ * photograph was taken, deliberately and permanently. On screen that error is
+ * about `2.5 * zoom` pixels against a dot whose halo is 11 across: inside the
+ * dot at 4x, twice it at 8x, four times it at 16x. Past here the land keeps
+ * getting sharper while the pins visibly wander off the places they name, and
+ * a globe that invites a closer look at a dot it cannot place is making a
+ * promise the privacy model deliberately breaks.
+ *
+ * So 8x is a compromise rather than a limit: one stop past where the marks
+ * are truly comfortable, because the coast at 8x is worth looking at and the
+ * drift there is still small enough to read as a dot sitting *near* a place
+ * rather than in the wrong one. It is not a number the data forced.
+ *
  * **The stops double.** They used to add one — 1 through 6 in steps of half,
  * then of one — on the rule that "+" should always mean the same amount of
- * closer. Over a range of sixteen that rule inverts itself: even steps of
- * three would make the first press a quadrupling and the last press a 23%
- * nudge, which is the same press meaning wildly different things. Doubling
+ * closer. Over a range this long that rule inverts itself: even steps would
+ * make the first press a doubling and the last a fractional nudge. Doubling
  * is what "the same amount of closer" means for a magnification, and it is
  * the way `focusedView` already reasons about the range — see the note there
- * about measuring progress multiplicatively. Four presses cross the whole
+ * about measuring progress multiplicatively. Three presses cross the whole
  * range, and each one does the same thing.
  *
- * What still does not scale past here is the *marks*. A public pin is
- * coarsened to a hundred kilometres before it is stored, so beyond about six
- * the coastline keeps improving while the dots stop meaning anything more
- * precise — and a globe that invites a closer look at a dot it cannot place
- * is making a promise the privacy model deliberately breaks. Deep zoom is
- * for the coast, not for the pins.
  */
-export const ZOOM_STOPS = [1, 2, 4, 8, 16] as const;
+export const ZOOM_STOPS = [1, 2, 4, 8] as const;
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 16;
+export const MAX_ZOOM = 8;
 
 /**
  * The zoom past which `world-fine` is no longer enough.

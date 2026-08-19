@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { beyondHorizon, boundingCaps, outsideFrame, viewBasis } from "./caps";
 import { markNear, placeMarks } from "./marks";
 import { cameraDirection, project, type View } from "./projection";
+import { MAX_ZOOM } from "./zoom";
 
 /**
  * The back-face cull, checked against the thing it is an optimisation of.
@@ -159,7 +160,8 @@ describe("the frame cull", () => {
       const view: View = {
         spin: random() * 360,
         tilt: (random() - 0.5) * 140,
-        // 1x through 16x, the whole range the stops cover.
+        // 1x through 8x, the whole range the stops cover, and a little past
+        // it so the predicate is checked beyond where the UI can reach.
         radius: FRAME * (1 + random() * 15),
       };
 
@@ -184,13 +186,13 @@ describe("the frame cull", () => {
 
   it("discards most of the world once the globe outgrows the porthole", () => {
     const caps = boundingCaps(LAND);
-    const view: View = { spin: 0, tilt: 0, radius: FRAME * 16 };
+    const view: View = { spin: 0, tilt: 0, radius: FRAME * MAX_ZOOM };
     const kept = caps.filter(
       (cap) => !outsideFrame(cap, viewBasis(view), FRAME),
     );
 
-    // The point of the whole exercise: at 16x the porthole holds a sliver of
-    // the near side, and almost nothing survives both culls.
+    // The point of the whole exercise: at the top stop the porthole holds a
+    // sliver of the near side, and almost nothing survives both culls.
     expect(kept.length).toBeLessThan(LAND.length);
   });
 
