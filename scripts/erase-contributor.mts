@@ -17,7 +17,7 @@
  * So this is a script rather than an admin button, deliberately: erasure is
  * rare, irreversible, and worth typing a command for.
  *
- * Dry run by default, following `name-photographs.mts` and the guard.
+ * Dry run by default, following the guard.
  *
  *   npm run db:erase-contributor -- someone@example.com
  *   npm run db:erase-contributor -- someone@example.com --apply

@@ -66,3 +66,8 @@ skills-lock.json
 # documentation, and not something to carry into a commit by accident. The
 # two already tracked here stay tracked; git ignores this only for new files.
 docs/snapshots/
+
+# JetBrains project files. Editor state, not project configuration —
+# `copilotDiffState.xml` was tracking a pending diff for a route deleted
+# months ago.
+.idea/
