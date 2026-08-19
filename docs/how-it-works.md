@@ -160,7 +160,7 @@ empty by default, and nothing is read from the file — a marked point is a
 decision somebody makes afterwards, exactly like typing a sentence.
 
 Marking a point stores it twice: the exact position, which only members see,
-and the centre of a cell about 100 km across, which is public and is what
+and the centre of a cell about 1 km across, which is public and is what
 `/globe` draws. The picker shows both before the save. A photographer whose
 subject should not be findable can publish the blurred dot only, which
 discards the exact point rather than storing it.

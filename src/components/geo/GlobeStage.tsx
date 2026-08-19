@@ -67,7 +67,23 @@ const GlobeOverlay = dynamic(
   { ssr: false },
 );
 
-export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
+export function GlobeStage({
+  points,
+  places: placeCount,
+}: {
+  points: readonly GlobePoint[];
+  /**
+   * How many *places* the page lists, which is not how many dots this draws.
+   *
+   * A dot is a coarsened cell; a place is what a reader would name, and
+   * `groupIntoPlaces` gathers nearby cells sharing a region into one. Three
+   * cells around Bali are three dots and one heading. Counting `points` here
+   * put "26 places" above a list that said 22 — two different counts of the
+   * same word on one screen — so the number comes from the page rather than
+   * from the array this happens to hold.
+   */
+  places: number;
+}) {
   const [open, setOpen] = useState(false);
   const [places, setPlaces] = useState<Map<string, GlobePlace> | null>(null);
 
@@ -148,7 +164,7 @@ export function GlobeStage({ points }: { points: readonly GlobePoint[] }) {
             reader user opens blind.
           */}
           <Title className={META}>
-            {`The globe · ${count(points.length, "place")}`}
+            {`The globe · ${count(placeCount, "place")}`}
           </Title>
 
           <GlobeOverlay places={places} points={points} />

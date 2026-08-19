@@ -156,6 +156,55 @@ export function locationToFill(
     : null;
 }
 
+/**
+ * The point to drop into an empty pin field without a click, or null.
+ *
+ * The same rule as `locationToFill`, on the same guess, for the same reason —
+ * and it deliberately did not exist until now. The argument against it was
+ * that a name is text somebody reads and corrects, while a pin is a public
+ * artifact: it becomes the dot the globe draws. That is still true; what
+ * changed is that leaving it behind a second click meant a photographer who
+ * had already accepted "Taipei, Taiwan" then had to press "Put a pin roughly
+ * here" to say the same thing again. Two clicks for one fact.
+ *
+ * **It follows the name rather than re-deciding it**, and that is the fix for
+ * the way this was first written. Checking only the pin field made "the same
+ * rule" false in the one case that matters: a photographer who had typed
+ * "Thailand" and left the pin empty got the name refused — the box was not
+ * empty — and the point dropped anyway. The globe would have shown a dot in
+ * Hawaii under a photograph captioned Thailand, from a guess the form had
+ * just declined in writing. The pin may only follow a name that was actually
+ * taken.
+ *
+ * `nameTaken` is that fact, passed in, and it is passed rather than worked
+ * out again for a reason worth the sentence. The first repair asked
+ * `locationToFill` a second time, against the Location field — which by then
+ * held the name it had just written. "Empty" was the condition, the write had
+ * made it false, and so the pin never dropped in the one case the feature
+ * exists for. A decision read twice out of a box being written into is a
+ * decision that can disagree with itself; taken once and handed on, it
+ * cannot.
+ *
+ * The rest of the guards are the old argument kept honest: only into an
+ * empty pin field, and only when the guess carried a point — a name without
+ * coordinates drops nothing. Undo puts it back with everything else, and the
+ * public half is coarsened to a kilometre before it is stored, so
+ * the dot this produces says roughly where and never where somebody stood.
+ */
+export function pinToDrop(
+  places: readonly PlaceGuess[],
+  currentValue: string,
+  nameTaken: boolean,
+): { lat: number; lng: number } | null {
+  const [top] = places;
+  return nameTaken &&
+    top?.point !== undefined &&
+    top.point !== null &&
+    currentValue.trim() === ""
+    ? top.point
+    : null;
+}
+
 /** The id prefix the coordinate field uses, which is not its field name. */
 const PIN_PREFIX = "pin";
 

@@ -5,7 +5,7 @@ import { CELL_KM, coarsen, MAX_ERROR_KM } from "./coarsen";
  * The privacy claim, as arithmetic.
  *
  * The picker tells a photographer that the public point is "the middle of a
- * square about a hundred kilometres across". That is a promise, and the only
+ * square about a kilometre across". That is a promise, and the only
  * thing that makes it one is this file: everything below measures real
  * ground distance with a haversine, rather than checking that the code does
  * what the code does.
@@ -22,7 +22,7 @@ function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-/** Great-circle distance, so "100 km" means kilometres on the ground. */
+/** Great-circle distance, so `CELL_KM` means kilometres on the ground. */
 function haversineKm(
   latA: number,
   lngA: number,
@@ -102,8 +102,16 @@ describe("CELL_KM", () => {
    * would produce. That is a migration, not an edit — this test is here so
    * nobody discovers that afterwards.
    */
-  it("is frozen at 100 km, because changing it needs a backfill", () => {
-    expect(CELL_KM).toBe(100);
+  it("is frozen at 1 km, because changing it needs a backfill", () => {
+    /*
+     * This tripwire has fired once and did its job. The value was 100 while
+     * the globe could only be looked at whole; magnification made a
+     * hundred-kilometre cell visibly wrong rather than usefully blunt, and
+     * moving to 1 meant a backfill of every stored point plus a rewrite of
+     * everything the site promises about it. Which is exactly the amount of
+     * work this test exists to make somebody notice in advance.
+     */
+    expect(CELL_KM).toBe(1);
   });
 
   it("states an error bound that matches the cell diagonal", () => {
@@ -120,7 +128,7 @@ describe("the cell is never larger than it claims", () => {
     latitudes.push(lat);
   }
 
-  it.each(latitudes)("is at most 100 km wide at %d°", (lat: number) => {
+  it.each(latitudes)("is at most CELL_KM wide at %d°", (lat: number) => {
     for (const lng of [-179, -90, -0.5, 17, 120, 179]) {
       /*
        * Half a metre of slack for the binary search, not for the maths. A
@@ -131,7 +139,7 @@ describe("the cell is never larger than it claims", () => {
     }
   });
 
-  it.each(latitudes)("is at most 100 km tall at %d°", (lat: number) => {
+  it.each(latitudes)("is at most CELL_KM tall at %d°", (lat: number) => {
     expect(cellHeightKm(lat, 8.5)).toBeLessThanOrEqual(CELL_KM + 0.001);
   });
 
@@ -220,13 +228,22 @@ describe("the same cell always gives the same point", () => {
 
   /*
    * The behaviour that makes a globe honest as well as private: two
-   * photographs from one valley must land on one dot, so the map cannot be
+   * photographs from one spot must land on one dot, so the map cannot be
    * read as a trace of where somebody walked.
+   *
+   * Measured off the cell rather than off two hand-picked coordinates. A
+   * fixed pair a kilometre apart was fine while cells were a hundred
+   * kilometres wide and became a coin toss the moment they were not — two
+   * points close together still land in different cells if a boundary runs
+   * between them. Nudging away from a known centre by a fraction of a cell
+   * is inside it at any `CELL_KM`, which is the property actually being
+   * claimed.
    */
   it("collapses nearby points onto one", () => {
-    const a = coarsen(47.3769, 8.5417);
-    const b = coarsen(47.3801, 8.5502);
-    expect(b).toEqual(a);
+    const centre = coarsen(47.3769, 8.5417);
+    const nudge = (CELL_KM / 111.32) * 0.2;
+    expect(coarsen(centre.lat + nudge, centre.lng + nudge)).toEqual(centre);
+    expect(coarsen(centre.lat - nudge, centre.lng - nudge)).toEqual(centre);
   });
 
   it("still separates places that are genuinely far apart", () => {
@@ -238,13 +255,25 @@ describe("the same cell always gives the same point", () => {
    * it cannot carry any information beyond which cell was hit.
    */
   it("gives one of a small, fixed set of answers per row", () => {
+    /*
+     * Quantisation, stated as a ratio rather than as a column count. The
+     * count is a function of `CELL_KM` and hard-coding it made this a test of
+     * one cell size; what is actually being claimed is that many inputs
+     * collapse onto few outputs, which is what stops the published point
+     * carrying anything but which cell was hit.
+     *
+     * One degree of longitude at 47°, sampled far more finely than a cell is
+     * wide.
+     */
+    const samples = 2000;
     const points = new Set<string>();
-    for (let lng = -180; lng < 180; lng += 0.05) {
-      const { lng: coarseLng } = coarsen(47.3769, lng);
-      points.add(String(coarseLng));
+    for (let step = 0; step < samples; step += 1) {
+      const { lng } = coarsen(47.3769, 8 + step / samples);
+      points.add(String(lng));
     }
-    // 360° of a row 100 km wide at ~47° latitude: about 270 columns.
-    expect(points.size).toBeLessThan(400);
-    expect(points.size).toBeGreaterThan(100);
+    // A degree at 47° is ~76 km, so ~76 cells of a kilometre — far fewer
+    // than the 2000 distinct longitudes fed in.
+    expect(points.size).toBeLessThan(samples / 10);
+    expect(points.size).toBeGreaterThan(10);
   });
 });

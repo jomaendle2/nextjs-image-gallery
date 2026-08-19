@@ -67,7 +67,7 @@ optional and all blank by default:
 | --- | --- |
 | `location`, a public place name | everybody |
 | `precise_location`, a sentence | members |
-| a marked point on a map | members see the exact point; **everybody** sees a dot blurred to a ~100 km cell |
+| a marked point on a map | members see the exact point; **everybody** sees a dot blurred to a ~1 km cell |
 
 The distinction that matters is not how precise these are, it is where they
 came from: every one of them is something a person decided to write down
@@ -81,7 +81,7 @@ publish coordinates at all — a marked point outlives the season, and a
 member-only coordinate is still a coordinate handed to strangers.
 
 The picker has a **"publish the blurred dot only"** option for exactly this.
-It writes the ~100 km point and discards the exact one, so the photograph
+It writes the ~1 km point and discards the exact one, so the photograph
 appears on `/globe` and there is nothing behind the paywall to leak. When in
 doubt, use it, or leave the map alone entirely and write a sentence instead.
 

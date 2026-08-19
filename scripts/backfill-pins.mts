@@ -74,9 +74,8 @@ const PINS: Record<string, { at: [number, number]; note: string }> = {
  * they never marked — and it would flip `has_member_details`, so the
  * photograph would start advertising member content that consists entirely
  * of our guess. The coarse dot carries no such claim: `/globe` describes it
- * as roughly where somebody was, it is a cell about a hundred kilometres
- * across, and it is derived here from a place name the photographer chose to
- * publish. That is a restatement of what they already said, at lower
+ * as roughly where somebody was, it is a cell about a kilometre across, and
+ * it is derived here from a place name the photographer chose to publish. That is a restatement of what they already said, at lower
  * precision, which is the one direction this is safe in.
  *
  * If one of them wants an exact point, the picker is one click and it

@@ -19,30 +19,36 @@ describe("the zoom stops", () => {
     expect(ZOOM_STOPS.at(-1)).toBe(MAX_ZOOM);
   });
 
-  it("climbs in even steps, so no press is a bigger jump than another", () => {
+  it("climbs in even ratios, so no press is a bigger jump than another", () => {
     /*
-     * The first version went 1 → 1.6 → 2.5: a small step then a large one,
-     * and the large one is where a reader loses their place. Even steps mean
-     * "+" always means the same amount of closer.
+     * Even *ratios*, not even differences, and the distinction only starts
+     * mattering once the range is long.
+     *
+     * The first version went 1 -> 1.6 -> 2.5: a small step then a large one,
+     * and the large one is where a reader loses their place. Equal differences
+     * fixed that over a range of six. Over a range of sixteen they reintroduce
+     * it the other way round — steps of three would make the first press a
+     * quadrupling and the last a 23% nudge. What the eye reads as "the same
+     * amount of closer" is the multiple, so that is what has to be even.
      */
-    const gaps = ZOOM_STOPS.slice(1).map(
-      (stop, i) => stop - (ZOOM_STOPS[i] ?? 0),
+    const ratios = ZOOM_STOPS.slice(1).map(
+      (stop, i) => stop / (ZOOM_STOPS[i] ?? 1),
     );
-    const [first] = gaps;
+    const [first] = ratios;
     expect(first).toBeDefined();
-    for (const gap of gaps) {
-      expect(gap).toBeCloseTo(first ?? 0, 6);
+    for (const ratio of ratios) {
+      expect(ratio).toBeCloseTo(first ?? 0, 6);
     }
-    expect(gaps.length).toBeGreaterThanOrEqual(3);
+    expect(ratios.length).toBeGreaterThanOrEqual(3);
   });
 
   it("steps up and down through every stop, and wraps at the top", () => {
-    expect(nextZoomStop(1)).toBe(1.5);
-    expect(nextZoomStop(1.5)).toBe(2);
-    expect(nextZoomStop(2)).toBe(2.5);
+    expect(nextZoomStop(1)).toBe(2);
+    expect(nextZoomStop(2)).toBe(4);
+    expect(nextZoomStop(8)).toBe(MAX_ZOOM);
     // Past the last, back to the whole earth — one press to start again.
-    expect(nextZoomStop(2.5)).toBe(1);
-    expect(previousZoomStop(2.5)).toBe(2);
+    expect(nextZoomStop(MAX_ZOOM)).toBe(1);
+    expect(previousZoomStop(MAX_ZOOM)).toBe(8);
     expect(previousZoomStop(1)).toBe(1);
   });
 
@@ -205,9 +211,54 @@ describe("focusedView over a run of notches", () => {
     return view;
   };
 
-  it("converges: more notches never leave the target further out", () => {
+  /**
+   * How far the view still has to turn, in degrees on the sphere.
+   *
+   * The unit this test used to work in was pixels, and that was right while
+   * the range ran 1 to 2.5 and wrong the moment it ran to 6. Magnifying
+   * multiplies the radius, so a pixel measurement conflates two different
+   * things — how far the view still has to turn, and how much bigger the
+   * sphere got while it turned. Over a six-fold range the second can
+   * outrun the first for a few notches near the limb, and the test failed
+   * on a globe that was converging perfectly well.
+   *
+   * Degrees separate them. The promise the gesture makes is that what you
+   * pointed at comes to the middle, which is a claim about the angle, and it
+   * holds at any ceiling. `arrives dead centre` below still measures pixels,
+   * because arriving is the one moment the two units agree.
+   */
+  const stillToTurn = (
+    view: { spin: number; tilt: number },
+    target: { lat: number; lng: number },
+  ) => {
+    const toRad = Math.PI / 180;
+    /* The view's centre: longitude is the spin undone, latitude is the tilt. */
+    const [lat1, lng1] = [view.tilt * toRad, -view.spin * toRad];
+    const [lat2, lng2] = [target.lat * toRad, target.lng * toRad];
+    return (
+      Math.acos(
+        Math.min(
+          1,
+          Math.sin(lat1) * Math.sin(lat2) +
+            Math.cos(lat1) * Math.cos(lat2) * Math.cos(lng1 - lng2),
+        ),
+      ) / toRad
+    );
+  };
+
+  it("converges: more notches never leave the target further to turn", () => {
     const target = { lat: -35, lng: -60 };
-    const offsets = [1, 5, 10, 20, 40].map((notches) => {
+    const angles = [1, 5, 10, 20, 40].map((notches) =>
+      stillToTurn(wheelTowards(target, notches), target),
+    );
+
+    for (const [i, angle] of angles.entries()) {
+      if (i > 0) {
+        expect(angle).toBeLessThanOrEqual((angles[i - 1] ?? 0) + 0.001);
+      }
+    }
+
+    const offsets = [40].map((notches) => {
       const view = wheelTowards(target, notches);
       const at = project(target.lat, target.lng, {
         ...view,
@@ -215,12 +266,6 @@ describe("focusedView over a run of notches", () => {
       });
       return Math.hypot(at.x, at.y);
     });
-
-    for (const [i, offset] of offsets.entries()) {
-      if (i > 0) {
-        expect(offset).toBeLessThanOrEqual((offsets[i - 1] ?? 0) + 0.001);
-      }
-    }
     // And it actually arrives, rather than merely not getting worse.
     expect(offsets.at(-1)).toBeCloseTo(0, 6);
   });

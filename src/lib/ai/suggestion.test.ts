@@ -33,6 +33,7 @@ function answer(over: Partial<RawSuggestion> = {}): RawSuggestion {
     title: "Tide lines",
     description: "Teal waves crash against rocky cliffs.",
     places: [place()],
+    tags: [],
     ...over,
   };
 }
@@ -50,6 +51,7 @@ describe("clamping to the columns' caps", () => {
           point: { lat: -8.829, lng: 115.085 },
         },
       ],
+      tags: [],
     });
   });
 
@@ -275,6 +277,12 @@ describe("salvaging an unfinished answer", () => {
       title: "Tide Lines",
       description: "Teal waves crash.",
       places: [],
+      /*
+       * Dropped for the same reason the places are, though a tag cannot
+       * itself arrive half-written: a half-emitted *list* of subjects would
+       * be presented as the model's considered shortlist.
+       */
+      tags: [],
     });
   });
 
