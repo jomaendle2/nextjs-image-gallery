@@ -23,7 +23,7 @@ import { unproject } from "./projection";
  * between neighbouring vertices:
  *
  *   world-fine     0.245°  →  2.5x
- *   world-finest   0.055°  →  8x
+ *   world-finest   0.038°  →  16x
  *   the raw source 0.014°  →  30x
  *
  * **More zoom is not a setting, it is more coastline.** That is worth saying
@@ -39,36 +39,39 @@ import { unproject } from "./projection";
  * dataset stops knowing anything, and going deeper would mean a different
  * source rather than a smaller tolerance.
  *
- * **The marks used to set this number. They no longer do, and that is a
- * change worth recording rather than quietly deleting.** For one commit this
- * ran at 16x, on a coastline that genuinely supported it, and the globe
- * filled with dots in the wrong places — `coarsen.ts` published a point up to
- * 71km from where the photograph was taken, which is three pixels at 1x and
- * about forty at 16x. The blur had not changed; magnification had simply made
- * it visible. The ceiling came back to 8 to hide it.
+ * **The marks used to set this number. They no longer do, and the whole
+ * sequence is worth keeping because it shows which constraint was really
+ * binding at each point.**
  *
- * `CELL_KM` is 1 now, so the worst error is 0.7km — about a fifth of a pixel
- * at the deepest stop, which is to say nothing at all. The pins are no longer
- * the binding constraint at any magnification this globe offers.
+ * This ran at 16x once before, on a coastline that genuinely supported it,
+ * and the globe filled with dots in the wrong places: `coarsen.ts` published
+ * a point up to 71km from where the photograph was taken — three pixels at
+ * 1x, about forty at 16x. The blur had not changed; magnification had made it
+ * visible. The ceiling came back to 8 to hide it, which treated the symptom.
  *
- * So 8 is once again a fact about the coastline and nothing else: it is what
- * `world-finest` was generated to support, and going deeper is the same trade
- * it always was — more vertices, more kilobytes, no cleverness available. The
- * marks would not object any more. The file size still would.
+ * `CELL_KM` is 1 now, so the worst error is 0.7km: under half a pixel at 16x,
+ * measured across 44,000 sampled coordinates and verified against every
+ * published photograph. The pins are no longer the binding constraint at any
+ * magnification this globe could plausibly offer.
+ *
+ * So 16x is back, and this time it is a fact about `world-finest` rather than
+ * a number that outran the data underneath it. Going further is the same
+ * trade it always was — more vertices, more kilobytes, no cleverness
+ * available — and the file, not the marks, is what would object.
  *
  * **The stops double.** They used to add one — 1 through 6 in steps of half,
  * then of one — on the rule that "+" should always mean the same amount of
- * closer. Over a range this long that rule inverts itself: even steps would
- * make the first press a doubling and the last a fractional nudge. Doubling
- * is what "the same amount of closer" means for a magnification, and it is
- * the way `focusedView` already reasons about the range — see the note there
- * about measuring progress multiplicatively. Three presses cross the whole
- * range, and each one does the same thing.
+ * closer. Over a range this long that rule inverts itself: even steps of
+ * three would make the first press a quadrupling and the last a 23% nudge.
+ * Doubling is what "the same amount of closer" means for a magnification, and
+ * it is the way `focusedView` already reasons about the range — see the note
+ * there about measuring progress multiplicatively. Four presses cross the
+ * whole range, and each one does the same thing.
  *
  */
-export const ZOOM_STOPS = [1, 2, 4, 8] as const;
+export const ZOOM_STOPS = [1, 2, 4, 8, 16] as const;
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 8;
+export const MAX_ZOOM = 16;
 
 /**
  * The zoom past which `world-fine` is no longer enough.

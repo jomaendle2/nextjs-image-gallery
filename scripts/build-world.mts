@@ -103,9 +103,9 @@ const RECIPES = {
    *
    *   0.07  → 0.245°  →  2.5x   (what `fine` supports)
    *   0.02  → 0.069°  →  6x
-   *   0.015 → 0.055°  →  8x     (here)
+   *   0.015 → 0.055°  →  8x
    *   0.012 → 0.049°  → 12x
-   *   0.008 → 0.038°  → 16x
+   *   0.008 → 0.038°  → 16x     (here)
    *   0      → 0.014°  → 30x    (the raw source, and the end of the road)
    *
    * — so "let me look closer" costs vertices in direct proportion, and there
@@ -117,20 +117,27 @@ const RECIPES = {
    * different source — OSM coastline — not a smaller tolerance. Anything
    * beyond would be smooth, confident, and invented.
    *
-   * **The tolerance is set by the zoom ceiling, and the ceiling is set by the
-   * marks rather than by the coast.** This briefly ran at 0.008, which buys a
-   * coastline good for 16x — and 16x was too far, for a reason that has
-   * nothing to do with coastlines. `coarsen.ts` used to publish a point up to 71km
-   * from where a photograph was taken, on purpose and permanently. That error
-   * is invisible at 1x and about four dot-widths at 16x, so magnifying past
-   * the coast's honest limit produced a globe whose *land* got sharper while
-   * its *dots* visibly wandered off the places they name.
+   * **This number and `MAX_ZOOM` move together, and the history is worth
+   * keeping because it shows which of them is in charge.**
    *
-   * So the ceiling is 8x, and this is the tolerance that 8x needs — no finer.
-   * Detail past what the reader can reach is weight nobody can see, which is
-   * the same argument that keeps this file off the everyday path at all.
+   * It ran at 0.008 once before and 16x was wrong then — not because the
+   * coastline could not take it, but because `coarsen.ts` published a point
+   * up to 71km from where a photograph was taken. That blur is invisible at
+   * 1x and about four dot-widths at 16x, so magnifying produced a globe whose
+   * land got sharper while its dots wandered off the places they named. The
+   * tolerance went back to 0.015 to match a ceiling of 8.
+   *
+   * `CELL_KM` is 1 now. The worst pin error is 0.7km — under half a pixel at
+   * 16x — so the marks have dropped out of the arithmetic altogether and the
+   * ceiling is a question about this file and nothing else.
+   *
+   * Which makes it the trade it always should have been: 736KB gzipped
+   * against 414KB for two and a half times the magnification, on a file
+   * nobody downloads unless they have already pinched past 2.5x. Detail past
+   * what a reader can reach would still be weight nobody can see, so this is
+   * exactly the tolerance 16x needs and no finer.
    */
-  finest: { tolerance: 0.015, minSpan: 0.1, places: 3 },
+  finest: { tolerance: 0.008, minSpan: 0.1, places: 3 },
   /*
    * Borders are thinner than coasts and forgive more, and a lower span bar
    * keeps the small enclaves that make the picture read as real.
@@ -141,7 +148,7 @@ const RECIPES = {
    * A hand-drawn-looking border running alongside a precise coastline is the
    * one artefact that would make the extra coastline detail look like a bug.
    */
-  bordersFinest: { tolerance: 0.019, minSpan: 0.1, places: 3 },
+  bordersFinest: { tolerance: 0.01, minSpan: 0.1, places: 3 },
 } as const;
 
 /**

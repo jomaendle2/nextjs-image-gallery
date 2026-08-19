@@ -45,10 +45,10 @@ describe("the zoom stops", () => {
   it("steps up and down through every stop, and wraps at the top", () => {
     expect(nextZoomStop(1)).toBe(2);
     expect(nextZoomStop(2)).toBe(4);
-    expect(nextZoomStop(4)).toBe(MAX_ZOOM);
+    expect(nextZoomStop(8)).toBe(MAX_ZOOM);
     // Past the last, back to the whole earth — one press to start again.
     expect(nextZoomStop(MAX_ZOOM)).toBe(1);
-    expect(previousZoomStop(MAX_ZOOM)).toBe(4);
+    expect(previousZoomStop(MAX_ZOOM)).toBe(8);
     expect(previousZoomStop(1)).toBe(1);
   });
 
