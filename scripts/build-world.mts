@@ -131,11 +131,20 @@ const RECIPES = {
    * 16x — so the marks have dropped out of the arithmetic altogether and the
    * ceiling is a question about this file and nothing else.
    *
-   * Which makes it the trade it always should have been: 736KB gzipped
-   * against 414KB for two and a half times the magnification, on a file
+   * Which makes it the trade it always should have been: 851KB gzipped
+   * against `fine`'s 182KB, for a ceiling of 16x rather than 2.5x, on a file
    * nobody downloads unless they have already pinched past 2.5x. Detail past
    * what a reader can reach would still be weight nobody can see, so this is
    * exactly the tolerance 16x needs and no finer.
+   *
+   * **There is very little room left under the tripwire, and that is the
+   * number to check before touching this line.** `world.test.ts` caps the
+   * deep tier at 900,000 bytes gzipped and the file sits at about 872,000 —
+   * three per cent of headroom. Loosening the tolerance a step to buy a
+   * little more magnification fails CI rather than shipping quietly, which is
+   * the right failure; knowing it in advance is what stops it costing an
+   * afternoon. The run below prints the real figure every time, so measure
+   * rather than trusting this paragraph.
    */
   finest: { tolerance: 0.008, minSpan: 0.1, places: 3 },
   /*

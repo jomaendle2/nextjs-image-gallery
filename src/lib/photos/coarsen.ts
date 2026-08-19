@@ -26,13 +26,13 @@
  * sacred but that changing it has to be a decision somebody makes on purpose.
  *
  * It was 100 until the globe learned to magnify. At 1x a hundred-kilometre
- * cell is about three pixels and reads as exact; by 8x it is twenty, and a
- * dot sitting twenty pixels off the headland it names does not read as
- * "roughly here", it reads as wrong. The blur had not changed — the picture
- * had simply become good enough to show it.
+ * cell is about three pixels and reads as exact; at the 16x the globe now
+ * reaches it is nearer fifty, and a dot sitting fifty pixels off the headland
+ * it names does not read as "roughly here", it reads as wrong. The blur had
+ * not changed — the picture had simply become good enough to show it.
  *
  * One kilometre keeps the shape of the promise and drops the visible error to
- * a fifth of a pixel at the deepest stop. What it still refuses to say is the
+ * under half a pixel at the deepest stop. What it still refuses to say is the
  * part that matters: a kilometre names a beach, a ridge or a stretch of road,
  * and not a door, a viewpoint or a parked car. The exact point remains
  * member-only and is still never part of a public query.

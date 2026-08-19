@@ -177,7 +177,31 @@ function noisy(width: number, height: number): Buffer {
   return pixels;
 }
 
-describe("the display copy", () => {
+/**
+ * The one block in this suite that encodes real megapixels, and the only one
+ * that needs longer than vitest's five-second default.
+ *
+ * Everything above works on a 240 x 160 fixture and finishes in milliseconds.
+ * These do not: the resize is the subject, so the fixtures have to be larger
+ * than `DISPLAY_MAX_EDGE` to exercise it at all, and mozjpeg over a canvas
+ * that size costs seconds rather than milliseconds. The orientation test is
+ * the worst of them, because the tag it checks has to be written by the
+ * encoder onto a canvas of its own — nine megapixels of incompressible noise,
+ * generated and encoded inside the test body. Measured at a fraction of a
+ * second on a developer's machine and six seconds in a modest container,
+ * against a five-second ceiling: which is to say it was passing on how fast
+ * the machine happened to be, and this branch is the one that put it on a
+ * runner nobody chose.
+ *
+ * Raised rather than made cheaper, because the size is load-bearing — a
+ * fixture small enough to be fast is a fixture that never reaches the clamp
+ * these tests exist to check.
+ *
+ * Generous on purpose. This bounds a hang, not a performance regression;
+ * there is nothing here worth failing a build over at eight seconds that is
+ * fine at four.
+ */
+describe("the display copy", { timeout: 30_000 }, () => {
   let wide: Buffer;
   let derivedWide: Awaited<ReturnType<typeof deriveFromBuffer>>;
 

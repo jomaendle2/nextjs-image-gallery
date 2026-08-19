@@ -6,8 +6,13 @@
  * receives exactly the detail they have asked for and no more:
  *
  *   `world`         ~27 KB   when the globe first draws at all
- *   `world-fine`   ~187 KB   when the globe is expanded full-screen
- *   `world-finest` ~501 KB   when somebody zooms past what `fine` can draw
+ *   `world-fine`   ~182 KB   when the globe is expanded full-screen
+ *   `world-finest` ~851 KB   when somebody zooms past what `fine` can draw
+ *
+ * Gzipped, and measured rather than remembered — `world.test.ts` holds a
+ * ceiling against each one, and the deep tier sits within three per cent of
+ * its own. A number written down here that has drifted from the file is how
+ * somebody talks themselves into a tolerance the tripwire then rejects.
  *
  * Module-scoped promises rather than component state, so opening the globe a
  * second time is instant and two globes on one page join one request instead
@@ -30,7 +35,7 @@ import type { Detailed, Land } from "./sphere";
  * session, and every later ask re-awaits the same failure and re-logs it.
  * Clearing the slot on the way past leaves the retry available to whoever
  * asks next: for the deep coastline that is the reader's next pinch, which is
- * the natural moment to try half a megabyte again.
+ * the natural moment to try eight hundred kilobytes again.
  *
  * The `import()` calls stay written out at each call site below rather than
  * being passed a module name, because `world.test.ts` asserts each of those
@@ -59,10 +64,10 @@ function shared<T>(fetch: () => Promise<T>): () => Promise<T> {
  *
  * **This function has to stay in this file, textually.** `world.test.ts`
  * asserts that the string `world-fine` appears in exactly one source file and
- * names that file as `components/geo/GlobeCanvas.tsx`. Moving these six lines
- * into `sphere.ts` alongside the rest of the coastline plumbing — which is
- * where they otherwise belong — turns a green suite red for a reason that
- * takes an hour to find.
+ * names that file as `components/geo/coastline.ts` — this one. Moving these
+ * six lines into `sphere.ts` alongside the rest of the coastline plumbing —
+ * which is where they otherwise belong — turns a green suite red for a reason
+ * that takes an hour to find.
  */
 export const loadFineLand = shared<Detailed>(() =>
   import("@/lib/geo/world-fine").then((module) => ({
@@ -74,11 +79,11 @@ export const loadFineLand = shared<Detailed>(() =>
 /**
  * The deep-zoom coastline, fetched only once somebody has zoomed for it.
  *
- * Half a megabyte gzipped — larger than everything else in `src/lib/geo` put
- * together, and larger than the rest of this page's JavaScript. It buys the
- * difference between a ceiling of 2.5x and one of 6x, because magnification
- * is limited by how far apart the vertices are on screen rather than by
- * anything in the renderer.
+ * Some eight hundred and fifty kilobytes gzipped — four times everything
+ * else in `src/lib/geo` put together, and larger than the rest of this page's
+ * JavaScript. It buys the difference between a ceiling of 2.5x and one of
+ * 16x, because magnification is limited by how far apart the vertices are on
+ * screen rather than by anything in the renderer.
  *
  * The trigger is the reader crossing `FINEST_FROM`, not opening the globe.
  * Someone who looks at the sphere, turns it and leaves never fetches this;

@@ -66,6 +66,14 @@ const CEILINGS = {
    * closer" always cashes out as "more coastline". There is no tolerance
    * that buys magnification cheaply, and a ceiling is what stops the next
    * person discovering that by shipping a megabyte.
+   *
+   * **It sits about three per cent above the file, and that is deliberate.**
+   * A ceiling with room to spare is a ceiling that notices nothing: the file
+   * could grow by a third before anybody heard about it, which is exactly the
+   * invisible regression the other budgets here exist to catch. Close is what
+   * makes it a tripwire rather than a formality. So a tolerance change in
+   * `build-world.mts` is expected to fail this and be answered by moving both
+   * numbers on purpose — never by raising this one to make room.
    */
   finest: 900_000,
 } as const;
