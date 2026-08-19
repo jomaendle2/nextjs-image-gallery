@@ -105,7 +105,7 @@ describe("I6 — paid content is never in a cacheable payload", () => {
    *
    * A pin is stored at two precisions precisely so that a public globe and a
    * member-only coordinate can both exist: the coarse pair is the centre of
-   * a ~100 km cell and belongs in every page's payload, the exact pair is
+   * a ~1 km cell and belongs in every page's payload, the exact pair is
    * the thing somebody paid for. Deriving one from the other at read time
    * would put `precise_lat` in this list, which is the one place it must
    * never be — so `coarsen()` runs at write time instead.

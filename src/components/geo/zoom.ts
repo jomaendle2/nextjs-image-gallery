@@ -39,21 +39,22 @@ import { unproject } from "./projection";
  * dataset stops knowing anything, and going deeper would mean a different
  * source rather than a smaller tolerance.
  *
- * **But the coast is not what sets this number — the marks are, and they run
- * out first.** This ran at 16x for exactly one commit, on a coastline that
- * genuinely supports it, and the result was a globe full of dots in the wrong
- * places. `coarsen.ts` publishes a point up to 71km from where the
- * photograph was taken, deliberately and permanently. On screen that error is
- * about `2.5 * zoom` pixels against a dot whose halo is 11 across: inside the
- * dot at 4x, twice it at 8x, four times it at 16x. Past here the land keeps
- * getting sharper while the pins visibly wander off the places they name, and
- * a globe that invites a closer look at a dot it cannot place is making a
- * promise the privacy model deliberately breaks.
+ * **The marks used to set this number. They no longer do, and that is a
+ * change worth recording rather than quietly deleting.** For one commit this
+ * ran at 16x, on a coastline that genuinely supported it, and the globe
+ * filled with dots in the wrong places — `coarsen.ts` published a point up to
+ * 71km from where the photograph was taken, which is three pixels at 1x and
+ * about forty at 16x. The blur had not changed; magnification had simply made
+ * it visible. The ceiling came back to 8 to hide it.
  *
- * So 8x is a compromise rather than a limit: one stop past where the marks
- * are truly comfortable, because the coast at 8x is worth looking at and the
- * drift there is still small enough to read as a dot sitting *near* a place
- * rather than in the wrong one. It is not a number the data forced.
+ * `CELL_KM` is 1 now, so the worst error is 0.7km — about a fifth of a pixel
+ * at the deepest stop, which is to say nothing at all. The pins are no longer
+ * the binding constraint at any magnification this globe offers.
+ *
+ * So 8 is once again a fact about the coastline and nothing else: it is what
+ * `world-finest` was generated to support, and going deeper is the same trade
+ * it always was — more vertices, more kilobytes, no cleverness available. The
+ * marks would not object any more. The file size still would.
  *
  * **The stops double.** They used to add one — 1 through 6 in steps of half,
  * then of one — on the rule that "+" should always mean the same amount of

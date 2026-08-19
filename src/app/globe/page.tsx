@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   alternates: alternates("/globe"),
   title: "Where these were taken — the beauty of earth.",
   description:
-    "Every place a photographer has marked, blurred to about a hundred kilometres.",
+    "Every place a photographer has marked, blurred to about a kilometre.",
 };
 
 /**

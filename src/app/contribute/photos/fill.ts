@@ -179,7 +179,7 @@ export function locationToFill(
  * The rest of the guards are the old argument kept honest: only into an
  * empty pin field, and only when the guess carried a point — a name without
  * coordinates drops nothing. Undo puts it back with everything else, and the
- * public half is coarsened to a hundred kilometres before it is stored, so
+ * public half is coarsened to a kilometre before it is stored, so
  * the dot this produces says roughly where and never where somebody stood.
  */
 export function pinToDrop(

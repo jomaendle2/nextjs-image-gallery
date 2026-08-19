@@ -98,7 +98,7 @@ grouped list of every photograph with a marked place, and the obvious next
 idea is to put a thumbnail beside each one — which reproduces exactly the
 cost above, on a second page, at the same 5.4 KB per photograph. The page is
 affordable because it costs per *place* rather than per photograph:
-`coarsen` collapses everything within about a hundred kilometres onto one
+`coarsen` collapses everything within about a kilometre onto one
 point, so 300 photographs are roughly 120 cells, and the canvas is handed
 three numbers a cell rather than the photograph lists. If a picture is
 wanted there, it is one picture per cell chosen server-side, not one per row.

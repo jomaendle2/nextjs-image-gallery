@@ -120,7 +120,7 @@ const RECIPES = {
    * **The tolerance is set by the zoom ceiling, and the ceiling is set by the
    * marks rather than by the coast.** This briefly ran at 0.008, which buys a
    * coastline good for 16x — and 16x was too far, for a reason that has
-   * nothing to do with coastlines. `coarsen.ts` publishes a point up to 71km
+   * nothing to do with coastlines. `coarsen.ts` used to publish a point up to 71km
    * from where a photograph was taken, on purpose and permanently. That error
    * is invisible at 1x and about four dot-widths at 16x, so magnifying past
    * the coast's honest limit produced a globe whose *land* got sharper while

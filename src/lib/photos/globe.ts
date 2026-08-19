@@ -4,17 +4,25 @@ import type { GlobePointRow } from "./types";
  * Turning a list of published points into the handful of places they are.
  *
  * **Clustering is the payload design, not a visual nicety.** `coarsen`
- * already collapses everything within about a hundred kilometres onto one
- * identical point, so the rows arriving here are mostly duplicates — three
- * hundred photographs are perhaps a hundred and twenty distinct cells.
- * Grouping on the way out is the difference between a page that scales with
- * the gallery and one that scales with the world.
+ * collapses everything inside one cell onto one identical point, so rows
+ * arriving here from the same spot are duplicates and grouping on the way
+ * out is what keeps the payload proportional to places rather than to
+ * photographs.
+ *
+ * It used to do far more of the work than it does now. At a hundred
+ * kilometres a cell swallowed a whole region, and three hundred photographs
+ * collapsed to perhaps a hundred and twenty points; at a kilometre it
+ * swallows a viewpoint, so a day spent walking around one bay arrives as
+ * several points rather than one. The grouping still earns its place — a
+ * gallery accumulates repeat visits to the same few spots — but the ratio it
+ * buys is closer to two-to-one than three-to-one, and the honest way to read
+ * the table below is as a floor rather than a forecast.
  *
  * | photographs | cells | JSON |
  * | ---: | ---: | ---: |
  * | 14 | ≤ 14 | ~1.5 KB |
- * | 300 | ~120 | ~12 KB |
- * | 1000 | ~300 | ~30 KB |
+ * | 300 | ~200 | ~20 KB |
+ * | 1000 | ~650 | ~65 KB |
  *
  * Pure, and separate from both the query and the page, so the grouping can
  * be tested without a database or a renderer.
@@ -150,10 +158,17 @@ export function toGlobePoints(cells: readonly GlobeCell[]): GlobePoint[] {
  * What to call a cell in a sentence.
  *
  * "Near", always, and never the bare place name. The point is the centre of
- * a square about a hundred kilometres across, so a heading reading "Nusa
- * Penida" would claim a precision the data does not have — and the whole
- * argument for publishing these at all is that they are too blunt to find
- * anything with. Two names are joined; beyond that the count carries it.
+ * a square about a kilometre across, so a heading reading "Nusa Penida"
+ * would claim a precision the data does not have.
+ *
+ * The word stays even though the cell shrank by two orders of magnitude, and
+ * it is worth saying why rather than treating it as leftover caution: the
+ * argument for publishing these at all is that they are blunt on purpose,
+ * and a kilometre is still a beach rather than a spot on it. Dropping "Near"
+ * would turn a deliberately imprecise point into a claim about an address,
+ * which is the one thing this data must never be read as.
+ *
+ * Two names are joined; beyond that the count carries it.
  *
  * "Somewhere unnamed" when nobody in the cell wrote a location: a
  * photographer may mark a spot without naming it, and the dot still belongs

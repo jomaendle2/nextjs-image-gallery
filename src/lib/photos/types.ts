@@ -34,7 +34,7 @@ export interface PhotoRow {
   author_name: string;
   author_site_url: string | null;
   /**
-   * The public half of a pin: the centre of a cell about 100 km across, or
+   * The public half of a pin: the centre of a cell about a kilometre across, or
    * null if the photographer marked nothing.
    *
    * The exact pair is deliberately absent, exactly as `precise_location` is.
