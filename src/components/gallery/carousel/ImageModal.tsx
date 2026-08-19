@@ -300,7 +300,17 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
             draggable={false}
             onLoad={handleLoad}
             placeholder="blur"
-            priority={true}
+            /*
+             * Eager and high priority, but not preloaded. The modal mounts on
+             * a click, so a `<link rel=preload>` in the head would be injected
+             * after the request it is supposed to get ahead of — `priority`
+             * (deprecated in Next 16, and a `preload` alias) bought nothing
+             * here except a late tag. What matters for a full-screen
+             * photograph the reader is already waiting on is its place in the
+             * queue, which is what `fetchPriority` sets.
+             */
+            fetchPriority="high"
+            loading="eager"
             quality={95}
             sizes={zoomedSizes}
             src={image.src}
