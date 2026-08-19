@@ -63,12 +63,38 @@ export const ROOT = join(SRC, "..");
  * change what every invariant above can see.
  */
 export function allSourceFiles(dir: string = SRC): string[] {
+  return walk(
+    dir,
+    (entry) => /\.tsx?$/.test(entry) && !entry.endsWith(".test.ts"),
+  );
+}
+
+/**
+ * The traversal, once, with the policy left to the caller.
+ *
+ * `keep` decides on the filename and `skip` on the full path, because those
+ * are the two shapes every caller has wanted: an extension, and one directory
+ * or file that is output rather than source.
+ *
+ * Shared for the reason the docblock above gives about `allSourceFiles`. The
+ * exclusions are the interesting part and belong at each call site; the
+ * `readdirSync`/`statSync`/recurse is not, and there were three copies of it —
+ * the third added by the tests that check the documentation, which is one more
+ * place for a walk to quietly stop descending.
+ */
+export function walk(
+  dir: string,
+  keep: (entry: string) => boolean,
+  skip: (full: string) => boolean = () => false,
+): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      found.push(...allSourceFiles(full));
-    } else if (/\.tsx?$/.test(entry) && !entry.endsWith(".test.ts")) {
+    if (skip(full)) {
+      // The caller's exclusion. `noContinue` is on, so this branch is empty.
+    } else if (statSync(full).isDirectory()) {
+      found.push(...walk(full, keep, skip));
+    } else if (keep(entry)) {
       found.push(full);
     }
   }

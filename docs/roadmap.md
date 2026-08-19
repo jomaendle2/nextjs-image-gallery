@@ -203,6 +203,29 @@ in a review thread because a comment in a diff is read once.
   unguarded whatever happens — it runs on `vercel-build`, and a guard there
   refuses every production deploy. **Trigger:** the next destructive script.
 
+- **`VERCEL_ENV` is read in five places with five predicates.**
+  `src/app/api/views/route.ts` (`=== "production"`),
+  `src/components/ui/EnvironmentBanner.tsx` (the same, then `=== "preview"`
+  for its phrasing), `src/lib/ai/offer.ts` and `scripts/preflight.mts`
+  (`!== "production"`), and `scripts/migrate.mts` (absent, or production, or
+  an opt-in flag). Three of them carry their own paragraph re-explaining that
+  a preview reports `"preview"` and a local `next dev` reports nothing, so
+  that explanation is now maintained in triplicate and they disagree the day
+  Vercel adds a fourth value.
+
+  The fix is a single deployment module under `src/lib`, exporting
+  `isProduction()` and `deploymentEnv()`, with the paragraph written once.
+  (Named in words rather than as a path: `docs.test.ts` checks that every
+  `src/…` path in prose exists, and a roadmap describes files that do not.)
+  `scripts/` can import it
+  — `scripts/migrate.mts` already imports `src/lib/schema.ts`, and
+  `erasableSyntaxOnly` was turned on partly because it does.
+  `ALLOW_PREVIEW_MIGRATIONS` stays local to `migrate.mts`: that is one
+  script's policy, not a reading of the signal. Note that
+  `src/app/api/views/route.test.ts` pins the literal comparison, so the test
+  moves with the extraction.
+  **Trigger:** the sixth reader, or the first time two of them disagree.
+
 - **`membershipConfigured()` is read across twelve files**, threaded
   as a prop into `SiteNav` and `GalleryTopBar`, provided as a context to the
   carousel, called directly by `SiteFooter`, and hardcoded to `true` on

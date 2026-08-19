@@ -31,6 +31,24 @@ export interface Item {
   error?: string;
 }
 
+/**
+ * One item at a new status, carrying a message only if there is one.
+ *
+ * The previous error is dropped rather than overwritten, which is what
+ * `{ ...item, status, error }` used to mean and no longer does: under
+ * `exactOptionalPropertyTypes` an explicit `undefined` is a value and an
+ * optional key's absence is a different state. Spreading over `item` without
+ * dropping first would leave a failure's message attached to the retry that
+ * succeeded.
+ *
+ * Here rather than in `UploadForm`, where it was written, because `retryBatch`
+ * below is the same operation and had the same six lines inline.
+ */
+export function restated(item: Item, status: ItemStatus, error?: string): Item {
+  const { error: _previous, ...rest } = item;
+  return { ...rest, status, ...(error === undefined ? {} : { error }) };
+}
+
 /** One file and where it sits in the batch, which is what `setStatus` needs. */
 export interface Attempt {
   file: File;
@@ -65,14 +83,7 @@ export function retryBatch(items: readonly Item[]): {
       return item;
     }
     again.push({ file: item.file, index });
-    /*
-     * The key is dropped rather than set to `undefined`. `error` is optional
-     * because a waiting item has never had one, and under
-     * `exactOptionalPropertyTypes` those are two different states — an
-     * explicit `undefined` is a value, and this is the absence of one.
-     */
-    const { error: _cleared, ...rest } = item;
-    return { ...rest, status: "waiting" as const };
+    return restated(item, "waiting");
   });
   return { again, items: next };
 }

@@ -19,6 +19,7 @@ import {
   type Item,
   type ItemStatus,
   itemId,
+  restated,
   retryBatch,
 } from "./upload-batch";
 import { useDropZone } from "./useDropZone";
@@ -96,21 +97,6 @@ function openFreshDraft(
   // One refresh for the batch; per-file refreshes re-render the list under
   // a running upload.
   router.refresh();
-}
-
-/**
- * One item, at a new status, carrying a message only if there is one.
- *
- * The previous error is dropped rather than overwritten, which is what
- * `{ ...item, status, error }` used to mean and no longer does: under
- * `exactOptionalPropertyTypes` an explicit `undefined` is a value and an
- * optional key's absence is a different state. Spreading over `item` without
- * dropping first would leave a failure's message attached to the retry that
- * succeeded.
- */
-function restated(item: Item, status: ItemStatus, error?: string): Item {
-  const { error: _previous, ...rest } = item;
-  return { ...rest, status, ...(error === undefined ? {} : { error }) };
 }
 
 export function UploadForm() {

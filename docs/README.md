@@ -57,6 +57,12 @@ The magic-link rationale was told six times and the environment variables
 four; that is how one copy comes to say fifteen minutes while the constant
 says sixty.
 
+**Describe a file that does not exist yet, do not spell it.** Every `src/…`
+path in prose is checked to exist, which is what keeps the rest of this honest
+— so a proposal for a module nobody has written names it in words. The check
+cannot tell a plan from a stale pointer, and the failure it is there to catch
+is worth the sentence.
+
 **Interpolate rather than retype.** Where prose quotes a value the code owns,
 name the constant. `LOGIN_TTL_MINUTES` and `MAX_UPLOAD_BYTES` are done that
 way already, and `security-copy.test.ts` keeps them that way.

@@ -1,17 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  current,
-  DOC_PATH,
-  exists,
-  linksIn,
-  NPM_SCRIPT,
-  prose,
-  resolveLink,
-  SRC_PATH,
-} from "./doc-text";
-import { ROOT } from "./source-text";
+import { brokenRefs, current, exists, NPM_SCRIPT, SRC_PATH } from "./doc-text";
+import { ROOT, read } from "./source-text";
 
 /**
  * Keeps the documentation honest about things that can be checked.
@@ -33,9 +24,9 @@ import { ROOT } from "./source-text";
  * these are the cheap half, and a document whose file paths are wrong is
  * usually a document whose explanations are wrong too.
  *
- * This file holds the claims a document makes about the world. The claims
- * the world makes about documents — a comment naming a path — are in
- * `docs-tree.test.ts`, along with the shape of the tree itself.
+ * This file holds the claims a document makes about the code: a path, a
+ * command, a count. Pointers between documents, pointers from code back into
+ * the documentation, and the shape of the tree are in `docs-tree.test.ts`.
  */
 
 describe("the documentation refers to things that exist", () => {
@@ -45,22 +36,13 @@ describe("the documentation refers to things that exist", () => {
    * at has moved.
    */
   it("every src/ and scripts/ path mentioned is real", () => {
-    const broken: string[] = [];
-    for (const { file, text } of current()) {
-      /*
-       * `.mts` matters and was missing from the first version of this
-       * pattern — every operational script in this repository uses it, so
-       * the check silently covered nothing it was written for. Caught by
-       * renaming a referenced file and finding the test still green.
-       */
-      const paths = text.match(SRC_PATH);
-      for (const path of new Set(paths ?? [])) {
-        if (!exists(path)) {
-          broken.push(`${file} → ${path}`);
-        }
-      }
-    }
-    expect(broken).toEqual([]);
+    /*
+     * `.mts` matters and was missing from the first version of this pattern —
+     * every operational script in this repository uses it, so the check
+     * silently covered nothing it was written for. Caught by renaming a
+     * referenced file and finding the test still green.
+     */
+    expect(brokenRefs(current(), SRC_PATH, exists)).toEqual([]);
   });
 
   it("every npm script mentioned is defined", () => {
@@ -88,50 +70,6 @@ describe("the documentation refers to things that exist", () => {
       }
     }
     expect(missing).toEqual([]);
-  });
-});
-
-describe("every pointer between documents resolves", () => {
-  it("every relative link resolves to a file", () => {
-    const broken: string[] = [];
-    for (const entry of prose()) {
-      for (const target of linksIn(entry.text)) {
-        const path = resolveLink(entry.file, target);
-        if (path !== null && !exists(path)) {
-          broken.push(`${entry.file} → ${target}`);
-        }
-      }
-    }
-
-    expect(
-      broken,
-      "A link that 404s on GitHub is the cheapest possible broken promise. " +
-        "If the document moved, fix it here and in the index that names " +
-        "it, together. A site route is not a link — write it in inline " +
-        "code, as the routes table does.",
-    ).toEqual([]);
-  });
-
-  /*
-   * The form a link does not cover, and the commoner one here: a document
-   * naming a sibling in backticks in the middle of a sentence.
-   */
-  it("every docs/ path named in prose resolves", () => {
-    const broken: string[] = [];
-    for (const { file, text } of current()) {
-      for (const path of new Set(text.match(DOC_PATH) ?? [])) {
-        if (!exists(path)) {
-          broken.push(`${file} → ${path}`);
-        }
-      }
-    }
-
-    expect(
-      broken,
-      "Name the document where it now lives. If the sentence is about a " +
-        "record that was archived, describe it and link the archive — do " +
-        "not keep the old path alive in prose.",
-    ).toEqual([]);
   });
 });
 
@@ -210,10 +148,7 @@ describe("counts stated in prose match the code", () => {
 });
 
 function templates(): string[] {
-  const email = readFileSync(
-    join(ROOT, "src", "lib", "auth", "email.ts"),
-    "utf8",
-  );
+  const email = read("lib", "auth", "email.ts");
   return (email.match(/^export async function (send\w+)/gm) ?? []).map((line) =>
     line.replace("export async function ", ""),
   );

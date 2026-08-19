@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  allPointerFiles,
   authored,
   BARE_DOC,
+  brokenRefs,
+  current,
   DOC_PATH,
   DOCS,
   exists,
@@ -12,6 +13,8 @@ import {
   knownMarkdown,
   linksIn,
   markdownUnder,
+  pointers,
+  prose,
   rel,
   resolveLink,
 } from "./doc-text";
@@ -20,9 +23,9 @@ import { ROOT } from "./source-text";
 /**
  * The shape of the documentation, as the few things a test can hold.
  *
- * `docs.test.ts` holds what a document claims about the world. This holds
- * the reverse — what the code claims about documents — and the arrangement
- * they are both written for.
+ * `docs.test.ts` holds what a document claims about the code. This holds
+ * every pointer — between documents, and from code back into them — and the
+ * arrangement they are all written for.
  *
  * The arrangement is the point. `AGENTS.md` is short because it defers:
  * three lines about the design system rather than the design system. That is
@@ -57,6 +60,41 @@ const INDEXES = ["AGENTS.md", "docs/README.md", "docs/archive/README.md"];
  */
 const AGENTS_CEILING = 120;
 
+describe("every pointer between documents resolves", () => {
+  it("every relative link resolves to a file", () => {
+    const broken: string[] = [];
+    for (const entry of prose()) {
+      for (const target of linksIn(entry.text)) {
+        const path = resolveLink(entry.file, target);
+        if (path !== null && !exists(path)) {
+          broken.push(`${entry.file} → ${target}`);
+        }
+      }
+    }
+
+    expect(
+      broken,
+      "A link that 404s on GitHub is the cheapest possible broken promise. " +
+        "If the document moved, fix it here and in the index that names " +
+        "it, together. A site route is not a link — write it in inline " +
+        "code, as the routes table does.",
+    ).toEqual([]);
+  });
+
+  /*
+   * The form a link does not cover, and the commoner one here: a document
+   * naming a sibling in backticks in the middle of a sentence.
+   */
+  it("every docs/ path named in prose resolves", () => {
+    expect(
+      brokenRefs(current(), DOC_PATH, exists),
+      "Name the document where it now lives. If the sentence is about a " +
+        "record that was archived, describe it and link the archive — do " +
+        "not keep the old path alive in prose.",
+    ).toEqual([]);
+  });
+});
+
 describe("the code's pointers into the documentation resolve", () => {
   /*
    * The direction nothing checked, and the one that fails most quietly. A
@@ -73,18 +111,8 @@ describe("the code's pointers into the documentation resolve", () => {
    * Strip either and most of what this exists for disappears.
    */
   it("every docs/ path named under src or scripts resolves", () => {
-    const broken: string[] = [];
-    for (const file of allPointerFiles()) {
-      const found = readFileSync(file, "utf8").match(DOC_PATH);
-      for (const path of new Set(found ?? [])) {
-        if (!exists(path)) {
-          broken.push(`${rel(file)} → ${path}`);
-        }
-      }
-    }
-
     expect(
-      broken,
+      brokenRefs(pointers(), DOC_PATH, exists),
       "The document moved and this comment did not. Update it: a pointer " +
         "in code is read by whoever is deepest in the code and least able " +
         "to go looking.",
@@ -106,19 +134,9 @@ describe("the code's pointers into the documentation resolve", () => {
    */
   it("every bare markdown filename names a document that exists", () => {
     const known = knownMarkdown();
-    const broken: string[] = [];
-
-    for (const file of allPointerFiles()) {
-      const found = readFileSync(file, "utf8").match(BARE_DOC);
-      for (const name of new Set(found ?? [])) {
-        if (!known.has(name)) {
-          broken.push(`${rel(file)} → ${name}`);
-        }
-      }
-    }
 
     expect(
-      broken,
+      brokenRefs(pointers(), BARE_DOC, (name) => known.has(name)),
       "That document does not exist under any folder. Name it by its path " +
         "so the check above can see it too, and so a reader knows where to " +
         "look.",

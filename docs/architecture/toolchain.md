@@ -79,6 +79,11 @@ Verify a change here by probing rather than by reading: write the forbidden
 import into a scratch file in each folder and confirm it fails. Reading the
 JSON will not tell you what it does.
 
+`src/lib/toolchain.test.ts` holds the half a probe cannot: that the copies
+still agree, and that the "off" entry is still last. It cannot check
+enforcement — only that the three blocks say the same thing, which is what
+goes wrong when somebody edits one reason and not the other two.
+
 These complement `src/lib/security-location.test.ts` and
 `src/lib/security-membership.test.ts` rather than replacing them. A linter
 sees one file at a time and cannot assert that *exactly one* file in the tree

@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
-import { ROOT } from "./source-text";
+import { ROOT, walk } from "./source-text";
 
 /**
  * Reading the documentation as a tree, for the tests that hold it together.
@@ -85,16 +85,16 @@ export const BARE_DOC = /(?<![\w/.-])[\w-]+\.md\b/g;
 
 /** Every markdown filename that exists anywhere we keep documentation. */
 export function knownMarkdown(): Set<string> {
-  const roots = readdirSync(ROOT).filter((entry) => entry.endsWith(".md"));
-  return new Set([...roots, ...markdownUnder().map((file) => basename(file))]);
+  return new Set(
+    [...rootMarkdown(), ...markdownUnder()].map((file) => basename(file)),
+  );
 }
 const MD_LINK = /(?<!!)\[[^\]\n]*\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g;
 const REF_LINK = /^\s{0,3}\[[^\]\n]+\]:\s*(\S+)/gm;
 
-export interface Prose {
+interface Prose {
   file: string;
   text: string;
-  historical: boolean;
 }
 
 /** Repo-relative and posix, the one spelling every check compares in. */
@@ -107,18 +107,11 @@ export function rel(absolute: string): string {
 
 /** Every `.md` under `docs`, recursively, snapshots aside. */
 export function markdownUnder(dir: string = DOCS): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (full === SNAPSHOTS) {
-      // Data, not documentation. See the constant.
-    } else if (statSync(full).isDirectory()) {
-      found.push(...markdownUnder(full));
-    } else if (entry.endsWith(".md")) {
-      found.push(full);
-    }
-  }
-  return found;
+  return walk(
+    dir,
+    (entry) => entry.endsWith(".md"),
+    (full) => full === SNAPSHOTS,
+  );
 }
 
 /** The half of a file we wrote. Only `AGENTS.md` has another half. */
@@ -126,15 +119,25 @@ export function authored(file: string, text: string): string {
   return file === "AGENTS.md" ? text.replace(GENERATED, "") : text;
 }
 
-/** Every prose file in the repository, with its own text and its status. */
+/** Every markdown file at the repository root. */
+function rootMarkdown(): string[] {
+  return readdirSync(ROOT)
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => join(ROOT, entry));
+}
+
+/**
+ * Every prose file in the repository.
+ *
+ * The root files are discovered rather than listed. A hard-coded three drifted
+ * from `knownMarkdown` below within a day of both being written: `CLAUDE.md`
+ * counted as a document that exists for one check while being invisible to
+ * every other, which is the shape of hole this whole file is against.
+ */
 export function prose(): Prose[] {
-  const roots = ["README.md", "AGENTS.md", "DESIGN.md"].map((name) =>
-    join(ROOT, name),
-  );
-  return [...roots, ...markdownUnder()].map((file) => ({
+  return [...rootMarkdown(), ...markdownUnder()].map((file) => ({
     file: rel(file),
     text: authored(rel(file), readFileSync(file, "utf8")),
-    historical: isHistorical(rel(file)),
   }));
 }
 
@@ -147,6 +150,9 @@ export function prose(): Prose[] {
  * that pluralises it — and either would have been silently exempted from
  * every check in `docs.test.ts` by nothing more than a well-chosen filename.
  * An exemption that can be claimed by accident is not an exemption.
+ *
+ * Asked of the path rather than stored on the record, because a field that
+ * says the same thing is a second place for the answer to live.
  */
 function isHistorical(relative: string): boolean {
   return (
@@ -156,7 +162,7 @@ function isHistorical(relative: string): boolean {
 
 /** Live prose: everything the present tense is answerable for. */
 export function current(): Prose[] {
-  return prose().filter((entry) => !entry.historical);
+  return prose().filter((entry) => !isHistorical(entry.file));
 }
 
 /**
@@ -178,7 +184,7 @@ export function current(): Prose[] {
  * were outside this walk when they were written, so moving the file they
  * cite would have left the suite green.
  */
-export function allPointerFiles(): string[] {
+function allPointerFiles(): string[] {
   return [
     ...codeUnder(join(ROOT, "src")),
     ...codeUnder(join(ROOT, "scripts")),
@@ -186,17 +192,65 @@ export function allPointerFiles(): string[] {
   ];
 }
 
+/**
+ * How large a source file can be before it is taken to be generated data.
+ *
+ * The coastline tiers under `src/lib/geo` are 70 KB, 495 KB and 2.5 MB of
+ * coordinate arrays; the largest thing anybody has written by hand here is
+ * 31 KB. Scanning the three of them for documentation pointers was about a
+ * quarter of what these tests cost, and it was worse than useless: a bare
+ * filename matched inside a two-megabyte float array is a false positive,
+ * not a finding.
+ *
+ * By size rather than by name, and that is not squeamishness — `world.test.ts`
+ * asserts that no module mentions the heavy tiers outside a dynamic import,
+ * so a list of them here would break the invariant that keeps them out of the
+ * bundle. Size is also what actually matters, and it needs no maintenance
+ * when a fourth tier is generated.
+ */
+const GENERATED_BYTES = 64 * 1024;
+
 function codeUnder(dir: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      found.push(...codeUnder(full));
-    } else if (/\.(?:tsx?|mts|mjs)$/.test(entry)) {
-      found.push(full);
+  return walk(
+    dir,
+    (entry) => /\.(?:tsx?|mts|mjs)$/.test(entry),
+    (full) => statSync(full).size > GENERATED_BYTES,
+  );
+}
+
+/** Every pointer file, with its text — the `prose()` of the code side. */
+export function pointers(): Prose[] {
+  return allPointerFiles().map((file) => ({
+    file: rel(file),
+    text: readFileSync(file, "utf8"),
+  }));
+}
+
+/**
+ * Every reference matching `pattern` that `ok` rejects, as `file → ref`.
+ *
+ * Four checks had written this loop out, differing only in the pattern and
+ * the predicate, and each had to re-derive the same two details: `new Set`,
+ * because a document naming the same path twice should fail once, and
+ * `match` rather than `test`, because these patterns are global and `test`
+ * would advance `lastIndex` into the next file.
+ *
+ * The reason each check exists stays at the check. Only the loop is here.
+ */
+export function brokenRefs(
+  entries: Prose[],
+  pattern: RegExp,
+  ok: (ref: string) => boolean,
+): string[] {
+  const broken: string[] = [];
+  for (const { file, text } of entries) {
+    for (const ref of new Set(text.match(pattern) ?? [])) {
+      if (!ok(ref)) {
+        broken.push(`${file} → ${ref}`);
+      }
     }
   }
-  return found;
+  return broken;
 }
 
 /**
@@ -213,8 +267,8 @@ function codeUnder(dir: string): string[] {
  * make this comment the last thing in the repository still pointing at it.
  */
 export function exists(path: string): boolean {
-  const trimmed = path.replace(/\/+$/, "");
-  const segments = trimmed.split("/").filter((part) => part.length > 0);
+  // Leading and trailing separators fall out here; the filter covers both.
+  const segments = path.split("/").filter((part) => part.length > 0);
   if (segments.length === 0) {
     return false;
   }
