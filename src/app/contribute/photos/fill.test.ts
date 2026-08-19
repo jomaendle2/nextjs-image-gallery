@@ -184,37 +184,37 @@ describe("pinToDrop", () => {
   } as const;
 
   it("drops a sure guess's point into an empty field", () => {
-    expect(pinToDrop([sure], "", "")).toEqual({ lat: 25.08, lng: 121.53 });
+    expect(pinToDrop([sure], "", true)).toEqual({ lat: 25.08, lng: 121.53 });
   });
 
   it("never moves a pin somebody placed", () => {
     // A marked spot is the one thing on this form that is already a decision.
-    expect(pinToDrop([sure], "25.1, 121.5", "")).toBeNull();
+    expect(pinToDrop([sure], "25.1, 121.5", true)).toBeNull();
   });
 
   it("keeps an unsure guess on its chip", () => {
     // The globe draws a dot from this. "Less sure" must stay a click.
-    expect(pinToDrop([{ ...sure, confidence: "low" }], "", "")).toBeNull();
+    expect(pinToDrop([{ ...sure, confidence: "low" }], "", false)).toBeNull();
   });
 
   it("drops nothing when the guess carried no point", () => {
     // A model can name a place it cannot locate; that is a name, not a pin.
-    expect(pinToDrop([{ ...sure, point: null }], "", "")).toBeNull();
+    expect(pinToDrop([{ ...sure, point: null }], "", true)).toBeNull();
   });
 
   it("only ever considers the model's first choice", () => {
     expect(
-      pinToDrop([{ ...sure, confidence: "low" }, sure], "", ""),
+      pinToDrop([{ ...sure, confidence: "low" }, sure], "", false),
     ).toBeNull();
   });
 
   it("has nothing to say about no places", () => {
-    expect(pinToDrop([], "", "")).toBeNull();
+    expect(pinToDrop([], "", false)).toBeNull();
   });
 
   /*
    * The case the first version of this function got wrong, and the reason it
-   * now asks `locationToFill` instead of repeating its conditions.
+   * now follows the name instead of re-deciding it.
    *
    * The photographer typed "Thailand" and left the pin empty. The name is
    * refused because the box is not empty — and the point used to drop
@@ -223,10 +223,63 @@ describe("pinToDrop", () => {
    * a guess the same form had just declined in writing.
    */
   it("does not drop a point whose name the form refused", () => {
-    expect(pinToDrop([{ ...sure, name: "Hawaii" }], "", "Thailand")).toBeNull();
+    expect(pinToDrop([{ ...sure, name: "Hawaii" }], "", false)).toBeNull();
   });
 
   it("drops the point when the name is being taken at the same moment", () => {
-    expect(pinToDrop([sure], "", "")).toEqual(sure.point);
+    expect(pinToDrop([sure], "", true)).toEqual(sure.point);
+  });
+});
+
+/*
+ * The pair, in the order and with the values `settle` uses them.
+ *
+ * Both functions were already covered and both were already right; what was
+ * wrong lived between them. `settle` asked `locationToFill` for the name,
+ * wrote it into the field, and then asked a second time — against the field
+ * it had just filled — whether the name had been taken. The answer was no,
+ * because "empty" was the condition and the write had made it false, so the
+ * pin never dropped in the one case it exists for. Nothing in either
+ * function's own tests could see that: the mistake was the caller's, and it
+ * was invisible because the two questions had no reason in the types to be
+ * the same question.
+ *
+ * These run the sequence as the hook runs it — decide once, write, then hand
+ * the decision on — so that a return to reading the box twice fails here.
+ */
+describe("a sure guess filling both fields at once", () => {
+  const sure = {
+    name: "Taipei, Taiwan",
+    confidence: "high",
+    reason: "the segmented profile of Taipei 101",
+    point: { lat: 25.08, lng: 121.53 },
+  } as const;
+
+  /** What `settle` does, with a box instead of a field. */
+  function fill(places: readonly (typeof sure)[], box: string, pinBox: string) {
+    const name = locationToFill(places, box);
+    const written = name ?? box;
+    return { written, point: pinToDrop(places, pinBox, name !== null) };
+  }
+
+  it("drops the pin for the name it has just written", () => {
+    expect(fill([sure], "", "")).toEqual({
+      written: "Taipei, Taiwan",
+      point: sure.point,
+    });
+  });
+
+  it("leaves both alone when the photographer has typed a place", () => {
+    expect(fill([sure], "Thailand", "")).toEqual({
+      written: "Thailand",
+      point: null,
+    });
+  });
+
+  it("writes the name but keeps a pin the photographer placed", () => {
+    expect(fill([sure], "", "25.1, 121.5")).toEqual({
+      written: "Taipei, Taiwan",
+      point: null,
+    });
   });
 });

@@ -22,10 +22,37 @@
 import type { Detailed, Land } from "./sphere";
 
 /**
+ * One fetch shared by everyone who asks, and no failure shared by anyone.
+ *
+ * The memo is the point — a second globe on the page joins the first one's
+ * request rather than making its own — but memoising a rejected promise turns
+ * one dropped connection into a tier that is missing for the rest of the
+ * session, and every later ask re-awaits the same failure and re-logs it.
+ * Clearing the slot on the way past leaves the retry available to whoever
+ * asks next: for the deep coastline that is the reader's next pinch, which is
+ * the natural moment to try half a megabyte again.
+ *
+ * The `import()` calls stay written out at each call site below rather than
+ * being passed a module name, because `world.test.ts` asserts each of those
+ * strings appears in exactly one source file — and because a bundler can only
+ * split what it can see spelled out.
+ */
+function shared<T>(fetch: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | null = null;
+  return () => {
+    pending ??= fetch().catch((cause: unknown) => {
+      pending = null;
+      throw cause;
+    });
+    return pending;
+  };
+}
+
+/**
  * Fetches the four-times-finer coastline, once per session.
  *
- * A module-scoped promise rather than component state, so opening the globe a
- * second time is instant and two globes on one page cannot each pull it. The
+ * Shared rather than held in component state, so opening the globe a second
+ * time is instant and two globes on one page cannot each pull it. The
  * `import()` is the whole point: nothing in the static graph names
  * `world-fine.ts`, so it is its own chunk and a reader who never expands the
  * globe never pays for it.
@@ -37,14 +64,12 @@ import type { Detailed, Land } from "./sphere";
  * where they otherwise belong — turns a green suite red for a reason that
  * takes an hour to find.
  */
-let finePromise: Promise<Detailed> | null = null;
-export function loadFineLand(): Promise<Detailed> {
-  finePromise ??= import("@/lib/geo/world-fine").then((module) => ({
+export const loadFineLand = shared<Detailed>(() =>
+  import("@/lib/geo/world-fine").then((module) => ({
     land: module.WORLD_LAND_FINE,
     borders: module.WORLD_BORDERS_FINE,
-  }));
-  return finePromise;
-}
+  })),
+);
 
 /**
  * The deep-zoom coastline, fetched only once somebody has zoomed for it.
@@ -65,14 +90,12 @@ export function loadFineLand(): Promise<Detailed> {
  * reason: `world.test.ts` asserts that each of these module names appears in
  * exactly one source file and names that file.
  */
-let finestPromise: Promise<Detailed> | null = null;
-export function loadFinestLand(): Promise<Detailed> {
-  finestPromise ??= import("@/lib/geo/world-finest").then((module) => ({
+export const loadFinestLand = shared<Detailed>(() =>
+  import("@/lib/geo/world-finest").then((module) => ({
     land: module.WORLD_LAND_FINEST,
     borders: module.WORLD_BORDERS_FINEST,
-  }));
-  return finestPromise;
-}
+  })),
+);
 
 /**
  * The everyday coastline, fetched the same way and for the same reason.
@@ -89,13 +112,9 @@ export function loadFinestLand(): Promise<Detailed> {
  * and the list is the content: the coastline should never have been ahead of
  * the page in the queue.
  *
- * Module-scoped promise, like the fine set above, so a second globe on a
- * page joins the first one's request instead of making its own.
+ * Shared like the fine set above, so a second globe on a page joins the
+ * first one's request instead of making its own.
  */
-let coarsePromise: Promise<Land> | null = null;
-export function loadCoarseLand(): Promise<Land> {
-  coarsePromise ??= import("@/lib/geo/world").then(
-    (module) => module.WORLD_LAND,
-  );
-  return coarsePromise;
-}
+export const loadCoarseLand = shared<Land>(() =>
+  import("@/lib/geo/world").then((module) => module.WORLD_LAND),
+);

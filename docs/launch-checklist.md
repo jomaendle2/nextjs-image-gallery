@@ -227,6 +227,32 @@ policy, a number of days is. **Blobs are not covered by any of this.** Vercel
 Blob has no snapshot, so a deleted blob is gone; that is the argument for
 `--apply` on every destructive script rather than for a backup.
 
+### Re-coarsen the stored dots in the same deploy, not the next one
+
+`CELL_KM` is a kilometre now, and every sentence that quotes it changed with
+it — the privacy page, the picker's guarantee, the alt text under each dot.
+The stored `coarse_lat`/`coarse_lng` did not: they are still on the hundred-
+kilometre grid they were written on, because a published dot is stored rather
+than derived so that it cannot move when somebody tunes the arithmetic.
+
+So between deploying this and running the script, the site states an accuracy
+it does not have. The dots are blunter than the page says, not sharper — the
+error is on the safe side — but it is still a claim that is not true yet:
+
+```
+npm run db:recoarsen             # prints the plan
+npm run db:recoarsen -- --apply  # writes it
+```
+
+Run `npm run db:backfill-pins` first; it holds the original coordinates for
+the photographs that predate the picker.
+
+Some rows cannot be fixed by either, and the script lists them rather than
+touching them: photographs whose photographer chose "public only" have no
+exact point stored, and no cell size recovers one. Their dots stay on the old
+grid permanently. That is the honest state — blunter than advertised, never
+sharper — and worth knowing before somebody asks why one dot sits in the sea.
+
 ### Run destructive scripts against a branch, not production
 
 Every `db:*` and `smoke:*` script loads `.env.local`, which points at

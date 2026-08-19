@@ -7,7 +7,10 @@
  * of a file whose subject is Ramer–Douglas–Peucker, and they are the half
  * that changes for editorial reasons rather than numerical ones.
  *
- * Functions of the already-serialised data rather than constants, so that
+ * Functions of the already-serialised data rather than constants, so that a
+ * header can quote the size and shape of the thing it sits above rather than
+ * describing it from memory and drifting.
+ *
  * The serialisers live here too, for the same reason: turning a ring of
  * numbers into the text of a module is this file's subject, and the
  * generator upstream is only interested in which numbers survive.
@@ -17,6 +20,18 @@
 export type Point = [number, number];
 /** A polygon: its exterior ring, then any holes. */
 export type Polygon = Point[][];
+
+/**
+ * Rounding, shared by the simplifier upstream and the writers here.
+ *
+ * It lives in this module rather than in the generator because the generator
+ * imports this one — putting it the other way round would be a cycle, and a
+ * second copy would be a number two files could disagree about.
+ */
+export function round(value: number, places: number): number {
+  const factor = 10 ** places;
+  return Math.round(value * factor) / factor;
+}
 
 /**
  * An SVG path in `x = lng + 180`, `y = 90 - lat`.
@@ -35,18 +50,6 @@ export type Polygon = Point[][];
  * line; clamping lays the stray vertices flat along the edge, where the frame
  * covers them.
  */
-/**
- * Rounding, shared by the simplifier upstream and the writers here.
- *
- * It lives in this module rather than in the generator because the generator
- * imports this one — putting it the other way round would be a cycle, and a
- * second copy would be a number two files could disagree about.
- */
-export function round(value: number, places: number): number {
-  const factor = 10 ** places;
-  return Math.round(value * factor) / factor;
-}
-
 export function toPath(
   polygons: Polygon[],
   north: number,

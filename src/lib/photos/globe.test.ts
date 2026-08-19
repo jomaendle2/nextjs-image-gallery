@@ -258,17 +258,25 @@ describe("gathering cells into the places a person would name", () => {
    * Transitivity, which the Bali cluster needs and no single pair provides:
    * the two "Bali, Indonesia" cells are 40 km apart and Uluwatu sits 1 km
    * from one of them, so all three arrive under one heading through a chain.
+   *
+   * Both orders, because the second one used to fail. Reversed, the cells at
+   * the ends of the chain arrive first — 55 km apart, and so two groups by
+   * the time the cell between them turns up. Joining that cell to whichever
+   * group matched first left the other standing, and the duplicate "Near
+   * Bali, Indonesia" heading came back. Which order the cells arrive in is
+   * not the caller's to promise: `/globe` sorts them by how busy they are.
    */
-  it("gathers a chain of cells no two of which span the whole group", () => {
-    const places = groupIntoPlaces(
-      cells([
-        ["Bali, Indonesia", -8.7028, 115.1637],
-        ["Uluwatu, Bali, Indonesia", -8.8291, 115.0849],
-        ["Bali, Indonesia", -8.3405, 115.092],
-      ]),
-    );
-    expect(places).toHaveLength(1);
-    expect(places[0]?.photos).toHaveLength(3);
+  it("gathers a chain whichever end of it arrives first", () => {
+    const chain: [string, number, number][] = [
+      ["Bali, Indonesia", -8.7028, 115.1637],
+      ["Uluwatu, Bali, Indonesia", -8.8291, 115.0849],
+      ["Bali, Indonesia", -8.3405, 115.092],
+    ];
+    for (const order of [chain, [...chain].reverse()]) {
+      const places = groupIntoPlaces(cells(order));
+      expect(places).toHaveLength(1);
+      expect(places[0]?.photos).toHaveLength(3);
+    }
   });
 
   /*

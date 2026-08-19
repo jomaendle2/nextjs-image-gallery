@@ -213,9 +213,16 @@ if (applying) {
   }
   mkdirSync("docs/snapshots", { recursive: true });
   /*
-   * Every row, not only the ones being written. A snapshot that covers the
-   * subset is a snapshot that is useless the second time somebody applies a
-   * different subset from the same report.
+   * Every row this run could ever write to, not only the ones it is writing
+   * now. A snapshot that covers the subset is useless the second time
+   * somebody applies a different subset from the same report.
+   *
+   * `mine`, though, and not `all`. The wider set was other contributors'
+   * titles, descriptions and locations — unpublished drafts among them —
+   * copied into a file under `docs/` by a script that never edits them, and
+   * `docs/snapshots/` was not ignored. Scope is the same word here as it is
+   * in the guard above: the rows this operator is allowed to change are the
+   * rows worth keeping the originals of.
    */
   /*
    * Never over an existing file, and this is the whole value of the
@@ -234,7 +241,7 @@ if (applying) {
   writeFileSync(
     at,
     `${JSON.stringify(
-      all.map(({ id, title, description, location, tags }) => ({
+      mine.map(({ id, title, description, location, tags }) => ({
         id,
         title,
         description,
@@ -245,7 +252,7 @@ if (applying) {
       2,
     )}\n`,
   );
-  console.warn(`snapshot: ${at} (${all.length} rows)`);
+  console.warn(`snapshot: ${at} (${mine.length} rows)`);
 }
 
 let changed = 0;

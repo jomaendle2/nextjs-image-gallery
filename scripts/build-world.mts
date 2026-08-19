@@ -433,14 +433,18 @@ const finestPolygons = prepare(all, RECIPES.finest);
 const today = new Date().toISOString().slice(0, 10);
 
 const provenance = provenanceOf(SOURCE, today);
+/*
+ * Serialised once and measured once. It was written twice — the second call,
+ * in the report below, had never been given the band to clamp against, so
+ * `Math.min(undefined, …)` made every latitude `NaN` and the "path: N chars"
+ * line was counting a string of them. Nothing caught it, because the compiler
+ * had never been shown this file — see the `include` line in `tsconfig.json`,
+ * which now reaches `.mts` as well.
+ */
+const path = toPath(pathPolygons, PATH_NORTH, PATH_SOUTH);
 const geo = join(import.meta.dirname, "..", "src", "lib", "geo");
 const bodies = {
-  path: pathFile(
-    provenance,
-    JSON.stringify(toPath(pathPolygons, PATH_NORTH, PATH_SOUTH)),
-    PATH_NORTH,
-    PATH_SOUTH,
-  ),
+  path: pathFile(provenance, JSON.stringify(path), PATH_NORTH, PATH_SOUTH),
   globe: globeFile(provenance, toLiteral(globePolygons)),
   fine: fineFile(provenance, toLiteral(finePolygons), asLines(borderLines)),
   finest: finestFile(
@@ -458,7 +462,7 @@ writeFileSync(join(geo, "world-finest.ts"), bodies.finest);
 console.log(
   [
     "wrote world-path.ts, world.ts, world-fine.ts and world-finest.ts",
-    `  path:  ${pathPolygons.length} shapes, ${toPath(pathPolygons).length} chars`,
+    `  path:  ${pathPolygons.length} shapes, ${path.length} chars`,
     `  globe: ${globePolygons.length} shapes, ${vertices(globePolygons)} points`,
     `  fine:  ${finePolygons.length} shapes, ${vertices(finePolygons)} points`,
     `  bord:  ${borderLines.length} lines`,

@@ -1,0 +1,22 @@
+{
+  /*
+   * The one-off tools, type-checked — which until now they were not.
+   *
+   * `tsconfig.json` includes `**` + `/*.ts`, and that pattern does not match
+   * `.mts`. Every file under `scripts/` was therefore invisible to `tsc`,
+   * which is how `toPath` came to be called with one of its three arguments
+   * and to report the length of a string of `NaN`s for a release or two.
+   *
+   * A second config rather than another line in the first, because these
+   * files are run by `node --experimental-strip-types` and so must name the
+   * extension they import — `./world-files.mts`, not `./world-files`. That
+   * needs `allowImportingTsExtensions`, and the application, which is bundled
+   * and must not write extensions, should not have it.
+   */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.mts", "scripts/**/*.ts"]
+}

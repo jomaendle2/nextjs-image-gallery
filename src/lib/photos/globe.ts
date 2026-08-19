@@ -279,13 +279,28 @@ export function groupIntoPlaces(
   const groups: GlobeCell[][] = [];
 
   for (const cell of cells) {
-    const joined = groups.find((group) =>
+    /*
+     * Every group it touches, not the first — that is what makes the chain
+     * transitive rather than merely usually transitive. Uluwatu and the
+     * northern Bali cell are 55 km apart, so they are two groups until the
+     * cell between them arrives; joining that cell to whichever group matched
+     * first leaves the other standing, and the page grows back the duplicate
+     * heading. A cell belonging to two groups is the evidence that they were
+     * one group all along, and the only moment that evidence exists is now.
+     */
+    const matched = groups.filter((group) =>
       group.some((member) => samePlace(member, cell)),
     );
-    if (joined === undefined) {
+    const [into, ...rest] = matched;
+
+    if (into === undefined) {
       groups.push([cell]);
     } else {
-      joined.push(cell);
+      into.push(cell);
+      for (const other of rest) {
+        into.push(...other);
+        groups.splice(groups.indexOf(other), 1);
+      }
     }
   }
 
@@ -301,7 +316,9 @@ export function groupIntoPlaces(
       }
       return {
         // The busiest cell's key, so a group keeps a stable identity as long
-        // as its cells do — and one that is already a valid cell key.
+        // as its cells do — and one that is already a valid cell key. Cells
+        // arrive busiest first and a merge appends, so the head of a group is
+        // still the first of its cells to have been seen.
         key: (group[0] ?? { key: "" }).key,
         labels,
         photos: group.flatMap((cell) => cell.photos),

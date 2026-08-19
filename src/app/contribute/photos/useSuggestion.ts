@@ -160,25 +160,28 @@ export function useSuggestion(
       // A sure place fills an empty Location field; `locationToFill` holds
       // the decision, this is only the write. Undo covers it like the rest.
       const location = fieldElement("location", photoId);
-      if (location !== null) {
-        const name = locationToFill(final.places, location.value);
-        if (name !== null) {
-          remember("location", location.value);
-          /*
-           * Recorded as this run's, so the failure path sweeps it. A stream
-           * dying after this write would otherwise restore title and
-           * description — under a message promising nothing changed — and
-           * leave the guess in the Location field with its chips cleared.
-           * `touched` was `Set<FillableField>`, which could not hold
-           * "location" at all; `TouchedField` is what lets it be swept.
-           */
-          markTouched("location");
-          location.value = name;
-        }
+      const name =
+        location === null ? null : locationToFill(final.places, location.value);
+      if (location !== null && name !== null) {
+        remember("location", location.value);
+        /*
+         * Recorded as this run's, so the failure path sweeps it. A stream
+         * dying after this write would otherwise restore title and
+         * description — under a message promising nothing changed — and
+         * leave the guess in the Location field with its chips cleared.
+         * `touched` was `Set<FillableField>`, which could not hold
+         * "location" at all; `TouchedField` is what lets it be swept.
+         */
+        markTouched("location");
+        location.value = name;
       }
 
       /*
-       * And the pin, on the same guess and under the same rule.
+       * And the pin, on the same guess and under the same rule — the same
+       * decision, in fact, which is `name` above rather than a second look at
+       * the field. The field has been written into by the time this runs, so
+       * asking it again would answer "occupied" and refuse the pin in exactly
+       * the case the pin exists for.
        *
        * A photographer who has just watched "Taipei, Taiwan" fill itself in
        * should not then have to press "Put a pin roughly here" to say the
@@ -187,18 +190,7 @@ export function useSuggestion(
        * be overwritten by the next render.
        */
       const pin = fieldElement("pin", photoId);
-      /*
-       * Read after the Location write above, deliberately. `pinToDrop` asks
-       * whether the name was taken, and the field is the record of that — so
-       * a photograph whose Location this run has just filled reads as filled
-       * here, and one whose Location was left alone because the photographer
-       * had typed something reads as theirs.
-       */
-      const point = pinToDrop(
-        final.places,
-        pin?.value ?? "",
-        fieldElement("location", photoId)?.value ?? "",
-      );
+      const point = pinToDrop(final.places, pin?.value ?? "", name !== null);
       if (point !== null) {
         remember("pin", pin?.value ?? "");
         markTouched("pin");

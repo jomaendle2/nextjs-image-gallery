@@ -268,8 +268,20 @@ export function GlobeCanvas({
     };
   }, [wantsDeep]);
 
-  const drawn = useRef(deep ?? detailed);
-  drawn.current = deep ?? detailed;
+  /*
+   * And it is handed back when the reader zooms out again — `wantsDeep`, not
+   * merely `deep`, decides which one is painted.
+   *
+   * Keeping it once it had landed cost nothing at high zoom, where most of it
+   * is culled, and a great deal at 1x, where nothing is: `outsideFrame` culls
+   * nothing while the radius equals the frame, so the whole finest coastline
+   * — some five times the vertices of the fine one — was being projected on
+   * every frame of a drag, on the machines least able to afford it. The tier
+   * is a function of the zoom, not of what has been downloaded.
+   */
+  const painted = wantsDeep ? (deep ?? detailed) : detailed;
+  const drawn = useRef(painted);
+  drawn.current = painted;
   const drawnCoarse = useRef(coarse);
   drawnCoarse.current = coarse;
 
