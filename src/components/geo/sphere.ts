@@ -75,7 +75,7 @@ export function paintSphere(
    */
   const land = content.detailed?.land ?? content.coarse;
   if (land !== null) {
-    drawLand(context, view, land);
+    drawLand(context, view, land, content.frame);
   }
   if (content.detailed !== null) {
     drawBorders(context, view, content.detailed.borders);

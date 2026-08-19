@@ -19,42 +19,46 @@ import { unproject } from "./projection";
  * past roughly **2.7 CSS pixels** apart on screen — that figure is the whole
  * constraint, and everything below is arithmetic from it.
  *
- * The ceiling used to be 2.5, set by `world-fine`, whose 27,000 vertices sit
- * a median 0.245 degrees apart: on a laptop the sphere's radius at 2.5x is
- * about 640 CSS pixels, which puts that median gap a little under three
- * pixels. Exactly at the limit, which is why it was the limit.
- *
- * It is now 6, because there is a finer coastline to spend. `world-finest`
- * cuts the median gap to 0.094 degrees, and the same arithmetic gives out at
- * about 6.4x. Measured across the dataset by `scripts/build-world.mts`:
+ * Measured across the dataset by `scripts/build-world.mts`, in median degrees
+ * between neighbouring vertices:
  *
  *   world-fine     0.245°  →  2.5x
- *   world-finest   0.094°  →  6.4x
+ *   world-finest   0.038°  →  16x
+ *   the raw source 0.014°  →  30x
  *
  * **More zoom is not a setting, it is more coastline.** That is worth saying
  * plainly because it looks like a constant somebody could have raised at any
  * point: raising it without the data underneath produces a smooth, confident
  * picture of vertices that were never surveyed, which is worse than refusing
  * to magnify — the reader cannot tell invented detail from measured detail.
- * The half-megabyte behind this number is what makes it honest.
+ * The megabyte behind this number is what makes it honest.
  *
- * **Six stops of one, still evenly spaced.** The old four covered a range of
- * 1.5 in steps of half; these cover a range of five in steps of one, which
- * keeps the rule that "+" always means the same amount of closer. It costs
- * five presses to cross the whole range rather than three — the right way
- * round, because the range is more than three times longer and a press that
- * covered a fifth of it would be the jump the even-steps rule exists to
- * prevent.
+ * **And there is an end to it.** The last row is the raw Natural Earth 10m
+ * source with no simplification at all, and 10m is the finest they publish.
+ * So 30x is not a budget this could buy its way past; it is where this
+ * dataset stops knowing anything, and going deeper would mean a different
+ * source rather than a smaller tolerance.
+ *
+ * **The stops double.** They used to add one — 1 through 6 in steps of half,
+ * then of one — on the rule that "+" should always mean the same amount of
+ * closer. Over a range of sixteen that rule inverts itself: even steps of
+ * three would make the first press a quadrupling and the last press a 23%
+ * nudge, which is the same press meaning wildly different things. Doubling
+ * is what "the same amount of closer" means for a magnification, and it is
+ * the way `focusedView` already reasons about the range — see the note there
+ * about measuring progress multiplicatively. Four presses cross the whole
+ * range, and each one does the same thing.
  *
  * What still does not scale past here is the *marks*. A public pin is
  * coarsened to a hundred kilometres before it is stored, so beyond about six
  * the coastline keeps improving while the dots stop meaning anything more
  * precise — and a globe that invites a closer look at a dot it cannot place
- * is making a promise the privacy model deliberately breaks.
+ * is making a promise the privacy model deliberately breaks. Deep zoom is
+ * for the coast, not for the pins.
  */
-export const ZOOM_STOPS = [1, 2, 3, 4, 5, 6] as const;
+export const ZOOM_STOPS = [1, 2, 4, 8, 16] as const;
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 6;
+export const MAX_ZOOM = 16;
 
 /**
  * The zoom past which `world-fine` is no longer enough.

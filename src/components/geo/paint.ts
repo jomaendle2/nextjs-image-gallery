@@ -1,4 +1,4 @@
-import { beyondHorizon, boundingCaps } from "./caps";
+import { beyondHorizon, boundingCaps, outsideFrame, viewBasis } from "./caps";
 import type { Mark } from "./marks";
 import {
   cameraDirection,
@@ -157,19 +157,28 @@ export function drawLand(
   context: CanvasRenderingContext2D,
   view: View,
   land: readonly (readonly (readonly number[])[])[],
+  frame: number,
 ): void {
   const caps = boundingCaps(land);
   const camera = cameraDirection(view);
+  const basis = viewBasis(view);
 
   for (let index = 0; index < land.length; index += 1) {
     const cap = caps[index];
     const polygon = land[index];
 
-    // Anything round the back cannot contribute a pixel. See `beyondHorizon`.
+    /*
+     * Two culls, cheapest first, and they answer different questions: one is
+     * about the sphere and one about the porthole. Round the back cannot
+     * contribute a pixel at any magnification; outside the frame cannot
+     * contribute one at *this* magnification, which is the test that carries
+     * the deep end of the zoom range. See `beyondHorizon` and `outsideFrame`.
+     */
     if (
       cap !== undefined &&
       polygon !== undefined &&
-      !beyondHorizon(cap, camera)
+      !beyondHorizon(cap, camera) &&
+      !outsideFrame(cap, basis, frame)
     ) {
       const { path, anyVisible } = layOnSphere(polygon, view);
       if (anyVisible) {

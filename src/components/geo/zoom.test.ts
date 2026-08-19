@@ -19,30 +19,36 @@ describe("the zoom stops", () => {
     expect(ZOOM_STOPS.at(-1)).toBe(MAX_ZOOM);
   });
 
-  it("climbs in even steps, so no press is a bigger jump than another", () => {
+  it("climbs in even ratios, so no press is a bigger jump than another", () => {
     /*
-     * The first version went 1 → 1.6 → 2.5: a small step then a large one,
-     * and the large one is where a reader loses their place. Even steps mean
-     * "+" always means the same amount of closer.
+     * Even *ratios*, not even differences, and the distinction only starts
+     * mattering once the range is long.
+     *
+     * The first version went 1 -> 1.6 -> 2.5: a small step then a large one,
+     * and the large one is where a reader loses their place. Equal differences
+     * fixed that over a range of six. Over a range of sixteen they reintroduce
+     * it the other way round — steps of three would make the first press a
+     * quadrupling and the last a 23% nudge. What the eye reads as "the same
+     * amount of closer" is the multiple, so that is what has to be even.
      */
-    const gaps = ZOOM_STOPS.slice(1).map(
-      (stop, i) => stop - (ZOOM_STOPS[i] ?? 0),
+    const ratios = ZOOM_STOPS.slice(1).map(
+      (stop, i) => stop / (ZOOM_STOPS[i] ?? 1),
     );
-    const [first] = gaps;
+    const [first] = ratios;
     expect(first).toBeDefined();
-    for (const gap of gaps) {
-      expect(gap).toBeCloseTo(first ?? 0, 6);
+    for (const ratio of ratios) {
+      expect(ratio).toBeCloseTo(first ?? 0, 6);
     }
-    expect(gaps.length).toBeGreaterThanOrEqual(3);
+    expect(ratios.length).toBeGreaterThanOrEqual(3);
   });
 
   it("steps up and down through every stop, and wraps at the top", () => {
     expect(nextZoomStop(1)).toBe(2);
-    expect(nextZoomStop(2)).toBe(3);
-    expect(nextZoomStop(5)).toBe(6);
+    expect(nextZoomStop(2)).toBe(4);
+    expect(nextZoomStop(8)).toBe(MAX_ZOOM);
     // Past the last, back to the whole earth — one press to start again.
-    expect(nextZoomStop(6)).toBe(1);
-    expect(previousZoomStop(6)).toBe(5);
+    expect(nextZoomStop(MAX_ZOOM)).toBe(1);
+    expect(previousZoomStop(MAX_ZOOM)).toBe(8);
     expect(previousZoomStop(1)).toBe(1);
   });
 

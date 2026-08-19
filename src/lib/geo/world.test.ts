@@ -67,7 +67,7 @@ const CEILINGS = {
    * that buys magnification cheaply, and a ceiling is what stops the next
    * person discovering that by shipping a megabyte.
    */
-  finest: 560_000,
+  finest: 900_000,
 } as const;
 
 describe("each file costs what the pages it reaches can afford", () => {

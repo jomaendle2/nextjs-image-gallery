@@ -1,4 +1,4 @@
-import { TO_RADIANS } from "./projection";
+import { TO_RADIANS, type View } from "./projection";
 
 /**
  * The back-face cull: which polygons are round the back and can be skipped.
@@ -23,6 +23,24 @@ export interface Cap {
   y: number;
   z: number;
   sin: number;
+  /**
+   * The straight-line distance, through the sphere, from the centroid to the
+   * furthest vertex — the chord of the angular radius, on a unit sphere.
+   *
+   * `sin` answers "is this polygon round the back?"; `chord` answers "how far
+   * across the screen can it reach?". They are the same angle measured two
+   * ways, and the second one is a distance rather than an angle for a reason:
+   * an orthographic projection is a linear map followed by dropping a
+   * coordinate, so it never increases a distance. Two points a chord `c`
+   * apart in space are therefore at most `radius * c` apart on screen, with
+   * no trigonometry at the call site and no case analysis at the poles.
+   *
+   * Unlike `sin`, this stays meaningful past ninety degrees: the chord grows
+   * monotonically with the angle all the way to 2 at the antipode, so a
+   * hemisphere-spanning polygon gets a large bound rather than an ambiguous
+   * one — which is the failure `sin` needs its own sentinel to avoid.
+   */
+  chord: number;
 }
 
 /**
@@ -86,24 +104,35 @@ function centroidOf(
 }
 
 /**
- * The sine of the angular radius: how far the furthest vertex is from the
- * centroid.
+ * How far the furthest vertex is from the centroid, measured both ways the
+ * two culls need it.
  *
- * `smallest` is the cosine of that angle, so a value at or below zero means
- * the cap is a hemisphere or wider — and such a cap must never be culled,
- * because `-sin(r)` stops being the right threshold the moment `r` passes
- * ninety degrees. Sine is symmetric about it: a cap of 170 degrees would
- * produce the same `-0.17` as one of 10 and cull a polygon wrapping most of
- * the planet. `sin: 1` makes the test `dot < -1`, which is never true.
+ * One walk rather than two. The horizon cull wants the sine of the angular
+ * radius and the frame cull wants its chord, and both are functions of the
+ * same number — `smallest`, the least dot product between the centroid and
+ * any vertex, which is the cosine of that angle. Computing it twice meant
+ * fifty thousand redundant trigonometric calls per coastline for two
+ * arithmetic conversions.
  *
- * `paint.test.ts` found this on its first run, with a polygon spanning three
- * hundred degrees of longitude. It is exactly the failure the brute force is
- * there for: silent, angle-dependent, and invisible on the frame it happens.
+ * They disagree past ninety degrees, and the disagreement is deliberate:
+ *
+ * **`sin`** is clamped to 1 there, which makes `beyondHorizon`'s test
+ * `dot < -1` and so never true. It has to be, because `-sin(r)` stops being
+ * the right threshold once `r` passes ninety: sine is symmetric about it, so
+ * a cap of 170 degrees produces the same `-0.17` as one of 10 and would cull
+ * a polygon wrapping most of the planet. `paint.test.ts` found exactly that
+ * on its first run, with a polygon spanning three hundred degrees of
+ * longitude — a silent, angle-dependent failure invisible on the frame it
+ * happens.
+ *
+ * **`chord`** needs no such guard, because it grows monotonically with the
+ * angle all the way to 2 at the antipode. A hemisphere-spanning polygon gets
+ * an honestly large screen bound rather than an ambiguous one.
  */
-function angularRadiusSin(
+function extentOf(
   polygon: readonly (readonly number[])[],
   centre: { x: number; y: number; z: number },
-): number {
+): { sin: number; chord: number } {
   let smallest = 1;
   for (const ring of polygon) {
     for (let index = 0; index < ring.length; index += 2) {
@@ -118,12 +147,13 @@ function angularRadiusSin(
     }
   }
 
-  if (smallest <= 0) {
-    return 1;
-  }
-
-  // cos(r) to sin(r), without the round trip through acos.
-  return Math.sqrt(1 - smallest * smallest);
+  return {
+    // |a - b|² = 2 - 2(a·b) for unit vectors. Clamped because a dot product
+    // assembled from five trigonometric calls can land a hair outside [-1, 1].
+    chord: Math.sqrt(Math.max(0, 2 - 2 * smallest)),
+    // cos(r) to sin(r), without the round trip through acos.
+    sin: smallest <= 0 ? 1 : Math.sqrt(1 - smallest * smallest),
+  };
 }
 
 /**
@@ -145,9 +175,11 @@ export function boundingCaps(
   const caps = land.map((polygon) => {
     const centre = centroidOf(polygon);
     if (centre === null) {
-      return { x: 0, y: 0, z: 1, sin: 1 };
+      // No direction to speak of, so a cap covering everything: never culled
+      // by the horizon, and a chord of 2 is never culled by the frame either.
+      return { x: 0, y: 0, z: 1, sin: 1, chord: 2 };
     }
-    return { ...centre, sin: angularRadiusSin(polygon, centre) };
+    return { ...centre, ...extentOf(polygon, centre) };
   });
 
   capsFor.set(land, caps);
@@ -171,4 +203,90 @@ export function beyondHorizon(
   camera: { x: number; y: number; z: number },
 ): boolean {
   return cap.x * camera.x + cap.y * camera.y + cap.z * camera.z < -cap.sin;
+}
+
+/**
+ * Whether a whole polygon falls outside the porthole.
+ *
+ * `beyondHorizon` asks whether a polygon is round the back. This asks the
+ * question magnification made worth asking: whether it is on the near side
+ * and still nowhere near the hole the reader is looking through. At 1x the
+ * answer is almost always no, because the frame *is* the sphere. At 16x the
+ * frame holds a couple of per cent of the near side, and the answer is yes
+ * for every continent except the one being looked at.
+ *
+ * That inverts the cost curve, which is the whole reason deep zoom is
+ * affordable. Without it, zooming in projects the same hundred and fifty
+ * thousand vertices in order to draw fewer and fewer of them: the closer the
+ * reader looks, the more work each frame does for a smaller picture. With it,
+ * the work follows what is actually on screen.
+ *
+ * **The bound.** An orthographic projection never increases a distance, so
+ * every vertex lands within `radius * cap.chord` of where the centroid lands.
+ * `layOnSphere` then pushes hidden vertices radially outward to the limb,
+ * which only moves them *further* from the origin — and the origin is the
+ * centre of the frame. So the drawn shape, edges included, stays within the
+ * cone that the bounding disc subtends from the centre of the frame.
+ *
+ * **`SLACK`.** That argument bounds the shape's distance from the frame
+ * centre but not, tightly, the closest approach of a straight edge spanning
+ * the cone — a chord always cuts inside the arc it spans. Rather than carry
+ * exact trigonometry for a term worth a few pixels, the test keeps half a
+ * frame of margin, and `paint.test.ts` checks the predicate against brute
+ * force across a spread of spins, tilts and magnifications. The margin is
+ * measured rather than assumed: the test fails if it is too small.
+ *
+ * Conservative in the only direction that matters, exactly like
+ * `beyondHorizon`. It may keep a polygon that turns out to draw nothing —
+ * the clip in `paintSphere` discards it as it always did — but it can never
+ * drop one with a pixel inside the frame.
+ */
+const SLACK = 1.5;
+
+/**
+ * The view's trigonometry, computed once for a whole coastline.
+ *
+ * Hoisted for the same reason `cameraDirection` is, and it is the same
+ * rearrangement: spin and tilt are constant for a frame while the polygon
+ * changes two and a half thousand times, so working them out inside
+ * `outsideFrame` would put ten thousand redundant trigonometric calls into
+ * every frame — inside the function whose entire job is to make frames
+ * cheaper.
+ */
+export interface Basis {
+  cosSpin: number;
+  sinSpin: number;
+  cosTilt: number;
+  sinTilt: number;
+  radius: number;
+}
+
+export function viewBasis(view: View): Basis {
+  const spin = view.spin * TO_RADIANS;
+  const tilt = view.tilt * TO_RADIANS;
+  return {
+    cosSpin: Math.cos(spin),
+    cosTilt: Math.cos(tilt),
+    radius: view.radius,
+    sinSpin: Math.sin(spin),
+    sinTilt: Math.sin(tilt),
+  };
+}
+
+export function outsideFrame(cap: Cap, basis: Basis, frame: number): boolean {
+  /*
+   * The centroid projected straight from the cap's own unit vector.
+   *
+   * `project` takes degrees and rebuilds this vector with five trigonometric
+   * calls; the cap already *is* the vector, so going back through latitude
+   * and longitude would be an `asin` and an `atan2` per polygon per frame to
+   * recover what is sitting in the argument. This is `project` with the
+   * spin's angle-addition expanded and the vertex factored out.
+   */
+  const { cosSpin, sinSpin, cosTilt, sinTilt, radius } = basis;
+  const facing = cap.x * cosSpin - cap.y * sinSpin;
+  const x = radius * (cap.y * cosSpin + cap.x * sinSpin);
+  const y = -radius * (cosTilt * cap.z - sinTilt * facing);
+
+  return Math.hypot(x, y) - radius * cap.chord > frame * SLACK;
 }

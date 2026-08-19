@@ -101,20 +101,34 @@ const RECIPES = {
    * where the gaps between points open past about 2.7 CSS pixels. Measured
    * across this dataset, the median gap falls roughly with the tolerance —
    *
-   *   0.07  → 0.245°  → 2.5x   (what `fine` supports, and today's ceiling)
-   *   0.045 → 0.170°  → 3.6x
-   *   0.03  → 0.126°  → 4.8x
-   *   0.02  → 0.094°  → 6.4x
+   *   0.07  → 0.245°  →  2.5x   (what `fine` supports)
+   *   0.02  → 0.069°  →  6x     (the previous ceiling)
+   *   0.012 → 0.049°  → 12x
+   *   0.008 → 0.038°  → 16x     (here)
+   *   0.005 → 0.029°  → 20x
+   *   0      →  0.014°  → 30x   (the raw source, and the end of the road)
    *
    * — so "let me look closer" costs vertices in direct proportion, and there
    * is no clever tolerance that buys the zoom for free.
    *
-   * 0.02 rather than 0.03 because the difference between them is a fifth of
-   * a megabyte on a file nobody downloads unless they have already pinched
-   * twice, and 6x is where the *marks* start being the limit instead of the
-   * coast — a hundred-kilometre-coarsened dot has no more to say at eight.
+   * **The last row is the one worth internalising.** Natural Earth 10m is the
+   * finest they publish, so 30x is not a budget decision, it is where this
+   * dataset stops knowing anything. Past it the only honest move is a
+   * different source — OSM coastline — not a smaller tolerance. Anything
+   * beyond would be smooth, confident, and invented.
+   *
+   * 0.008 lands at 16x for 736KB gzipped, against 414KB for the 6x that came
+   * before. Roughly 320KB for two and a half times the magnification, on a
+   * file nobody downloads unless they have already pinched twice.
+   *
+   * What does *not* scale with it is the **marks**. A public pin is coarsened
+   * to a hundred kilometres before it is stored, so past about 6x the
+   * coastline keeps improving while the dots stop meaning anything more
+   * precise. That is a deliberate privacy floor rather than a limitation to
+   * fix, and it is why the coast is what deep zoom is for: at 16x a reader is
+   * looking at a fjord, not at where somebody stood.
    */
-  finest: { tolerance: 0.02, minSpan: 0.1, places: 3 },
+  finest: { tolerance: 0.008, minSpan: 0.1, places: 3 },
   /*
    * Borders are thinner than coasts and forgive more, and a lower span bar
    * keeps the small enclaves that make the picture read as real.
@@ -125,7 +139,7 @@ const RECIPES = {
    * A hand-drawn-looking border running alongside a precise coastline is the
    * one artefact that would make the extra coastline detail look like a bug.
    */
-  bordersFinest: { tolerance: 0.025, minSpan: 0.1, places: 3 },
+  bordersFinest: { tolerance: 0.01, minSpan: 0.1, places: 3 },
 } as const;
 
 /**

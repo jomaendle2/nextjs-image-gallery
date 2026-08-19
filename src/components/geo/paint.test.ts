@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beyondHorizon, boundingCaps } from "./caps";
+import { beyondHorizon, boundingCaps, outsideFrame, viewBasis } from "./caps";
 import { markNear, placeMarks } from "./marks";
 import { cameraDirection, project, type View } from "./projection";
 
@@ -106,10 +106,101 @@ describe("the back-face cull", () => {
     for (const spin of [0, 90, 180, 270]) {
       expect(
         beyondHorizon(
-          cap ?? { x: 0, y: 0, z: 1, sin: 1 },
+          cap ?? { x: 0, y: 0, z: 1, sin: 1, chord: 2 },
           cameraDirection({ spin, tilt: 0, radius: 100 }),
         ),
       ).toBe(false);
+    }
+  });
+});
+
+/**
+ * The frame cull, checked the same way and for the same reason.
+ *
+ * `outsideFrame` is a bound on where a polygon can land on screen, and a
+ * bound that is a hair too tight erases whatever it was bounding — silently,
+ * and only at the magnification and angle where it was wrong. So this walks
+ * every drawn point the renderer would produce, including the radial push
+ * `layOnSphere` applies to hidden vertices, and insists the predicate never
+ * says "outside" when one of them is inside the frame.
+ *
+ * The magnifications matter more than the angles here, because the cull only
+ * starts discarding anything once the sphere outgrows the frame. `frame` is
+ * held at the sphere's resting radius and `radius` grows past it, which is
+ * exactly what `paintSphere` does: the porthole stays put and the globe grows
+ * through it.
+ */
+function drawnPoints(
+  polygon: readonly (readonly number[])[],
+  view: View,
+): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  for (const ring of polygon) {
+    for (let index = 0; index < ring.length; index += 2) {
+      const point = project(ring[index + 1] ?? 0, ring[index] ?? 0, view);
+      // `layOnSphere`'s limb push, reproduced exactly.
+      const scale = point.visible
+        ? 1
+        : view.radius / (Math.hypot(point.x, point.y) || 1);
+      out.push({ x: point.x * scale, y: point.y * scale });
+    }
+  }
+  return out;
+}
+
+describe("the frame cull", () => {
+  const FRAME = 200;
+
+  it("never discards a polygon with a point inside the frame", () => {
+    const caps = boundingCaps(LAND);
+    const random = pseudoRandom(20_260_819);
+
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      const view: View = {
+        spin: random() * 360,
+        tilt: (random() - 0.5) * 140,
+        // 1x through 16x, the whole range the stops cover.
+        radius: FRAME * (1 + random() * 15),
+      };
+
+      for (const [index, polygon] of LAND.entries()) {
+        const cap = caps[index];
+        if (cap !== undefined && outsideFrame(cap, viewBasis(view), FRAME)) {
+          for (const point of drawnPoints(polygon, view)) {
+            /*
+             * The frame is a circle, and `paintSphere` clips to it — but an
+             * edge between two points outside a circle can still cut across
+             * it, so the assertion uses the circumscribing square. Anything
+             * the renderer could possibly touch has to be outside that.
+             */
+            expect(
+              Math.max(Math.abs(point.x), Math.abs(point.y)),
+            ).toBeGreaterThan(FRAME);
+          }
+        }
+      }
+    }
+  });
+
+  it("discards most of the world once the globe outgrows the porthole", () => {
+    const caps = boundingCaps(LAND);
+    const view: View = { spin: 0, tilt: 0, radius: FRAME * 16 };
+    const kept = caps.filter(
+      (cap) => !outsideFrame(cap, viewBasis(view), FRAME),
+    );
+
+    // The point of the whole exercise: at 16x the porthole holds a sliver of
+    // the near side, and almost nothing survives both culls.
+    expect(kept.length).toBeLessThan(LAND.length);
+  });
+
+  it("keeps everything while the sphere still fits the frame", () => {
+    const caps = boundingCaps(LAND);
+    for (const spin of [0, 60, 120, 180, 240, 300]) {
+      const view: View = { spin, tilt: 0, radius: FRAME };
+      for (const cap of caps) {
+        expect(outsideFrame(cap, viewBasis(view), FRAME)).toBe(false);
+      }
     }
   });
 });
