@@ -147,6 +147,18 @@ export default async function AdminPage() {
                   {row.role === "owner"
                     ? null
                     : ` · ${count(row.invites_remaining, "invitation")} left`}
+                  {/*
+                    What the nudge cron has actually done to this person.
+                    Without it the only way to know the sequence is running —
+                    or that somebody asked it to stop — is to open the
+                    database, and a feature that mails people on a schedule
+                    with no visible trace is the kind that keeps mailing
+                    somebody long after they wanted it to stop.
+                  */}
+                  {row.nudge_count === 0
+                    ? null
+                    : ` · ${count(row.nudge_count, "reminder")} sent`}
+                  {row.nudges_muted_at === null ? null : " · muted"}
                 </p>
               </div>
               <ContributorRowActions row={row} />

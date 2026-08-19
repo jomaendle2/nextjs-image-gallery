@@ -55,3 +55,6 @@ next-env.d.ts
 .junie/
 skills-lock.json
 .claude/skills/
+
+# Rendered email previews from `npm run preview:email` — regenerate, do not commit
+.email-previews/

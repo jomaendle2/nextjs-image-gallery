@@ -1,5 +1,5 @@
 import type { GalleryImage } from "@/data/galleryData";
-import { escapeHtml } from "@/lib/auth/email";
+import { escapeHtml } from "@/lib/auth/mailer";
 import { photoAltText } from "@/lib/photos/alt-text";
 import { photoTitle } from "@/lib/photos/title";
 

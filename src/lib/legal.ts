@@ -121,7 +121,23 @@ export const PROCESSORS = [
     name: "Resend (Plain Text Inc.)",
     role: "Email delivery",
     data: "Email address and the contents of messages sent to it",
-    basis: "Consent for the list (Art. 6(1)(a)); contract for sign-in links",
+    /*
+     * Three bases, because three different kinds of message leave through
+     * the same processor and they do not rest on the same thing.
+     *
+     * The nudges are the addition worth naming: an invited photographer who
+     * has published nothing receives up to six reminders over three months,
+     * and they never asked for those — they accepted an invitation, which is
+     * not the same as consenting to a sequence. Legitimate interest is the
+     * honest basis, and it is only honest while the balancing test holds: a
+     * finite sequence, to somebody the operator already has a relationship
+     * with, about the thing they were invited to do, with a one-click opt-out
+     * in every single message and in its headers.
+     */
+    basis:
+      "Consent for the list (Art. 6(1)(a)); contract for sign-in links; " +
+      "legitimate interest for reminders to invited photographers " +
+      "(Art. 6(1)(f)), with an opt-out in every message",
   },
   /*
    * The only processor a *visitor* never reaches.

@@ -122,6 +122,25 @@ export async function consumeLoginToken(
       : null;
   }
 
+  /*
+   * The first time this person ever got in, recorded once.
+   *
+   * The nudge copy needs it: "your link is still good" and "you signed in,
+   * and your page is still empty" are different messages to the same empty
+   * page, and there was nothing anywhere that could tell them apart —
+   * `sessions` rows expire and are pruned, so an absence there means nothing.
+   *
+   * `WHERE first_signed_in_at IS NULL` rather than a bare COALESCE, so this
+   * writes on exactly one sign-in per contributor and every later one costs
+   * a statement that touches no rows. It is fire-and-forget in the sense
+   * that matters: nothing below reads it, so it can only ever be late.
+   */
+  await sql`
+    UPDATE contributors
+       SET first_signed_in_at = now()
+     WHERE email = ${address} AND first_signed_in_at IS NULL;
+  `;
+
   return {
     email: address,
     contributor: {

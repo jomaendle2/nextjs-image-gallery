@@ -370,6 +370,30 @@ Tracked against the invariants above. Status is updated as each lands.
 | 14 | `/api/photo/[id]/details` unlimited | I11 | **done** — `memberDetailsLimiter`, 120 per 15 min, keyed by member. Tolerable while the response was prose; a coordinate set is worth collecting |
 | 15 | No index behind the globe query | — | open — `photos_globe_idx` when the table justifies it; see `next-version.md` |
 
+### I17 — Mail nobody asked for carries a way out of it
+
+*Added with the reminders to invited photographers.*
+
+Every other message this site sends answers something a person did: a
+subscriber opted in twice, a member paid, an applicant applied, a sign-in link
+answers a form somebody just submitted. The nudges answer nothing — up to six
+of them over three months, to somebody whose only act was accepting an
+invitation. That is the one category where the reader's alternative to an
+opt-out is the spam button, and a spam report is charged to the whole domain
+rather than to the one address: it degrades delivery of the announcements too,
+which are the mail that actually matters.
+
+**Rule:** a message the recipient did not ask for carries a one-click opt-out
+in the body *and* the RFC 8058 header pair, the opt-out endpoint is POST-only
+(a link scanner must not be able to trigger it), and the sequence ends by
+itself — the last message says so. `nudge-copy.ts` attaches the headers inside
+the builder every nudge goes through, so a new one cannot be written without
+them.
+
+The opt-out is deliberately narrow: it stops reminders and nothing else.
+Sign-in links and announcements rest on different consent, and somebody tired
+of being asked to publish has not asked to be locked out of their account.
+
 ## 6. How these are enforced
 
 `src/lib/security.test.ts`, `src/lib/security-interface.test.ts` and

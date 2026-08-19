@@ -423,6 +423,80 @@ export const MIGRATIONS: readonly string[] = [
      ) STORED;`,
 
   /*
+   * Nudging the photographers who were invited and never published.
+   *
+   * Three columns and a ledger. `nudge_token` is the opt-out secret that goes
+   * in every nudge's `List-Unsubscribe` header, minted lazily by the cron on
+   * the first one somebody is sent — so there is no backfill statement here
+   * and no token generated for an address that never needs one. It does not
+   * expire, for the same reason `subscribers.unsubscribe_token` does not: the
+   * one moment a person most needs it is months after they stopped reading.
+   *
+   * `nudges_muted_at` stops nudges and nothing else. Sign-in links and
+   * announcements are unaffected — different consent, different mail.
+   *
+   * `first_signed_in_at` is stamped inside `consumeLoginToken`, and exists so
+   * the first two nudges can tell two different empty pages apart: "your link
+   * is still good" and "you signed in, and the page is still empty" are not
+   * the same message.
+   */
+  "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS nudge_token TEXT;",
+  "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS nudges_muted_at TIMESTAMPTZ;",
+  "ALTER TABLE contributors ADD COLUMN IF NOT EXISTS first_signed_in_at TIMESTAMPTZ;",
+
+  /*
+   * The send log, and the thing that makes a retried cron run safe.
+   *
+   * The composite primary key *is* the idempotency mechanism, and it replaces
+   * the pair of counter columns a first draft reaches for. `INSERT … ON
+   * CONFLICT DO NOTHING RETURNING contributor_id` claims a stage and returns
+   * nothing at all if that stage was already claimed, so two overlapping runs
+   * — or one run retried after a timeout — cannot both send. Claim before
+   * send, because a duplicate is worse than a miss: this is the convention
+   * `markAnnounced` documents, applied to the one kind of mail that goes out
+   * without a person pressing anything.
+   *
+   * It is also a send log, which this codebase has never had. Answering "what
+   * did we actually mail this address, and when" previously required reading
+   * the provider's dashboard.
+   */
+  `CREATE TABLE IF NOT EXISTS contributor_nudges (
+     contributor_id TEXT NOT NULL REFERENCES contributors(id) ON DELETE CASCADE,
+     track          TEXT NOT NULL,
+     stage          INTEGER NOT NULL,
+     sent_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+     PRIMARY KEY (contributor_id, track, stage)
+   );`,
+
+  /*
+   * The statement that stops this feature ambushing the existing list on the
+   * day it ships, and the most important one here.
+   *
+   * Without it, every contributor invited before today becomes stage-1
+   * eligible the moment the cron first runs, and walks the entire six-stage
+   * sequence over the following three months — starting with "your page is
+   * waiting", sent to somebody invited last year. Marking stages 1–3 of the
+   * empty track as already sent lands them directly on the monthly tail,
+   * which is the correct place for an invitation that has been sitting for
+   * months: quiet, short, and ending by itself.
+   *
+   * A hard-coded literal date rather than `now() - INTERVAL '…'`, and that is
+   * the whole subtlety. An interval would re-capture whoever was invited in
+   * the meantime on every deploy, silently skipping the first three stages
+   * for photographers who were invited yesterday and should get all six.
+   * `schema.test.ts` requires every statement to be safe to re-run, and this
+   * one is safe to re-run precisely because both the date and the sent_at
+   * stamp are fixed: the second run inserts the same rows and every one of
+   * them conflicts.
+   */
+  `INSERT INTO contributor_nudges (contributor_id, track, stage, sent_at)
+     SELECT c.id, 'empty', s.stage, TIMESTAMPTZ '2026-08-19 00:00:00+00'
+       FROM contributors c
+       CROSS JOIN (VALUES (1), (2), (3)) AS s(stage)
+      WHERE c.created_at < TIMESTAMPTZ '2026-08-19 00:00:00+00'
+     ON CONFLICT DO NOTHING;`,
+
+  /*
    * The display copy stops being a hopeful backfill and becomes an invariant.
    *
    * Four read sites used to say `COALESCE(display_url, blob_url)`, which for

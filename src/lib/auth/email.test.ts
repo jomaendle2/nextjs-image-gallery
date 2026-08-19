@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  escapeHtml,
   sendApplicationApproved,
   sendInvitation,
   sendLoginEmail,
   sendMembershipWelcome,
 } from "./email";
+import { escapeHtml } from "./mailer";
 import { LOGIN_TTL_MINUTES } from "./ttl";
 
 describe("escapeHtml", () => {

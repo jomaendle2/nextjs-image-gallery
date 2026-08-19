@@ -48,6 +48,11 @@ const NO_STYLESHEET = new Map<string, string>([
     join("/lib", "auth", "email.ts"),
     "email HTML, where custom properties are unsupported by most clients",
   ],
+  [
+    join("/lib", "auth", "mailer.ts"),
+    "the shell and button every template renders through; email HTML, as above",
+  ],
+  [join("/lib", "auth", "nudge-copy.ts"), "email HTML, as above"],
   [join("/lib", "announcement.ts"), "email HTML, as above"],
 ]);
 
