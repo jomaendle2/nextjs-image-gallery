@@ -4,7 +4,7 @@ import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import { OverlaidChrome } from "@/components/OverlaidChrome";
 import "./globals.css";
-import { SITE_DESCRIPTION } from "@/lib/metadata";
+import { ogCard, SITE_DESCRIPTION } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 
 const geistSans = Geist({
@@ -30,7 +30,7 @@ const TITLE = "the beauty of earth.";
  * it was the only sentence anywhere in the project written in a different
  * voice from the site it describes.
  */
-const OG_IMAGE = `/api/og?title=${encodeURIComponent(TITLE)}`;
+const OG_IMAGE = ogCard({ title: TITLE });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

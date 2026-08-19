@@ -13,7 +13,7 @@ import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { membershipConfigured } from "@/lib/members/offer";
-import { alternates } from "@/lib/metadata";
+import { alternates, ogCard } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { groupIntoCells, labelFor, toGlobePoints } from "@/lib/photos/globe";
 import { listGlobePoints } from "@/lib/photos/repository";
@@ -22,12 +22,37 @@ import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  alternates: alternates("/globe"),
-  title: "Where these were taken — the beauty of earth.",
-  description:
-    "Every place a photographer has marked, blurred to about a hundred kilometres.",
-};
+const DESCRIPTION =
+  "Every place a photographer has marked, blurred to about a hundred kilometres.";
+
+/**
+ * Its own card, with the number on it.
+ *
+ * No strip of photographs here, and that is the honest choice rather than an
+ * omission: this page is a map, and three photographs would preview it as a
+ * gallery. What it can say that the site-wide card cannot is how much is on
+ * it — "41 places" is the reason to open a globe.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const cells = groupIntoCells(await listGlobePoints());
+  const card = ogCard({
+    title: "Where these were taken",
+    subtitle: count(cells.length, "place"),
+  });
+
+  return {
+    alternates: alternates("/globe"),
+    title: "Where these were taken — the beauty of earth.",
+    description: DESCRIPTION,
+    openGraph: {
+      title: "Where these were taken — the beauty of earth.",
+      description: DESCRIPTION,
+      url: "/globe",
+      images: [{ url: card, width: 1200, height: 630 }],
+    },
+    twitter: { card: "summary_large_image", images: [card] },
+  };
+}
 
 /**
  * The gallery by place.

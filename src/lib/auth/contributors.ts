@@ -389,6 +389,30 @@ export async function claimInvite(input: {
   return { status: "no-invites-left" };
 }
 
+/**
+ * Who brought this photographer in, if a photographer did.
+ *
+ * Null for somebody the owner invited directly, and null for the owner —
+ * which is the same answer for a different reason and the caller treats them
+ * identically. The name is used to say "Anna invited you" on a workspace
+ * that otherwise greets everybody the same way, and an invitation from a
+ * peer is the one arrival this site has that somebody chose personally.
+ *
+ * `revoked_at IS NULL` on the *inviter*: naming somebody who has been
+ * removed from the gallery is worse than naming nobody.
+ */
+export async function inviterName(
+  contributorId: string,
+): Promise<string | null> {
+  const rows = await sql`
+    SELECT inviter.display_name
+    FROM contributors c
+    JOIN contributors inviter ON inviter.id = c.invited_by
+    WHERE c.id = ${contributorId} AND inviter.revoked_at IS NULL;
+  `;
+  return (rows[0]?.["display_name"] as string | undefined) ?? null;
+}
+
 /** How many invites this contributor has left to give. */
 export async function invitesRemaining(contributorId: string): Promise<number> {
   const rows = await sql`
@@ -444,17 +468,22 @@ export interface ContributorPreview {
  * person's four most recent photographs alongside their row, so the page
  * costs a single round trip however many photographers there are.
  */
-export async function listContributorsWithPreviews(): Promise<
-  ContributorPreview[]
-> {
-  /*
-   * Two lateral joins and no GROUP BY. Grouping by the aggregated previews
-   * fails outright — Postgres has no equality operator for `json` — and
-   * counting in its own subquery is clearer than grouping around it anyway.
-   * The inner join on a positive count is what hides contributors who have
-   * been invited but have not published yet.
-   */
-  const rows = await sql`
+/*
+ * Cached per request, like `getContributorBySlug` and for the same reason:
+ * `/photographers` now builds its share card from the same rows it renders,
+ * so `generateMetadata` and the page body both ask for them. Without this
+ * that is two identical round trips per render rather than one.
+ */
+export const listContributorsWithPreviews = cache(
+  async function withPreviews(): Promise<ContributorPreview[]> {
+    /*
+     * Two lateral joins and no GROUP BY. Grouping by the aggregated previews
+     * fails outright — Postgres has no equality operator for `json` — and
+     * counting in its own subquery is clearer than grouping around it anyway.
+     * The inner join on a positive count is what hides contributors who have
+     * been invited but have not published yet.
+     */
+    const rows = await sql`
     SELECT c.slug, c.display_name, c.site_url,
            stats.photo_count,
            COALESCE(recent.previews, '[]'::json) AS previews
@@ -478,8 +507,9 @@ export async function listContributorsWithPreviews(): Promise<
     WHERE c.revoked_at IS NULL
     ORDER BY stats.photo_count DESC, c.display_name ASC;
   `;
-  return rows as ContributorPreview[];
-}
+    return rows as ContributorPreview[];
+  },
+);
 
 /** Whether this contributor is an owner, for rules the interface must not own. */
 export async function isOwnerContributor(id: string): Promise<boolean> {

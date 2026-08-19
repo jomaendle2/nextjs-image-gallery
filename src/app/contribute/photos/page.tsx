@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { GlassButton } from "@/components/ui/glass-button";
 import { TextLink } from "@/components/ui/TextLink";
 import { aiSuggestionsConfigured } from "@/lib/ai/offer";
-import { invitesRemaining } from "@/lib/auth/contributors";
+import { inviterName, invitesRemaining } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { mapStyleUrl } from "@/lib/maptiler";
@@ -13,6 +13,7 @@ import { signOut } from "../actions";
 import { ContributeWorkspace } from "../ContributeShell";
 import { WorkspaceNav } from "../WorkspaceNav";
 import { FirstRun } from "./FirstRun";
+import { JustLive } from "./JustLive";
 import { PhotoList } from "./PhotoList";
 import { UnsavedGuard } from "./UnsavedGuard";
 import { UploadForm } from "./UploadForm";
@@ -35,9 +36,10 @@ export default async function PhotosPage() {
     redirect("/contribute?error=ended");
   }
 
-  const [photos, invites] = await Promise.all([
+  const [photos, invites, invitedBy] = await Promise.all([
     listOwnPhotos(contributor.id),
     invitesRemaining(contributor.id),
+    inviterName(contributor.id),
   ]);
   const published = photos.filter((photo) => photo.published_at !== null);
 
@@ -54,13 +56,22 @@ export default async function PhotosPage() {
       subtitle={`Signed in as ${contributor.display_name}.`}
       title="Your photographs"
     >
-      <div className="mb-8 flex flex-wrap gap-3">
-        {published.length > 0 ? (
-          <TextLink href={`/by/${contributor.slug}`} standalone={true}>
-            View your public page
-          </TextLink>
-        ) : null}
-        {/*
+      {/*
+        Hidden entirely while the first-publish card is up, because that card
+        says both of these things better: it links to the page and it explains
+        what the invitations are for. Two links to `/by/<slug>` a hand's width
+        apart, and the same count stated twice, is what "celebrate the moment"
+        looks like when it is bolted on beside the furniture instead of
+        replacing it.
+      */}
+      {published.length === 1 ? null : (
+        <div className="mb-8 flex flex-wrap gap-3">
+          {published.length > 0 ? (
+            <TextLink href={`/by/${contributor.slug}`} standalone={true}>
+              View your public page
+            </TextLink>
+          ) : null}
+          {/*
           `invite` and `contributors` used to be here too, and are now in
           `WorkspaceNav` above — a row of links that only existed on the
           dashboard is not navigation, it is a dead end everywhere else.
@@ -70,12 +81,13 @@ export default async function PhotosPage() {
           "0 left": somebody who has three is being told they can bring people
           in, and somebody who has none has nothing to act on.
         */}
-        {invites > 0 ? (
-          <p className="text-sm text-white/55">
-            {count(invites, "invitation")} left to give.
-          </p>
-        ) : null}
-      </div>
+          {invites > 0 ? (
+            <p className="text-sm text-white/55">
+              {count(invites, "invitation")} left to give.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {/*
         Before the upload box rather than after it, and only until the first
@@ -83,7 +95,16 @@ export default async function PhotosPage() {
         at the file input, and the most important of them — that nobody reviews
         any of this — was answered nowhere on the site.
       */}
-      {published.length === 0 ? <FirstRun /> : null}
+      {published.length === 0 ? <FirstRun invitedBy={invitedBy} /> : null}
+
+      {/*
+        And the other end of the same round trip. `=== 1` rather than `> 0`:
+        this is the moment the page went from an address that existed to one
+        worth sending somebody, and the second publish takes it away again.
+      */}
+      {published.length === 1 ? (
+        <JustLive invites={invites} slug={contributor.slug} />
+      ) : null}
 
       {/*
         The tile key is read here, on the server, and handed down as a prop.

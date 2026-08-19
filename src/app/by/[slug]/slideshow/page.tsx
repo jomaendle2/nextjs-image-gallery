@@ -8,7 +8,7 @@ import {
   listPublicContributorSlugs,
 } from "@/lib/auth/contributors";
 import { membershipConfigured } from "@/lib/members/offer";
-import { contributorAlternates } from "@/lib/metadata";
+import { contributorAlternates, ogCard } from "@/lib/metadata";
 
 export const revalidate = 3600;
 
@@ -46,9 +46,10 @@ export async function generateMetadata({
    * shares, and until now it previewed with the generic gallery image — so
    * the one link they send about their own work said nothing about them.
    */
-  const card = `/api/og?title=${encodeURIComponent(contributor.display_name)}&subtitle=${encodeURIComponent(
-    "Photographs on the beauty of earth",
-  )}`;
+  const card = ogCard({
+    title: contributor.display_name,
+    subtitle: "Photographs on the beauty of earth",
+  });
 
   return {
     title: `${contributor.display_name} — the beauty of earth.`,

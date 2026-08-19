@@ -64,6 +64,54 @@ export function alternates(canonical: string): Metadata["alternates"] {
 }
 
 /**
+ * The share card for a page, as a URL into `/api/og`.
+ *
+ * Written out by hand in four places, each escaping its own parameters, and
+ * one of them differed: the site-wide card passes a title only, the
+ * photographer's card adds a subtitle, the slideshow's adds both plus a strip
+ * of photographs. Nothing was wrong with any of them, which is precisely how
+ * a fifth ends up subtly different from the other four — a missing
+ * `encodeURIComponent` around a name with an ampersand in it truncates the
+ * card's title and nobody sees it, because nobody looks at their own link
+ * previews.
+ *
+ * `previews` are absolute blob URLs, joined with commas because that is the
+ * shape the route already parses. An empty list omits the parameter rather
+ * than sending an empty one: the route treats "no previews" and "a preview
+ * that failed to load" differently, and only the first of those is true here.
+ *
+ * A relative URL, resolved against `metadataBase` by Next. Absolute would
+ * mean reading the origin, and the origin is configuration this module has no
+ * business knowing about.
+ */
+export function ogCard(options: {
+  title: string;
+  subtitle?: string;
+  previews?: readonly string[];
+}): string {
+  const query = new URLSearchParams({ title: options.title });
+
+  if (options.subtitle !== undefined && options.subtitle !== "") {
+    query.set("subtitle", options.subtitle);
+  }
+
+  /*
+   * Only what a share card can actually fetch. The route refuses anything
+   * that is not one of our blobs, so a relative path or a data URL costs a
+   * round trip to be rejected — and a card whose strip silently renders
+   * empty is worse than one with no strip at all.
+   */
+  const usable = (options.previews ?? []).filter((url) =>
+    url.startsWith("https://"),
+  );
+  if (usable.length > 0) {
+    query.set("previews", usable.join(","));
+  }
+
+  return `/api/og?${query}`;
+}
+
+/**
  * As above, for a photographer's page, which has a feed of its own worth
  * offering alongside the site-wide one.
  */

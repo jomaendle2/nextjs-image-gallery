@@ -269,6 +269,15 @@ export async function getMemberDetails(
  * `location` is the photographer's own public string, which is what labels a
  * cell. No reverse geocoding: it would need a sixth processor and would be
  * worse than the words the person who was there chose.
+ *
+ * Deliberately *not* wrapped in React's `cache`, though `/globe` now asks for
+ * these twice per render — once for the share card, once for the page body.
+ * Three invariants in `security.test.ts` and `security-membership.test.ts`
+ * slice this file on `export async function` boundaries to prove what the
+ * globe query may select, and a `cache(...)` wrapper moves the boundary they
+ * read. The saving is one query per hourly revalidation; the cost would be
+ * editing a security control to suit an optimisation, which is the wrong way
+ * round.
  */
 export async function listGlobePoints(): Promise<GlobePointRow[]> {
   const rows = await sql`
