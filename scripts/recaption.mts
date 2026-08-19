@@ -34,7 +34,7 @@
  * is the second thing the script learned, and the more serious one. The
  * gallery has more than one contributor, and a first run rewrote six
  * photographs belonging to somebody else — whose captions are published under
- * their name, and who was never asked. `docs/next-version.md` has stated the
+ * their name, and who was never asked. `docs/roadmap.md` has stated the
  * rule since before any of this existed: *never publish generated text under
  * somebody's name unreviewed.* A batch script run by the site owner is
  * exactly the path that walks around it, because the owner's credentials

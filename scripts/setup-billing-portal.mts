@@ -75,7 +75,7 @@ const features: Stripe.BillingPortal.ConfigurationCreateParams.Features = {
  * `privacy_policy_url` and `terms_of_service_url` are deliberately absent:
  * this site has neither page yet, and pointing Stripe's portal at two 404s
  * is worse than pointing it nowhere. Both are required before taking real
- * money from Germany — see docs/security-review.md — and both belong here
+ * money from Germany — see docs/archive/2026-08-security-review.md — and both belong here
  * the moment they exist.
  */
 const businessProfile = {

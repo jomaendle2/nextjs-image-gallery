@@ -50,10 +50,17 @@ export function code(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 }
 
+/** The repository root, for the tests that read outside `src`. */
+export const ROOT = join(SRC, "..");
+
 /**
  * Every `.ts`/`.tsx` file under `src`, so a new violation cannot hide in a
  * directory nobody thought to name. Test files are excluded: they quote the
  * very patterns they forbid.
+ *
+ * The exclusion is `.test.ts` and not `.test.tsx`, which is exact rather than
+ * careless — there are none of the latter, and widening it here would quietly
+ * change what every invariant above can see.
  */
 export function allSourceFiles(dir: string = SRC): string[] {
   const found: string[] = [];

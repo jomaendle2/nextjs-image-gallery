@@ -1,12 +1,17 @@
-# The next version
+# Roadmap
 
-What is deliberately not in the first release, why, and what would trigger
-each one. Everything here was found by building or measuring the current
-version rather than imagined in advance, so the ordering reflects what
-actually bit rather than what sounds important.
+What is deliberately not built, why, and what would trigger each one.
+Everything here was found by building or measuring the current version rather
+than imagined in advance, so the ordering reflects what actually bit rather
+than what sounds important.
 
-Nothing on this list blocks five testers. That is the whole point of it
-being a list rather than work.
+Every item has a **trigger** rather than a priority, because priorities drift
+and triggers do not. Nothing on this list blocks a small set of testers; that
+is the whole point of it being a list rather than work.
+
+The scaling numbers below were measured in August 2026 on the state of the
+project at the time — the working is in
+[the archived quality audit](archive/2026-08-quality-audit.md).
 
 ---
 
@@ -44,7 +49,7 @@ database.**
 Worth confirming while you are in the dashboard: what the Neon
 point-in-time-recovery retention actually is. The commands for a manual
 `pg_dump` floor, and the note that blobs are covered by none of it, are in
-`docs/launch-checklist.md`; the retention number itself still has to be read
+[the archived launch checklist](archive/2026-08-launch-checklist.md); the retention number itself still has to be read
 off the dashboard and written down there.
 
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
@@ -198,7 +203,7 @@ in a review thread because a comment in a diff is read once.
   unguarded whatever happens — it runs on `vercel-build`, and a guard there
   refuses every production deploy. **Trigger:** the next destructive script.
 
-- **`membershipConfigured()` is read at eight server call sites**, threaded
+- **`membershipConfigured()` is read across twelve files**, threaded
   as a prop into `SiteNav` and `GalleryTopBar`, provided as a context to the
   carousel, called directly by `SiteFooter`, and hardcoded to `true` on
   `/membership` to work around the prop's default. Four mechanisms for one
@@ -226,6 +231,26 @@ in a review thread because a comment in a diff is read once.
   reconstruct one person's viewing history. Dividing a pool by it needs
   Stripe Connect, thresholds and tax — a separate piece of work, and one that
   only makes sense once there is a pool.
+
+- **Nothing detects an export used only in its own file.** About thirty are:
+  mostly result and row types in `src/lib/*/repository.ts` and the three
+  `NAV_*` constants in `field.ts`. Biome's unused-variable rules are per-file
+  and never look at an `export`; there is no cross-file reachability check in
+  the build at all. `knip` would find them, and it understands Next's
+  convention-reached entry points — pages, routes, `sitemap.ts`,
+  `instrumentation.ts` — which a naive tool reports as dead. The cost is a
+  dependency and a configuration file full of exceptions, which is why it is
+  here rather than in `package.json`. **Trigger:** the next time a deletion
+  turns out to have left something behind, or a second reviewer asks whether
+  a symbol is live.
+
+- **CI does not build.** Vercel builds every push, so `next build` is covered.
+  What is not is `scripts/preflight.mts` and `scripts/migrate.mts`, which
+  `vercel-build` runs *before* the build — both are typechecked and
+  `schema.test.ts` covers the data they act on, but neither driver has a
+  behavioural test, and `vitest.config.mts` cannot pick one up because its
+  `include` is `src/**`. **Trigger:** the first preflight or migration
+  regression that reaches a deploy.
 
 - **`next-plausible` 3 → 4.** The only outdated dependency, and a major
   version. Deliberately not taken the week before inviting testers: a
@@ -305,12 +330,20 @@ chip in the way of the ones that work.
 
 ---
 
-## From the original brief, still unbuilt
+## From the original brief
 
-- **AI-drafted descriptions** through the Vercel AI Gateway. Blocked only on
-  a gateway key. The shape that fits this site: draft a description from the
-  photograph, show it to the photographer, and let them edit or reject it —
-  never publish generated text under somebody's name unreviewed.
+Nothing is left on it. **AI-drafted descriptions** were the last entry and
+they shipped: `src/lib/ai/suggest.ts` and
+`src/app/api/photos/[id]/suggest/route.ts`, behind `AI_GATEWAY_API_KEY`, in
+the shape this section asked for — draft from the photograph, show it to the
+photographer, let them edit or reject it, never publish generated text under
+somebody's name unreviewed.
+
+Kept as a heading rather than deleted because the entry sat here for weeks
+after the feature existed, describing it as "blocked only on a gateway key"
+while the key was set and the button was on screen. A roadmap that does not
+get things struck off is read as a list of what is missing, and starts lying
+in the most expensive direction.
 
 ---
 

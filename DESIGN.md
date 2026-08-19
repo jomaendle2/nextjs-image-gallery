@@ -111,6 +111,29 @@ sits on a text baseline.
 
 ---
 
+## Glass
+
+Glass is defined once in `globals.css` as two weights — `glass-thin` and
+`glass-thick` — each combining a blur, a saturation boost, a specular inset
+edge and a drop shadow, plus `glass-hairline` and `glass-bar` for the two
+shapes that recur. The saturation is what makes a panel pick up the colour of
+the photo behind it instead of going grey.
+
+There was a `glass-regular` between the two for a while. Nothing ever used
+it, and it kept two override rules alive underneath it — one for
+`prefers-reduced-transparency` and one for `:hover` — so the middle rung cost
+three blocks and carried nothing.
+
+Glass is applied only to chrome that genuinely floats over an image.
+`backdrop-filter` makes the compositor snapshot and blur everything behind an
+element every frame; on a 90px strip that is nearly free, on a full-viewport
+layer it is one of the most expensive things a page can do.
+
+`prefers-reduced-transparency` drops every glass surface to a flat fill.
+`prefers-reduced-motion` disables the spinners and the colour transition.
+
+---
+
 ## Motion
 
 `--ease-glass` (`cubic-bezier(0.32, 0.72, 0, 1)`) everywhere. Deceleration

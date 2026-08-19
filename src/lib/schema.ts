@@ -367,7 +367,7 @@ export const MIGRATIONS: readonly string[] = [
    * can be turned into a sentence a person reads.
    *
    * No index yet. At fourteen rows and at three hundred the globe query is a
-   * sequential scan over a table the feed already scans; `docs/next-version.md`
+   * sequential scan over a table the feed already scans; `docs/roadmap.md`
    * records `photos_globe_idx` beside the existing 300-photograph trigger.
    */
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS precise_lat DOUBLE PRECISION;",
@@ -442,7 +442,7 @@ export const MIGRATIONS: readonly string[] = [
    *
    * `NOT NULL DEFAULT '{}'` so every read is an array and no caller has to
    * decide what a null list of subjects means. GIN is what makes the browse
-   * pages in `docs/next-version.md` a query rather than a scan, and it costs
+   * pages in `docs/roadmap.md` a query rather than a scan, and it costs
    * nothing to add now while the table is small.
    */
   "ALTER TABLE photos ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';",

@@ -1,5 +1,15 @@
 # Community Contributors Implementation Plan
 
+> **Archived record — 15 August 2026. Not current state.**
+>
+> The eleven-task implementation plan for the contributor feature. Every one
+> of its sixty-three checkboxes is unticked and every task shipped: it was
+> worked from rather than updated. Paths in it predate the move to `.mts`,
+> and its rule counts and environment variable names are those of the day.
+>
+> Its Global Constraints section, however, is where the working rules in
+> [`AGENTS.md`](../../AGENTS.md) came from.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let a closed set of invited photographers publish into the gallery, credited and filterable, without giving up the cached, layout-shift-free viewing experience the site has today.

@@ -19,7 +19,7 @@
  *
  * Adding one is a deliberate act with a cost: the tag is only useful once
  * several photographs carry it, and every entry that never gets picked is a
- * chip in the way of the ones that do. `docs/next-version.md` records the
+ * chip in the way of the ones that do. `docs/roadmap.md` records the
  * browse pages this is groundwork for, and the trigger for building them.
  */
 

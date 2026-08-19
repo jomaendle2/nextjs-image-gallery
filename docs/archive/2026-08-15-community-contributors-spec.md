@@ -1,5 +1,15 @@
 # Opening the gallery to invited contributors
 
+> **Archived record — 15 August 2026. Not current state.**
+>
+> The design for opening the gallery to invited photographers, written before
+> any of it existed. The schema here is roughly fourteen columns and four
+> tables behind what shipped, the upload cap is half what it became, and the
+> filter key it describes was superseded by `/by/[slug]`.
+>
+> [data-model.md](../architecture/data-model.md) is current. Kept for the
+> shape of the argument that produced it.
+
 Status: approved (sections 1-2 reviewed with Jo; 3-6 authored under AFK
 authorisation on 2026-08-15).
 

@@ -1,5 +1,18 @@
 # Launch checklist
 
+> **Archived record — August 2026. Not current state.**
+>
+> Written while `/contribute`, `/membership`, `/photographers`, `/subscribe`
+> and the legal pages still lived on a branch. That branch merged, and §0
+> below — "production is not this product yet", "1 route on main, 17 on the
+> branch" — has been false since. §6 says of itself that its claims are older
+> than the code.
+>
+> The operator procedures that are still live — backups, re-coarsening the
+> dots after `CELL_KM` changes, running destructive scripts against a branch,
+> erasing somebody — are in [the runbook](../operations/runbook.md). Kept for
+> the reasoning behind each item.
+
 For sending the site to friends. Checked against the live Vercel project,
 Stripe account and Resend domain — every claim here was verified rather than
 assumed, and struck through once done.

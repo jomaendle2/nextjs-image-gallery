@@ -1,5 +1,16 @@
 # Quality audit — the beauty of earth.
 
+> **Archived record — August 2026. Not current state.**
+>
+> The reasoning from seven production-readiness passes. Some of its
+> recommendations were taken and some were reversed: it argues against
+> building a paid tier that now exists, and says there is no way to subscribe
+> in a section after the one describing the subscribe flow it built. The
+> commit hashes it cites do not resolve — the branch was collapsed on merge.
+>
+> The measurements are the durable half and are in
+> [the roadmap](../roadmap.md). Kept for the argument, not the conclusions.
+
 The reasoning from the production-readiness passes that still constrains
 future work. Kept in the repo rather than in a session, because the work
 spans many sittings and the reasoning outlives the checklist.

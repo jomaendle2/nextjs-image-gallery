@@ -18,7 +18,7 @@
  *
  * **It refuses to run outside production, and that is new.** Preview,
  * development and production currently share one Neon database —
- * `docs/next-version.md` §1 has this as the first thing to fix and it is a
+ * `docs/roadmap.md` §1 has this as the first thing to fix and it is a
  * dashboard setting rather than a code change. Until it is fixed, "runs on
  * every build" meant every *preview* build too: push a branch that adds a
  * statement to `MIGRATIONS`, and it executes against live data the moment

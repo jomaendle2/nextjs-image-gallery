@@ -1,5 +1,17 @@
 # Security review — payments, membership and the paid content
 
+> **Archived record — 15 August 2026. Not current state.**
+>
+> A review of the payment and membership surface, against a branch that no
+> longer exists. Two claims in it were already stale when it was archived: it
+> says a sign-in token is valid for fifteen minutes (`LOGIN_TTL_MINUTES` is
+> sixty) and that the operator's postal address is blank (it is filled in).
+> Both are left as written, because a record edited to be true today is not a
+> record.
+>
+> What it found is now [security.md](../architecture/security.md), where the
+> invariants are numbered and each is enforced by a test.
+
 Reviewed 15 August 2026, against the state of `worktree-going-big` at the
 commit this document lands in. Scope: everything that decides who has paid,
 what paying buys, and who may spend money. The wider site (uploads, magic-link

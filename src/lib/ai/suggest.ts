@@ -16,7 +16,7 @@ import type { PartialRawSuggestion, RawSuggestion } from "./suggestion";
  *
  * It is given bytes, never a URL. The caller fetches the *display copy* —
  * the `sharp` re-encode that carries no metadata — because the original
- * upload still holds whatever GPS the camera wrote, and `docs/security-review.md`
+ * upload still holds whatever GPS the camera wrote, and `docs/architecture/security.md`
  * is explicit that the original is the one file on this site that must not
  * travel. Handing a provider a URL would also hand them the choice of which
  * of the two to fetch.
