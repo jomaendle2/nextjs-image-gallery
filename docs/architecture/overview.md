@@ -118,6 +118,9 @@ page renders from it, so it is the one place worth changing.
 
 ## Things that will bite you
 
+- **View counts do not move outside production, and that is deliberate.** A
+  photograph you keep reloading locally will show the real total and never
+  increase it. See `image_views` in [data-model.md](data-model.md).
 - **`vercel env pull` overwrites `.env.local` wholesale.** It has already
   destroyed `CRON_SECRET` once. Pull to a different file and merge.
 - **Variables marked "sensitive" in Vercel cannot be pulled back** — they

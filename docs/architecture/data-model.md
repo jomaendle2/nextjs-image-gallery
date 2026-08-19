@@ -20,6 +20,16 @@ was a `photos` table. **The one table nothing may alter** — `schema.test.ts`
 asserts it, because this is live data that predates everything else here and
 an `ALTER` on it is how a migration would take the counts with it.
 
+**Only the production deployment writes to it.** Preview, development and
+production share one database, so browsing the gallery on `localhost` while
+building something, or clicking a preview link sent out for review, used to
+land in the number a photographer reads as their audience. `/api/views`
+checks `VERCEL_ENV` before incrementing and answers with the real total
+either way, so the count still displays correctly everywhere — it just stops
+moving anywhere but production. There is no column recording where a view
+came from, which is why this matters: an inflated total cannot be unwound.
+`src/app/api/views/route.test.ts` holds the gate above the write.
+
 ## `contributors`
 
 One row per photographer. `slug` is what `/by/[slug]` resolves;
