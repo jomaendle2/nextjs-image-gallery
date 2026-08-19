@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { getSessionEmail, memberForSession } from "@/lib/auth/session";
 import { MEMBERSHIP } from "@/lib/legal";
-import { membershipConfigured } from "@/lib/members/offer";
+import { annualOffered, membershipConfigured } from "@/lib/members/offer";
 import { isActive } from "@/lib/members/status";
 import { alternates } from "@/lib/metadata";
 import { getSpecimenPhoto } from "@/lib/photos/repository";
@@ -246,7 +246,10 @@ export default async function MembershipPage({
         )}
 
         {member === null && !justPaid && !lapsed ? (
-          <SubscribeSection signedIn={email !== null} />
+          <SubscribeSection
+            annual={annualOffered()}
+            signedIn={email !== null}
+          />
         ) : null}
 
         {member === null || billing === null ? null : <ManageButton />}
@@ -281,10 +284,16 @@ export default async function MembershipPage({
   );
 }
 
-function SubscribeSection({ signedIn }: { signedIn: boolean }) {
+function SubscribeSection({
+  signedIn,
+  annual,
+}: {
+  signedIn: boolean;
+  annual: boolean;
+}) {
   return (
     <section>
-      <SubscribeButton signedIn={signedIn} />
+      <SubscribeButton annual={annual} signedIn={signedIn} />
       {signedIn ? null : (
         /*
          * For somebody who is already a member on another device, not for

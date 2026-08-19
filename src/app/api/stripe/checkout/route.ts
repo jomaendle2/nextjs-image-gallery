@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionEmail } from "@/lib/auth/session";
+import { annualOffered, type MembershipPlan } from "@/lib/members/offer";
 import { getMemberByEmail } from "@/lib/members/repository";
 import { hasLiveSubscription } from "@/lib/members/status";
 import { clientIp, stripeLimiter } from "@/lib/rate-limit";
@@ -27,6 +28,39 @@ function whoIsBuying(
 }
 
 /**
+ * Which cadence the button asked for, believing nothing.
+ *
+ * This is an unauthenticated route, so the body is a stranger's text rather
+ * than an argument: anything that is not the exact string `"annual"` is
+ * monthly, including a malformed body, no body at all, and a `plan` of
+ * `{ toString: … }`. The failure direction matters — an unrecognised value
+ * must fall to the cheaper price, never the dearer one.
+ *
+ * `annualOffered()` is checked here rather than trusted from the page. The
+ * button is hidden when no annual price exists, but hiding a control is a
+ * statement about the page and not about the endpoint, and this endpoint
+ * answers to anybody who can POST. Without this line a crafted request would
+ * reach `membershipPriceId("annual")` and throw a 502 naming an environment
+ * variable.
+ */
+async function requestedPlan(request: Request): Promise<MembershipPlan> {
+  if (!annualOffered()) {
+    return "monthly";
+  }
+  try {
+    const body: unknown = await request.json();
+    const plan =
+      typeof body === "object" && body !== null
+        ? (body as { plan?: unknown }).plan
+        : undefined;
+    return plan === "annual" ? "annual" : "monthly";
+  } catch {
+    // No body, or not JSON. Both mean the monthly button.
+    return "monthly";
+  }
+}
+
+/**
  * Starts a subscription checkout, for a signed-in member or a new one.
  *
  * No session is required, though the reasoning that a membership is
@@ -47,7 +81,7 @@ function whoIsBuying(
  * A signed-in buyer still gets their address fixed rather than collected —
  * there is no reason to ask again for something we already know.
  */
-export async function POST(): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   /*
    * A limiter on an unauthenticated route that spends money elsewhere.
    * Every call creates a live object in a metered Stripe account.
@@ -91,6 +125,7 @@ export async function POST(): Promise<NextResponse> {
   }
 
   const origin = siteOrigin();
+  const plan = await requestedPlan(request);
 
   try {
     const session = await stripeClient().checkout.sessions.create({
@@ -100,7 +135,7 @@ export async function POST(): Promise<NextResponse> {
        * account's own settings, and hardcoding `["card"]` would quietly
        * switch off every other method a subscriber might have used.
        */
-      line_items: [{ price: membershipPriceId(), quantity: 1 }],
+      line_items: [{ price: membershipPriceId(plan), quantity: 1 }],
       ...whoIsBuying(existing?.stripe_customer_id ?? null, email),
       /*
        * Carried through to the webhook when we have it. Stripe's own

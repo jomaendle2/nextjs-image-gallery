@@ -17,7 +17,11 @@ import { navLink } from "@/components/ui/field";
  * component and drag it into the bundle of two routes that deliberately ship
  * no client JavaScript at all.
  */
-export type PublicSection = "globe" | "photographers" | "membership";
+export type PublicSection =
+  | "globe"
+  | "photographers"
+  | "pricing"
+  | "membership";
 
 interface Destination {
   section: PublicSection;
@@ -28,6 +32,16 @@ interface Destination {
 const DESTINATIONS: readonly Destination[] = [
   { section: "globe", href: "/globe", label: "globe" },
   { section: "photographers", href: "/photographers", label: "photographers" },
+  /*
+   * Before membership, and both are here rather than one.
+   *
+   * `/pricing` is the whole ladder including two rungs that cannot be bought;
+   * `/membership` is the one that can, and is where a lapsed member goes to
+   * fix a card. Collapsing them would mean either hiding the ladder or
+   * sending somebody with an expired card through a page of proposals to
+   * reach their own billing portal.
+   */
+  { section: "pricing", href: "/pricing", label: "pricing" },
   { section: "membership", href: "/membership", label: "membership" },
 ];
 

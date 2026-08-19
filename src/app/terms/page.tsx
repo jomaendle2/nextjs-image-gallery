@@ -47,11 +47,12 @@ export default function TermsPage() {
 
       <Section heading="What a membership is">
         <p>
-          For {MEMBERSHIP.price} per {MEMBERSHIP.interval} you see two things
-          that are otherwise hidden: where each photograph was taken, in the
-          photographer's own words, and a note on how it was made. That is the
-          whole of it. The gallery, the photographs, the feeds and the mailing
-          list are free and will stay free.
+          For {MEMBERSHIP.price} per {MEMBERSHIP.interval}, or{" "}
+          {MEMBERSHIP.annualPrice} per {MEMBERSHIP.annualInterval}, you see two
+          things that are otherwise hidden: where each photograph was taken, in
+          the photographer's own words, and a note on how it was made. That is
+          the whole of it. The gallery, the photographs, the feeds and the
+          mailing list are free and will stay free.
         </p>
         <p>
           Not every photograph has either. Photographers fill these in when they
@@ -63,9 +64,12 @@ export default function TermsPage() {
 
       <Section heading="Price and payment">
         <p>
-          {MEMBERSHIP.price} per {MEMBERSHIP.interval}, charged by Stripe when
-          you subscribe and on the same day each {MEMBERSHIP.interval}{" "}
-          afterwards until you cancel.
+          {MEMBERSHIP.price} per {MEMBERSHIP.interval} or{" "}
+          {MEMBERSHIP.annualPrice} per {MEMBERSHIP.annualInterval}, whichever
+          you chose at checkout — charged by Stripe when you subscribe and on
+          the same day each {MEMBERSHIP.interval} or {MEMBERSHIP.annualInterval}{" "}
+          afterwards until you cancel. The two buy exactly the same thing; the
+          year is cheaper because it is paid up front.
           {OPERATOR.kleinunternehmer
             ? " No VAT is charged or shown, under §19 UStG."
             : " Prices include VAT at the applicable rate."}
@@ -84,6 +88,13 @@ export default function TermsPage() {
           asking anybody and without giving a reason. Cancelling stops the next
           payment; access continues to the end of the period you have already
           paid for. There is no minimum term and no notice period.
+        </p>
+        <p>
+          That rule is worth stating twice for a yearly membership, because it
+          is the one thing the cheaper price costs you: cancelling in month
+          three keeps the remaining nine months of access and stops the renewal.
+          It is not refunded part-way. Your statutory right of withdrawal in the
+          first fourteen days is separate and untouched.
         </p>
       </Section>
 

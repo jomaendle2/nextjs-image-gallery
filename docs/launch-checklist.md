@@ -155,6 +155,7 @@ When you do want it on:
 | Step | Why |
 | --- | --- |
 | `vercel env add STRIPE_MEMBERSHIP_PRICE_ID production` | Otherwise the page hides the offer |
+| `vercel env add STRIPE_MEMBERSHIP_PRICE_ID_ANNUAL production` | Optional. Without it only the monthly button renders; with it the yearly price is the primary one |
 | Register the webhook at `https://<domain>/api/stripe/webhook` | **Zero endpoints are registered today**, so no payment would ever be recorded |
 | `vercel env add STRIPE_WEBHOOK_SECRET production` | Without it the route refuses every event, by design |
 | Confirm the endpoint's API version matches `API_VERSION` in `src/lib/stripe.ts` | Payload shapes differ between versions; two silent bugs lived on this seam |

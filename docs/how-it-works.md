@@ -50,12 +50,16 @@ safely re-runnable, which is the thing standing between this project and a
 migration that half-applies in production.
 
 Tables worth knowing: `photos`, `contributors`, `sessions`, `login_tokens`,
-`applications`, `subscribers`, `members`, `photo_member_views`.
+`applications`, `subscribers`, `members`, `photo_member_views`, `waitlist`.
 
 ### Stripe — payments
 
-Test and live keys in `STRIPE_SECRET_KEY`. One product, one price
-(`STRIPE_MEMBERSHIP_PRICE_ID`), €5/month.
+Test and live keys in `STRIPE_SECRET_KEY`. One product, two prices: €5/month
+(`STRIPE_MEMBERSHIP_PRICE_ID`) and €45/year
+(`STRIPE_MEMBERSHIP_PRICE_ID_ANNUAL`, optional). An interval is a property of
+a Stripe price rather than of a subscription, so a monthly and a yearly
+membership are two prices granting the same thing — which is why the webhook
+needs to know nothing about the split.
 
 Three routes, and the split between them is the whole security model:
 

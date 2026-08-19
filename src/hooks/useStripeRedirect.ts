@@ -22,15 +22,38 @@ interface StripeRedirect {
  * failure as a sentence rather than a dead button. `busy` is deliberately
  * never cleared on success — the page is navigating away, and flipping the
  * label back to its resting state first would suggest the click did nothing.
+ *
+ * `payload` arrived with the annual membership, which is two buttons posting
+ * to one route and differing only in which price they name. It is serialised
+ * once, here, rather than taken as an object — an object literal at the call
+ * site is a new identity on every render, so it would rebuild `go` on every
+ * render as a dependency, and a string does not.
+ *
+ * It is deliberately not a parameter of `go`. Two call sites pass `go`
+ * straight to `onClick`, and a `go` that read its first argument would send
+ * a React synthetic event to Stripe the moment somebody wired it up that way
+ * again.
  */
-export function useStripeRedirect(endpoint: string): StripeRedirect {
+export function useStripeRedirect(
+  endpoint: string,
+  payload?: Readonly<Record<string, string>>,
+): StripeRedirect {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sending = payload === undefined ? undefined : JSON.stringify(payload);
 
   const go = useCallback(() => {
     setBusy(true);
     setError(null);
-    fetch(endpoint, { method: "POST" })
+    fetch(endpoint, {
+      method: "POST",
+      ...(sending === undefined
+        ? {}
+        : {
+            body: sending,
+            headers: { "Content-Type": "application/json" },
+          }),
+    })
       .then(async (response) => {
         const body = (await response.json()) as {
           url?: string;
@@ -45,7 +68,7 @@ export function useStripeRedirect(endpoint: string): StripeRedirect {
         setBusy(false);
         setError(cause instanceof Error ? cause.message : "Something failed.");
       });
-  }, [endpoint]);
+  }, [endpoint, sending]);
 
   return { go, busy, error };
 }

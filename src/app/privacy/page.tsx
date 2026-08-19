@@ -75,6 +75,22 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="font-medium text-white/85">
+              What you asked to hear about
+            </strong>{" "}
+            — if you leave an address on the{" "}
+            <TextLink href="/pricing">pricing page</TextLink> for a tier that is
+            not built yet, we keep that address, which tier it was, and anything
+            you typed in the note. It is kept so we can answer you about that
+            one thing, and it is not the mailing list: nothing is sent to it
+            unless the tier becomes real, and asking to be removed removes it.
+            Ask at{" "}
+            <TextLink href={`mailto:${OPERATOR.email}`}>
+              {OPERATOR.email}
+            </TextLink>
+            .
+          </li>
+          <li>
+            <strong className="font-medium text-white/85">
               Your application
             </strong>{" "}
             — the name, website and note you type on the apply form, kept so we

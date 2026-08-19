@@ -24,3 +24,32 @@ export function membershipConfigured(): boolean {
       process.env["STRIPE_MEMBERSHIP_PRICE_ID"],
   );
 }
+
+/**
+ * Which cadence somebody is buying.
+ *
+ * Here rather than in `stripe.ts` for this file's founding reason: the
+ * checkout button is a client component and needs the name of the thing it
+ * is asking for, and importing that name from the module that begins
+ * `import Stripe from "stripe"` would put nineteen megabytes of SDK behind a
+ * union of two strings. A type is erased at build time; the import it
+ * arrives through is not.
+ */
+export type MembershipPlan = "monthly" | "annual";
+
+/**
+ * Whether the year-at-a-time price exists to be sold.
+ *
+ * Separate from `membershipConfigured` and deliberately not folded into it.
+ * The monthly price is what decides whether membership is on sale at all —
+ * without it the offer disappears from the footer, the nav and the page. The
+ * annual one is an addition to a working offer, so a missing id here hides
+ * one button rather than switching off payments, and the site stays sellable
+ * in the window between creating one price in Stripe and creating the other.
+ */
+export function annualOffered(): boolean {
+  return (
+    membershipConfigured() &&
+    Boolean(process.env["STRIPE_MEMBERSHIP_PRICE_ID_ANNUAL"])
+  );
+}

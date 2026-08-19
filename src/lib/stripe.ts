@@ -1,5 +1,6 @@
 import process from "node:process";
 import Stripe from "stripe";
+import type { MembershipPlan } from "@/lib/members/offer";
 
 /**
  * The Stripe client, and the price a membership is sold at.
@@ -41,14 +42,32 @@ export function stripeClient(): Stripe {
 }
 
 /**
- * The price to sell. Created once in the Stripe dashboard and referenced by
- * id, because a price created in code on every checkout would litter the
- * account with duplicates and make revenue impossible to read.
+ * The price to sell, at the cadence asked for. Created once in the Stripe
+ * dashboard and referenced by id, because a price created in code on every
+ * checkout would litter the account with duplicates and make revenue
+ * impossible to read.
+ *
+ * Two ids rather than one price with two intervals, because Stripe has no
+ * such object: an interval is a property of a price, so a monthly and a
+ * yearly membership are two prices that happen to grant the same thing.
+ * Which is also why the webhook needs no change for this — it reads the
+ * subscription's status and period end, and neither knows or cares which of
+ * the two was bought.
+ *
+ * Throws rather than falling back to the monthly id when the annual one is
+ * missing. A silent fallback would charge €5 for a button that said €45 and
+ * the buyer would find out on the receipt; `annualOffered()` is what keeps
+ * that button off the page in the first place, and this is the assertion
+ * that it did its job.
  */
-export function membershipPriceId(): string {
-  const id = process.env["STRIPE_MEMBERSHIP_PRICE_ID"];
+export function membershipPriceId(plan: MembershipPlan = "monthly"): string {
+  const variable =
+    plan === "annual"
+      ? "STRIPE_MEMBERSHIP_PRICE_ID_ANNUAL"
+      : "STRIPE_MEMBERSHIP_PRICE_ID";
+  const id = process.env[variable];
   if (id === undefined || id === "") {
-    throw new Error("STRIPE_MEMBERSHIP_PRICE_ID is not set.");
+    throw new Error(`${variable} is not set.`);
   }
   return id;
 }

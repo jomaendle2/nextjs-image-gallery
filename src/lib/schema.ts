@@ -423,6 +423,35 @@ export const MIGRATIONS: readonly string[] = [
      ) STORED;`,
 
   /*
+   * Who has asked for a tier that does not exist yet.
+   *
+   * `/pricing` names two products — Pro and Spaces — that are not built, and
+   * this is the register of people who said they would want one. It exists
+   * to answer a single question before either is built: how many, and of
+   * which. A demand test whose result lives in an inbox is a demand test
+   * nobody counts.
+   *
+   * Unique on `(email, tier)` rather than on `email`. One person may want
+   * both, and asking twice for the same one is a person who forgot, not a
+   * second data point — so the insert updates in place and the count stays
+   * a count of people rather than of clicks.
+   *
+   * `screens` is nullable and meaningful only for Spaces, where it is the
+   * one number that separates a curious reader from a buyer with six
+   * displays in a lobby. Storing it as a column rather than leaving it in
+   * the note is what makes that sortable later.
+   */
+  `CREATE TABLE IF NOT EXISTS waitlist (
+     id         TEXT PRIMARY KEY,
+     email      TEXT NOT NULL,
+     tier       TEXT NOT NULL,
+     note       TEXT NOT NULL DEFAULT '',
+     screens    INTEGER,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     UNIQUE (email, tier)
+   );`,
+
+  /*
    * The display copy stops being a hopeful backfill and becomes an invariant.
    *
    * Four read sites used to say `COALESCE(display_url, blob_url)`, which for

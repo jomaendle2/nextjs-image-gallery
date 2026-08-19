@@ -42,6 +42,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     { url: `${origin}/membership`, changeFrequency: "monthly", priority: 0.8 },
     /*
+     * Higher than `/membership` because it is the page an advertisement or a
+     * shared link points at: it names every tier, including the two that are
+     * only proposals, and every other paid page is reachable from it.
+     */
+    { url: `${origin}/pricing`, changeFrequency: "monthly", priority: 0.9 },
+    /*
      * Worth crawling on its own: it is the gallery organised by geography,
      * and every photograph with a marked place is reachable from it as a
      * plain link with no JavaScript involved.

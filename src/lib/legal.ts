@@ -79,10 +79,30 @@ export const LEGAL_LINKS = [
   { href: "/terms", label: "Terms" },
 ] as const;
 
-/** What a membership costs, stated once. */
+/**
+ * What a membership costs, stated once — now at two cadences.
+ *
+ * The annual price is not a discount dressed up as a feature. A €5 monthly
+ * subscription bought through advertising costs far more to acquire than a
+ * year of it returns, and the year-at-a-time price is the only version of
+ * this offer whose arithmetic works: it collects twelve months up front and
+ * removes eleven chances to churn. That it is also cheaper for the reader is
+ * what makes it honest rather than merely convenient for us.
+ *
+ * `annualSaving` is written out rather than computed. It is prose that
+ * appears on a button beside a price, German law wants both unmistakable at
+ * the moment of commitment (§312j BGB), and a number derived from two
+ * currency strings by arithmetic somewhere in a component is a rounding
+ * decision nobody reviewed. Whoever changes a price changes this line, which
+ * is the point.
+ */
 export const MEMBERSHIP = {
   price: "€5",
   interval: "month",
+  annualPrice: "€45",
+  annualInterval: "year",
+  /** €45 against twelve months at €5. Restate it when either price moves. */
+  annualSaving: "€15",
 } as const;
 
 /**

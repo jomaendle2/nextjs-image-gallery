@@ -10,6 +10,8 @@ import { isOwner } from "@/lib/auth/types";
 import { countUnannouncedPhotos, listAllPhotos } from "@/lib/photos/repository";
 import { count } from "@/lib/plural";
 import { countConfirmedSubscribers } from "@/lib/subscribers/repository";
+import { listEarlyAccess } from "@/lib/waitlist/repository";
+import { tierName } from "@/lib/waitlist/tiers";
 import { ContributeShell } from "../ContributeShell";
 import { InviteForm } from "../InviteForm";
 import { WorkspaceNav } from "../WorkspaceNav";
@@ -43,14 +45,21 @@ export default async function AdminPage() {
     notFound();
   }
 
-  const [applications, contributors, photos, unannounced, subscribers] =
-    await Promise.all([
-      listPendingApplications(),
-      listContributors(),
-      listAllPhotos(),
-      countUnannouncedPhotos(),
-      countConfirmedSubscribers(),
-    ]);
+  const [
+    applications,
+    contributors,
+    photos,
+    unannounced,
+    subscribers,
+    earlyAccess,
+  ] = await Promise.all([
+    listPendingApplications(),
+    listContributors(),
+    listAllPhotos(),
+    countUnannouncedPhotos(),
+    countConfirmedSubscribers(),
+    listEarlyAccess(),
+  ]);
 
   return (
     <ContributeShell
@@ -102,6 +111,43 @@ export default async function AdminPage() {
         `AnnounceActions` about the confirmation outliving the panel.
       */}
       <AnnounceActions pending={unannounced} subscribers={subscribers} />
+
+      {/*
+        The answer to the question `/pricing` was published to ask.
+
+        A section rather than a number, because the decision this feeds is not
+        "how many" alone: six addresses with two of them naming a screen count
+        is a different finding from six with none, and the note is where
+        somebody says which building. It disappears entirely at zero — an
+        empty table under a heading reads as a broken feature rather than as
+        a result, and the result at zero is legible enough without one.
+      */}
+      {earlyAccess.length === 0 ? null : (
+        <section className="mb-8">
+          <h2 className={`mb-3 ${SECTION_HEADING}`}>
+            Early access requests ({earlyAccess.length})
+          </h2>
+          <ul className="space-y-2">
+            {earlyAccess.map((request) => (
+              <li
+                className="glass-hairline rounded-2xl px-4 py-3"
+                key={request.id}
+              >
+                <p className="truncate font-medium text-sm">
+                  {tierName(request.tier)}
+                  {request.screens === null
+                    ? null
+                    : ` · ${count(request.screens, "screen")}`}
+                </p>
+                <p className="truncate text-white/55 text-xs">
+                  {request.email}
+                  {request.note === "" ? null : ` · ${request.note}`}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="glass-thin rounded-3xl p-6">
         <h2 className={`mb-1 ${SECTION_HEADING}`}>Invite a photographer</h2>
