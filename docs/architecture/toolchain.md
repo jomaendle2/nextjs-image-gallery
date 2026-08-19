@@ -47,21 +47,42 @@ at-rules.
 ### The restricted imports
 
 `noRestrictedImports` is where an architectural rule can be stated in the one
-tool that reads it while you type. Each entry names the document that
-explains it, because a lint error that says only "not allowed" gets
-suppressed rather than understood.
+tool that reads it while you type. Each entry names the document that explains
+it, because a lint error saying only "not allowed" gets suppressed rather than
+understood.
 
-| Restricted | Allowed in | Why |
+| Restricted | Where it applies | Why |
 | --- | --- | --- |
-| `maplibre-gl` | `src/app/contribute/photos/MapSurface.tsx` | Invariant I14: the map library must never reach a public page. |
-| `stripe` | `src/lib/stripe.ts`, the Stripe routes, `scripts/` | ~19 MB, and Next traces imports. `src/lib/members/offer.ts` exists so that asking *whether* payments are configured does not pull the SDK into a footer. |
-| `@/lib/database` | the repository modules, `src/lib/auth/`, `src/app/api/` | The SQL client is server-only, and data access goes through a repository so that authorisation lives in the `WHERE` clause. |
-| `@/app/**` and `@/components/**`, from `src/lib`, `src/hooks`, `src/data` | nothing | Layering. Those three are underneath the app, not beside it. `@/app/form-state` was the only thing reaching up; it is `@/lib/form-state` now. |
+| `maplibre-gl` | everywhere | Invariant I14: the map library must never reach a public page. |
+| `stripe` | everywhere | ~19 MB, and Next traces imports. `src/lib/members/offer.ts` exists so that asking *whether* payments are configured does not pull the SDK into a footer. |
+| `@/lib/database` | `src/components/**` | A component reaching for SQL. Not restricted deeper: the repositories and `src/lib/auth` legitimately hold the client, and invariant I2 is what actually enforces the boundary. |
+| `@/app/**`, `@/components/**` | `src/lib`, `src/hooks`, `src/data` | Layering — those three sit underneath the app, not beside it. `@/app/form-state` was the only thing reaching up, and it is `@/lib/form-state` now. |
 
-These complement the tests in `src/lib/security-location.test.ts` and
-`src/lib/security-membership.test.ts` rather than replacing them: a linter
+The three legitimate imports are exempted with `biome-ignore` at the import
+itself rather than by a glob in this file, so the reason sits where somebody
+asks the question: `src/lib/stripe.ts` constructs the client,
+`src/app/api/stripe/webhook/route.ts` takes a type-only import the rule cannot
+distinguish from a value one, and `MapSurface.tsx` is I14's one door in.
+Tests and `scripts/` are off entirely — a test quotes the patterns it forbids.
+
+**`overrides` replace, they do not merge.** This is the trap, and it cost a
+round: an override that adds one rule to a folder silently *removes* every
+other restriction there. The first version of this configuration added the
+layering rule for `src/lib/**` and by doing so turned off `maplibre-gl`,
+`stripe` and `@/lib/database` throughout `src/lib`, `src/hooks` and
+`src/data` — while a probe from `src/components` showed the rules working
+perfectly. So each override below states the **complete** set for its folder,
+the folders are disjoint, and the "off" entry for tests and scripts comes
+last because a later match wins.
+
+Verify a change here by probing rather than by reading: write the forbidden
+import into a scratch file in each folder and confirm it fails. Reading the
+JSON will not tell you what it does.
+
+These complement `src/lib/security-location.test.ts` and
+`src/lib/security-membership.test.ts` rather than replacing them. A linter
 sees one file at a time and cannot assert that *exactly one* file in the tree
-mentions something, or that a mention in a string counts.
+mentions something, or that a mention inside a string counts.
 
 ## TypeScript
 

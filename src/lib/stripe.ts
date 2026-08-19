@@ -1,4 +1,5 @@
 import process from "node:process";
+// biome-ignore lint/style/noRestrictedImports: the one module that constructs the client. Everything else asks membershipConfigured() instead — see docs/architecture/toolchain.md.
 import Stripe from "stripe";
 
 /**

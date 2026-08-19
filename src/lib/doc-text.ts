@@ -49,7 +49,7 @@ const SNAPSHOTS = join(DOCS, "snapshots");
  * broken however old the page is. The archive's own `README.md` is not a
  * record at all — it is the index into them — so it is held to everything.
  */
-const ARCHIVE = join(DOCS, "archive");
+const ARCHIVE = "docs/archive";
 
 /**
  * The block `next dev` writes into `AGENTS.md` and re-adds if it is removed.
@@ -134,9 +134,24 @@ export function prose(): Prose[] {
   return [...roots, ...markdownUnder()].map((file) => ({
     file: rel(file),
     text: authored(rel(file), readFileSync(file, "utf8")),
-    historical:
-      file.startsWith(join(ARCHIVE, "")) && basename(file) !== "README.md",
+    historical: isHistorical(rel(file)),
   }));
+}
+
+/**
+ * Whether a document is a record rather than a claim about now.
+ *
+ * On the repo-relative path with its separator, not `startsWith` against the
+ * folder's own name. The folder name is a prefix of any sibling whose name
+ * merely begins the same way — a hyphenated note file beside it, a directory
+ * that pluralises it — and either would have been silently exempted from
+ * every check in `docs.test.ts` by nothing more than a well-chosen filename.
+ * An exemption that can be claimed by accident is not an exemption.
+ */
+function isHistorical(relative: string): boolean {
+  return (
+    relative.startsWith(`${ARCHIVE}/`) && basename(relative) !== "README.md"
+  );
 }
 
 /** Live prose: everything the present tense is answerable for. */
@@ -156,10 +171,19 @@ export function current(): Prose[] {
  * repository are in `scripts/*.mts`, which it does not walk at all, and
  * three more are in `*.test.ts` files, which it drops.
  *
- * A comment pointing at a document that moved is wrong wherever it sits.
+ * A comment pointing at a document that moved is wrong wherever it sits —
+ * including when it sits in configuration. `biome.json` carries the reason
+ * for each restricted import as a message a developer reads at the moment
+ * they are blocked, and every one of those names a document. Those messages
+ * were outside this walk when they were written, so moving the file they
+ * cite would have left the suite green.
  */
 export function allPointerFiles(): string[] {
-  return [...codeUnder(join(ROOT, "src")), ...codeUnder(join(ROOT, "scripts"))];
+  return [
+    ...codeUnder(join(ROOT, "src")),
+    ...codeUnder(join(ROOT, "scripts")),
+    join(ROOT, "biome.json"),
+  ];
 }
 
 function codeUnder(dir: string): string[] {
@@ -189,17 +213,36 @@ function codeUnder(dir: string): string[] {
  * make this comment the last thing in the repository still pointing at it.
  */
 export function exists(path: string): boolean {
-  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
-  const full = join(ROOT, trimmed);
-  const parent = dirname(full);
-  return isDirectory(parent) && readdirSync(parent).includes(basename(trimmed));
+  const trimmed = path.replace(/\/+$/, "");
+  const segments = trimmed.split("/").filter((part) => part.length > 0);
+  if (segments.length === 0) {
+    return false;
+  }
+
+  /*
+   * Every segment, not only the last. The first version checked the filename
+   * and let `dirname` reach the folders through `statSync`, which is exactly
+   * as case-insensitive as the filesystem underneath it — so `docs/Architecture`
+   * passed on a Mac and failed on CI, which is the failure this function was
+   * written to prevent, moved one level up. The restructure that introduced
+   * these folders is what made it reachable.
+   */
+  let here = ROOT;
+  for (const segment of segments) {
+    if (!listing(here).includes(segment)) {
+      return false;
+    }
+    here = join(here, segment);
+  }
+  return true;
 }
 
-function isDirectory(path: string): boolean {
+/** One directory's entries, or nothing if it is not a directory. */
+function listing(dir: string): string[] {
   try {
-    return statSync(path).isDirectory();
+    return readdirSync(dir);
   } catch {
-    return false;
+    return [];
   }
 }
 
@@ -241,7 +284,13 @@ export function resolveLink(from: string, target: string): string | null {
   const full = decoded.startsWith("/")
     ? join(ROOT, decoded)
     : resolve(dirname(join(ROOT, from)), decoded);
-  return full.startsWith(join(ROOT, "")) ? rel(full) : bare;
+  /*
+   * `${ROOT}${sep}` rather than `ROOT`, so that a sibling checkout called
+   * `…-old` is not read as being inside this one. A link that escapes the
+   * repository is reported as written rather than resolved, because there is
+   * nothing here it could sensibly be checked against.
+   */
+  return full.startsWith(`${ROOT}${sep}`) ? rel(full) : bare;
 }
 
 /** Every link target in a document, fenced examples left out. */
