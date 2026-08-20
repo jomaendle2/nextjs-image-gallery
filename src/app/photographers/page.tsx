@@ -15,7 +15,7 @@ import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { membershipConfigured } from "@/lib/members/offer";
-import { alternates, ogCard } from "@/lib/metadata";
+import { alternates, ogCard, shareCard } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { count } from "@/lib/plural";
 
@@ -41,7 +41,15 @@ export async function generateMetadata(): Promise<Metadata> {
   const contributors = await listContributorsWithPreviews();
   const card = ogCard({
     title: "Photographers",
-    subtitle: count(contributors.length, "photographer"),
+    /*
+     * No subtitle at zero rather than "0 photographers". `ogCard` drops an
+     * empty one and `/api/og` falls back to "Photographs from around the
+     * world" — which is what a recruitment link should say on the day there
+     * is nobody to count.
+     */
+    ...(contributors.length === 0
+      ? {}
+      : { subtitle: count(contributors.length, "photographer") }),
     /*
      * One from each of the first three, rather than three from the first.
      * The card is about who is here, and a strip drawn entirely from one
@@ -57,13 +65,13 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: alternates("/photographers"),
     title: "Photographers — the beauty of earth.",
     description: DESCRIPTION,
-    openGraph: {
+    ...shareCard({
       title: "Photographers — the beauty of earth.",
       description: DESCRIPTION,
       url: "/photographers",
-      images: [{ url: card, width: 1200, height: 630 }],
-    },
-    twitter: { card: "summary_large_image", images: [card] },
+      card,
+      alt: "The photographers contributing to the beauty of earth, with a strip of their work",
+    }),
   };
 }
 

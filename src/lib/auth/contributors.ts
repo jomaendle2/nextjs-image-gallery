@@ -466,6 +466,16 @@ export async function claimInvite(input: {
  *
  * `revoked_at IS NULL` on the *inviter*: naming somebody who has been
  * removed from the gallery is worse than naming nobody.
+ *
+ * `role <> 'owner'` on the inviter for the same reason the admin door leaves
+ * `invited_by` NULL — "the gallery invited you" is not news. The admin door
+ * is not the only door the owner has: the owner is also a contributor, and an
+ * invite they spend through `/contribute/invite` goes through `claimInvite`,
+ * which *does* record `invited_by`. Without this filter the one line meant to
+ * say a peer chose you says the house did.
+ *
+ * Both filters are on `inviter.`, not on `c.` — filtering the invitee is not
+ * the bug; filtering only the invitee is.
  */
 export async function inviterName(
   contributorId: string,
@@ -474,7 +484,8 @@ export async function inviterName(
     SELECT inviter.display_name
     FROM contributors c
     JOIN contributors inviter ON inviter.id = c.invited_by
-    WHERE c.id = ${contributorId} AND inviter.revoked_at IS NULL;
+    WHERE c.id = ${contributorId}
+      AND inviter.revoked_at IS NULL AND inviter.role <> 'owner';
   `;
   return (rows[0]?.["display_name"] as string | undefined) ?? null;
 }

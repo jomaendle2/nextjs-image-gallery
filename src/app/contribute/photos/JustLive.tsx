@@ -13,11 +13,13 @@ import { count } from "@/lib/plural";
  * person actually wants at that moment, to look at it and to show it to
  * someone, were both several clicks away and neither was suggested.
  *
- * **It appears once and leaves.** Rendered only while exactly one photograph
- * is published, so it is a moment rather than furniture: the second publish
- * takes it away, and nobody is congratulated twice for the same thing. That
- * also means it needs no state of its own — the condition is a count the page
- * already has, so there is nothing to store, expire, or dismiss.
+ * **It appears at exactly one published photograph and leaves at the second.**
+ * A moment rather than furniture. The condition is a count the page already
+ * has, so it needs no state of its own — nothing to store, expire or dismiss
+ * — and the honest consequence of that is that it is a property of the count
+ * and not a record of an event: somebody who unpublishes back down to one
+ * sees it again. That is the trade being made, and it is the right way round,
+ * because the alternative is a row in the database to suppress a card.
  *
  * The invitation is the second half and deliberately *below* the first. The
  * gallery has no open sign-up, so invitations are the only way anybody new
@@ -36,7 +38,14 @@ export function JustLive({ slug, invites }: { slug: string; invites: number }) {
         there the moment you pressed publish, without passing anybody.
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+      {/*
+        `gap-x-8` rather than the `gap-x-6` used where these sit under a
+        photograph. Both controls pull themselves outward to reach 44px —
+        `TOUCH_LINK` by `-mx-2` and `ShareButton` by `-mx-4` — which eats 24 of
+        the 24 pixels between them and leaves the two targets flush against
+        each other.
+      */}
+      <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-3">
         <TextLink href={`/by/${slug}`} standalone={true}>
           See your page
         </TextLink>
@@ -47,9 +56,11 @@ export function JustLive({ slug, invites }: { slug: string; invites: number }) {
           standing — just after publishing — offered no way to copy it.
         */}
         <ShareButton
+          className="text-white/55 hover:text-white"
           label="your page"
           path={`/by/${slug}`}
           title="My photographs on the beauty of earth"
+          withLabel={true}
         />
       </div>
 

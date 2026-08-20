@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isOurBlob } from "./blob-host";
 
 /**
  * The one sentence that describes this site to anybody who has not opened it.
@@ -64,13 +65,36 @@ export function alternates(canonical: string): Metadata["alternates"] {
 }
 
 /**
+ * As above, for a photographer's page, which has a feed of its own worth
+ * offering alongside the site-wide one.
+ */
+export function contributorAlternates(
+  canonical: string,
+  slug: string,
+  name: string,
+): Metadata["alternates"] {
+  return {
+    canonical,
+    types: {
+      "application/rss+xml": [
+        {
+          url: `/by/${slug}/feed.xml`,
+          title: `${name} — the beauty of earth.`,
+        },
+        ...(FEED["application/rss+xml"] as { url: string; title: string }[]),
+      ],
+    },
+  };
+}
+
+/**
  * The share card for a page, as a URL into `/api/og`.
  *
- * Written out by hand in four places, each escaping its own parameters, and
+ * Written out by hand in three places, each escaping its own parameters, and
  * one of them differed: the site-wide card passes a title only, the
- * photographer's card adds a subtitle, the slideshow's adds both plus a strip
- * of photographs. Nothing was wrong with any of them, which is precisely how
- * a fifth ends up subtly different from the other four — a missing
+ * slideshow's adds a subtitle, the photographer's adds both plus a strip of
+ * photographs. Nothing was wrong with any of them, which is precisely how a
+ * fourth ends up subtly different from the other three — a missing
  * `encodeURIComponent` around a name with an ampersand in it truncates the
  * card's title and nobody sees it, because nobody looks at their own link
  * previews.
@@ -96,14 +120,20 @@ export function ogCard(options: {
   }
 
   /*
-   * Only what a share card can actually fetch. The route refuses anything
-   * that is not one of our blobs, so a relative path or a data URL costs a
-   * round trip to be rejected — and a card whose strip silently renders
-   * empty is worse than one with no strip at all.
+   * Only what a share card can actually fetch, decided by the same predicate
+   * the route decides with. This filter used to be `startsWith("https://")`
+   * under a comment claiming the route "refuses anything that is not one of
+   * our blobs" — which is true of the route and was not true here, so a URL
+   * on somebody else's host passed this and was dropped by `isOurBlob` at the
+   * other end: the silently-empty strip the comment exists to prevent,
+   * arranged by the check meant to prevent it.
+   *
+   * `blob-host.ts` is safe to import from a module that reaches the client
+   * bundle: it has no imports, reads no environment and touches no node API.
+   * It is also the fourth place that would otherwise re-derive a rule whose
+   * own header asks for "one definition, imported by both".
    */
-  const usable = (options.previews ?? []).filter((url) =>
-    url.startsWith("https://"),
-  );
+  const usable = (options.previews ?? []).filter(isOurBlob);
   if (usable.length > 0) {
     query.set("previews", usable.join(","));
   }
@@ -112,24 +142,50 @@ export function ogCard(options: {
 }
 
 /**
- * As above, for a photographer's page, which has a feed of its own worth
- * offering alongside the site-wide one.
+ * The whole `openGraph`/`twitter` pair for a page, card included.
+ *
+ * `ogCard` consolidated the URL; this consolidates what is built around it,
+ * which had gone wrong in the way the docblock above predicted one level up.
+ * Five hand-written blocks existed and no two agreed: two set `og.url` and
+ * three did not, one set `og.type`, one mirrored the title and description
+ * into `twitter`, and exactly one carried image `alt` text — the root
+ * layout, which spends eight comment lines on why alt text on a share card
+ * matters. The two newest blocks were copied from the thinnest of the three.
+ *
+ * So this emits the *union* of what the five set rather than their
+ * intersection: every page now gets `og:type`, an `og:url`, image dimensions,
+ * alt text, and a `twitter` block that says who it is. `alt` is a required
+ * parameter, which is the point — it stops being forgettable by being typed.
+ *
+ * `title` is a parameter rather than read from the page's `title`, because
+ * they genuinely differ: `/by/[slug]` puts the bare display name on the card
+ * and the suffixed one in the tab.
+ *
+ * `url` is relative, resolved against `metadataBase` for the reason `ogCard`
+ * gives about origins.
  */
-export function contributorAlternates(
-  canonical: string,
-  slug: string,
-  name: string,
-): Metadata["alternates"] {
+export function shareCard(options: {
+  title: string;
+  description: string;
+  url: string;
+  card: string;
+  alt: string;
+}): Pick<Metadata, "openGraph" | "twitter"> {
   return {
-    canonical,
-    types: {
-      "application/rss+xml": [
-        {
-          url: `/by/${slug}/feed.xml`,
-          title: `${name} — the beauty of earth.`,
-        },
-        ...(FEED["application/rss+xml"] as { url: string; title: string }[]),
+    openGraph: {
+      type: "website",
+      title: options.title,
+      description: options.description,
+      url: options.url,
+      images: [
+        { url: options.card, width: 1200, height: 630, alt: options.alt },
       ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: options.title,
+      description: options.description,
+      images: [options.card],
     },
   };
 }

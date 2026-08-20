@@ -35,5 +35,5 @@ actually send, `npm run smoke:email -- you@example.com` walks every template
 in the site, nudges included.
 
 The two workspace screenshots and the share card are taken by hand against a
-dev server: the first needs a session, and the second is whatever `/api/og`
-draws for the parameters `src/lib/metadata.ts` builds.
+dev server: the workspace ones need a session, and the card is whatever
+`/api/og` draws for the parameters `src/lib/metadata.ts` builds.

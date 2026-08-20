@@ -1,5 +1,18 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { alternates, contributorAlternates, ogCard } from "./metadata";
+import { BLOB_HOST } from "./blob-host";
+import {
+  alternates,
+  contributorAlternates,
+  ogCard,
+  shareCard,
+} from "./metadata";
+import { allSourceFiles, SRC } from "./source-text";
+
+/** A URL `isOurBlob` accepts: our host, and under the photograph prefix. */
+function blob(name: string): string {
+  return `https://${BLOB_HOST}/photos/${name}`;
+}
 
 /**
  * The share card's URL, which nobody ever looks at.
@@ -44,10 +57,10 @@ describe("ogCard", () => {
   it("joins previews with commas, the shape the route parses", () => {
     const url = ogCard({
       title: "x",
-      previews: ["https://blob.test/1.jpg", "https://blob.test/2.jpg"],
+      previews: [blob("1.jpg"), blob("2.jpg")],
     });
     expect(new URL(url, "https://x.test").searchParams.get("previews")).toBe(
-      "https://blob.test/1.jpg,https://blob.test/2.jpg",
+      `${blob("1.jpg")},${blob("2.jpg")}`,
     );
   });
 
@@ -56,13 +69,26 @@ describe("ogCard", () => {
      * A relative path or a data URL costs a round trip to be refused, and a
      * strip that silently renders empty is worse than no strip: the card
      * still claims the space for photographs and shows none.
+     *
+     * The look-alike host is the case that made this test earn its name. The
+     * filter was `startsWith("https://")` under a comment claiming the route
+     * "refuses anything that is not one of our blobs" — so a URL on somebody
+     * else's host passed here and was refused at the other end by
+     * `isOurBlob`, producing precisely the empty strip the comment promised
+     * to prevent. Both ends now ask the same question.
      */
     const url = ogCard({
       title: "x",
-      previews: ["/local.jpg", "data:image/png;base64,AAA", "https://ok/1.jpg"],
+      previews: [
+        "/local.jpg",
+        "data:image/png;base64,AAA",
+        `https://${BLOB_HOST}.evil.example/photos/1.jpg`,
+        `https://${BLOB_HOST}/avatars/1.jpg`,
+        blob("1.jpg"),
+      ],
     });
     expect(new URL(url, "https://x.test").searchParams.get("previews")).toBe(
-      "https://ok/1.jpg",
+      blob("1.jpg"),
     );
   });
 
@@ -71,6 +97,9 @@ describe("ogCard", () => {
     expect(ogCard({ title: "x", previews: ["/nope.jpg"] })).not.toContain(
       "previews",
     );
+    expect(
+      ogCard({ title: "x", previews: ["https://elsewhere.test/1.jpg"] }),
+    ).not.toContain("previews");
   });
 
   it("stays relative, so the origin comes from metadataBase", () => {
@@ -99,5 +128,88 @@ describe("alternates", () => {
     ] as { url: string }[];
     expect(feeds[0]?.url).toBe("/by/anna/feed.xml");
     expect(feeds[1]?.url).toBe("/feed.xml");
+  });
+});
+
+describe("shareCard", () => {
+  const card = shareCard({
+    title: "Photographers",
+    description: "The photographers contributing to the beauty of earth.",
+    url: "/photographers",
+    card: "/api/og?title=Photographers",
+    alt: "A strip of their work",
+  });
+
+  it("always puts alt text on the image", () => {
+    /*
+     * The finding this helper exists for. Five hand-written blocks and
+     * exactly one of them carried `alt` — the root layout, which spends eight
+     * comment lines on why it matters — so the two newest share cards on the
+     * site shipped without it. `alt` is a required parameter here, so the
+     * only way to omit it now is to stop calling this, which the sweep below
+     * forbids.
+     */
+    const images = card.openGraph?.images as { alt?: string }[];
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect(image.alt).toBeTruthy();
+    }
+  });
+
+  it("emits the union of what the five blocks used to set", () => {
+    // Not the intersection: three of the five were thinner than the others,
+    // and levelling down would have been a consolidation that lost something.
+    const og = card.openGraph as {
+      type?: string;
+      url?: string;
+      images: { url: string; width: number; height: number }[];
+    };
+    expect(og.type).toBe("website");
+    expect(og.url).toBe("/photographers");
+    expect(og.images[0]?.width).toBe(1200);
+    expect(og.images[0]?.height).toBe(630);
+    // `Metadata["twitter"]` is a union whose narrower arms have no `card`,
+    // which is exactly the field being asserted on.
+    const twitter = card.twitter as { title?: string; card?: string };
+    expect(twitter.title).toBe("Photographers");
+    expect(twitter.card).toBe("summary_large_image");
+  });
+});
+
+/**
+ * The sweep, so a sixth hand-written block cannot appear.
+ *
+ * The docblock on `ogCard` predicted that a fourth hand-written card would
+ * differ from the other three; it was right, and the two that were added
+ * differed twice over — they set `og.url` where their siblings did not, and
+ * neither carried alt text. A prediction in a comment is not a control, and
+ * this is the shape the repository already uses to turn one into the other.
+ *
+ * `/photo/[id]` is not caught, and should not be: it builds its card out of
+ * the photograph itself rather than from `/api/og`, so it never calls
+ * `ogCard` and is excluded by the detector rather than by an exception.
+ */
+describe("every page that builds a card builds the block around it too", () => {
+  const callers = allSourceFiles()
+    .map((file) => ({ file, source: readFileSync(file, "utf8") }))
+    .filter(({ source }) => source.includes("ogCard({"));
+
+  it("finds the call sites at all", () => {
+    // If this finds nothing, the detector has broken, not the code.
+    expect(callers.length).toBeGreaterThan(0);
+  });
+
+  it("none of them hand-writes an openGraph block", () => {
+    const handwritten = callers
+      .filter(({ source }) => source.includes("openGraph:"))
+      .map(({ file }) => file.replace(SRC, ""));
+    expect(handwritten).toEqual([]);
+  });
+
+  it("all of them go through shareCard", () => {
+    const missing = callers
+      .filter(({ source }) => !source.includes("shareCard({"))
+      .map(({ file }) => file.replace(SRC, ""));
+    expect(missing).toEqual([]);
   });
 });

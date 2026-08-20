@@ -184,16 +184,25 @@ in a review thread because a comment in a diff is read once.
   that has to be extracted from a database-adjacent module to be readable
   elsewhere. Do that rather than extracting a third one.
 
-- **The globe is one derivation cached twice.** `/globe/page.tsx` and
-  `/api/globe/route.ts` both call `listGlobePoints()` and `groupIntoCells()`,
-  and both declare `revalidate = 3600`. Publishing now clears both, but only
-  because `revalidateFeeds` names both — the dots and the card that appears
-  when you hover one are the same data behind two independent caches, and the
-  bug that hid a new photograph's card for an hour was that list being one
-  entry short. The fix is one cached function tagged `globe` and invalidated
-  by `revalidateTag`. Nothing in this repo uses tags yet.
-  **Trigger:** a third surface wanting the same data, or the list missing an
-  entry a second time.
+- **The globe is one derivation cached three times.** `/globe/page.tsx`,
+  `/api/globe/route.ts` and now `/globe`'s `generateMetadata` all call
+  `listGlobePoints()` and `groupIntoCells()`, and the first two declare
+  `revalidate = 3600`. Publishing clears them, but only because
+  `revalidateFeeds` names them — the dots, the card that appears when you
+  hover one and the number on the share card are the same data behind
+  independent caches, and the bug that hid a new photograph's card for an hour
+  was that list being one entry short. The trigger below has fired: the share
+  card is the third surface. It also found the constraint that decides *how*
+  to fix it. The naive remedy — wrapping `listGlobePoints` in React's `cache`
+  so the page and its card share one query — is blocked, because four
+  source-text security tests slice `repository.ts` on `export async function`
+  boundaries and that wrapper moves the marker they read
+  (`src/lib/photos/repository.ts` says so at the query). So the remedy is the
+  one already written here: one cached function tagged `globe` and invalidated
+  by `revalidateTag`, which leaves the export where the invariants look for
+  it. Nothing in this repo uses tags yet.
+  **Trigger:** fired. A fourth surface, or the list missing an entry a second
+  time, and this stops being deferrable.
 
 - **The destructive-script guard is opt-in.** `confirmDestructive()` has to
   be imported and called, so a new script that writes to production is

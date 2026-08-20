@@ -4,7 +4,7 @@ import { Geist } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import { OverlaidChrome } from "@/components/OverlaidChrome";
 import "./globals.css";
-import { ogCard, SITE_DESCRIPTION } from "@/lib/metadata";
+import { ogCard, SITE_DESCRIPTION, shareCard } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 
 const geistSans = Geist({
@@ -67,33 +67,25 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
     shortcut: "/favicon.ico",
   },
-  openGraph: {
+  /*
+   * The card, and the alt text that goes on it.
+   *
+   * An em dash, like every other title on this site, and the words the card
+   * actually prints — `/api/og` renders "Photographs from around the world"
+   * under the title. Alt text describes the picture; a hyphen and a different
+   * noun described neither the picture nor the site.
+   *
+   * `"/"` rather than `SITE_URL`: `metadataBase` above resolves it to exactly
+   * the same absolute URL, and every other caller of `shareCard` passes a
+   * path. One shape, so the site-wide card is not the one exception.
+   */
+  ...shareCard({
     title: TITLE,
     description: SITE_DESCRIPTION,
-    url: SITE_URL,
-    images: [
-      {
-        url: OG_IMAGE,
-        width: 1200,
-        height: 630,
-        /*
-         * An em dash, like every other title on this site, and the words the
-         * card actually prints — `/api/og` renders "Photographs from around
-         * the world" under the title. Alt text describes the picture; a
-         * hyphen and a different noun described neither the picture nor the
-         * site.
-         */
-        alt: `${TITLE} — Photographs from around the world`,
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    title: TITLE,
-    description: SITE_DESCRIPTION,
-    card: "summary_large_image",
-    images: [OG_IMAGE],
-  },
+    url: "/",
+    card: OG_IMAGE,
+    alt: `${TITLE} — Photographs from around the world`,
+  }),
 };
 
 export const viewport: Viewport = {

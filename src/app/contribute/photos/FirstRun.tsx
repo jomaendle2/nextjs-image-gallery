@@ -80,7 +80,8 @@ export function FirstRun({ invitedBy }: { invitedBy?: string | null }) {
         somebody chose personally, and the workspace greeted everybody
         identically — so the warmest fact about a new photographer's first
         screen was one the site knew and did not say. Absent for anybody the
-        owner invited directly, because "the gallery invited you" is not news.
+        owner brought in, by either door, because "the gallery invited you" is
+        not news — `inviterName` filters on the inviter's role for that.
       */}
       {invitedBy === null || invitedBy === undefined ? null : (
         <p className={`mb-4 ${BODY_SMALL}`}>{invitedBy} invited you here.</p>

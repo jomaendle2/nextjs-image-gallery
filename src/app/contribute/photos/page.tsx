@@ -36,6 +36,15 @@ export default async function PhotosPage() {
     redirect("/contribute?error=ended");
   }
 
+  /*
+   * `inviterName` is fetched here, beside the other two, and not inside an
+   * `async FirstRun` that needs it — even though only the zero state reads
+   * it. `src/components/**` contains no async components at all: every page
+   * in this app fetches and passes props, and making the exception here would
+   * be the first instance of a second pattern for the sake of one indexed
+   * single-row lookup that runs in parallel with two queries already in
+   * flight. The alternative also serialises the zero state behind it.
+   */
   const [photos, invites, invitedBy] = await Promise.all([
     listOwnPhotos(contributor.id),
     invitesRemaining(contributor.id),
@@ -57,14 +66,27 @@ export default async function PhotosPage() {
       title="Your photographs"
     >
       {/*
-        Hidden entirely while the first-publish card is up, because that card
-        says both of these things better: it links to the page and it explains
-        what the invitations are for. Two links to `/by/<slug>` a hand's width
-        apart, and the same count stated twice, is what "celebrate the moment"
-        looks like when it is bolted on beside the furniture instead of
-        replacing it.
+        One either/or, because these are the two ends of the same round trip.
+
+        `=== 1` rather than `> 0`: this is the moment the page went from an
+        address that existed to one worth sending somebody, and the second
+        publish takes it away again. The card is not shown *beside* the link
+        row, it replaces it — the card says both of those things better, since
+        it links to the page and explains what the invitations are for. Two
+        links to `/by/<slug>` a hand's width apart, and the same count stated
+        twice, is what "celebrate the moment" looks like when it is bolted on
+        beside the furniture instead of replacing it.
+
+        The predicate was written twice in opposite polarity, thirty-eight
+        lines apart, with the reason only at the first of them. Widen one and
+        miss the other and the result is exactly the doubled-link layout the
+        reason exists to prevent, so there is one of it — pinned by
+        `src/lib/workspace.test.ts`. At zero the else branch collapses to the
+        invitations line alone, which is what it rendered before.
       */}
-      {published.length === 1 ? null : (
+      {published.length === 1 ? (
+        <JustLive invites={invites} slug={contributor.slug} />
+      ) : (
         <div className="mb-8 flex flex-wrap gap-3">
           {published.length > 0 ? (
             <TextLink href={`/by/${contributor.slug}`} standalone={true}>
@@ -96,15 +118,6 @@ export default async function PhotosPage() {
         any of this — was answered nowhere on the site.
       */}
       {published.length === 0 ? <FirstRun invitedBy={invitedBy} /> : null}
-
-      {/*
-        And the other end of the same round trip. `=== 1` rather than `> 0`:
-        this is the moment the page went from an address that existed to one
-        worth sending somebody, and the second publish takes it away again.
-      */}
-      {published.length === 1 ? (
-        <JustLive invites={invites} slug={contributor.slug} />
-      ) : null}
 
       {/*
         The tile key is read here, on the server, and handed down as a prop.

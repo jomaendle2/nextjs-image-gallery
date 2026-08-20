@@ -8,7 +8,7 @@ import {
   getContributorBySlug,
   listPublicContributorSlugs,
 } from "@/lib/auth/contributors";
-import { contributorAlternates, ogCard } from "@/lib/metadata";
+import { contributorAlternates, ogCard, shareCard } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographerSchema } from "@/lib/structured-data";
 
@@ -84,15 +84,13 @@ export async function generateMetadata({
       contributor.slug,
       contributor.display_name,
     ),
-    openGraph: {
+    ...shareCard({
       title: contributor.display_name,
       description: `Photographs by ${contributor.display_name}.`,
-      images: [{ url: card, width: 1200, height: 630 }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      images: [card],
-    },
+      url: `/by/${contributor.slug}`,
+      card,
+      alt: `${contributor.display_name} — photographs on the beauty of earth`,
+    }),
   };
 }
 

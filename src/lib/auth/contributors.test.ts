@@ -42,6 +42,7 @@ vi.mock("@/lib/database", () => ({ sql: fakeSql }));
 const {
   claimNudge,
   ensureNudgeToken,
+  inviterName,
   listContributors,
   listNudgeCandidates,
   listNudgeCounts,
@@ -288,5 +289,28 @@ describe("muteNudges", () => {
     // is true either way.
     responses = [[{ id: "abc" }]];
     expect(await muteNudges("a-token")).toBe(true);
+  });
+});
+
+describe("inviterName", () => {
+  it("asks about the inviter, not only about the invitee", async () => {
+    /*
+     * Both filters are on `inviter.`, and that is the whole of the test.
+     * Filtering the invitee is not the bug — filtering *only* the invitee is:
+     * the query would happily name somebody who has since been removed from
+     * the gallery, or name the owner.
+     *
+     * The owner one is the subtle half. `inviteContributor` leaves
+     * `invited_by` NULL, so the admin door never produced this line and the
+     * `role` filter looked redundant — but the owner is also a contributor,
+     * and an invite spent through `/contribute/invite` runs `claimInvite`,
+     * which records `invited_by` like anybody else's. The sentence exists to
+     * say a peer chose you.
+     */
+    await inviterName("abc");
+
+    expect(issued[0]?.text).toContain("inviter.revoked_at IS NULL");
+    expect(issued[0]?.text).toContain("inviter.role <> 'owner'");
+    expect(issued[0]?.values).toEqual(["abc"]);
   });
 });

@@ -272,12 +272,16 @@ export async function getMemberDetails(
  *
  * Deliberately *not* wrapped in React's `cache`, though `/globe` now asks for
  * these twice per render — once for the share card, once for the page body.
- * Three invariants in `security.test.ts` and `security-membership.test.ts`
- * slice this file on `export async function` boundaries to prove what the
- * globe query may select, and a `cache(...)` wrapper moves the boundary they
- * read. The saving is one query per hourly revalidation; the cost would be
- * editing a security control to suit an optimisation, which is the wrong way
- * round.
+ * Four tests slice this file on `export async function` boundaries and this
+ * line is one of the boundaries: `security.test.ts` starts the globe slice
+ * here to prove what that query may select, and the three checks in
+ * `security-membership.test.ts` *end* the `getMemberDetails` slice here — so
+ * the three that would break are not even about the globe. A `cache(...)`
+ * wrapper moves the marker all four read. The saving is one query per hourly
+ * revalidation; the cost would be editing a security control to suit an
+ * optimisation, which is the wrong way round. `docs/roadmap.md` records the
+ * remedy that does not: one cached function tagged and invalidated by
+ * `revalidateTag`.
  */
 export async function listGlobePoints(): Promise<GlobePointRow[]> {
   const rows = await sql`
