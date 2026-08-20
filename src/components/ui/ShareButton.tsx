@@ -46,6 +46,14 @@ function shareData(title: string, url: string, text?: string): ShareData {
  * swaps and the box does not, because these sit in bars that were
  * deliberately made immovable.
  *
+ * `withLabel` puts the word beside the glyph, for the one place a bare
+ * 13px chain icon is not enough: the first-publish card, where it stands
+ * next to a fully-worded link at the most important moment in the flow. The
+ * visible word is *static* and `aria-hidden` on purpose — it preserves the
+ * fixed width the paragraph above protects, the icon swapping to a check
+ * remains the sighted feedback, and the announcement stays in the live
+ * region below rather than being read twice.
+ *
  * The confirmation state is reset by remounting — pass a `key` that changes
  * with the subject. An effect that resets on a prop change is the shape that
  * already went wrong here once, showing a ✓ over the wrong photograph.
@@ -55,6 +63,7 @@ export function ShareButton({
   label,
   title,
   text,
+  withLabel = false,
   className = "",
 }: {
   /** Absolute path on this site, e.g. `/by/jo-maendle`. */
@@ -64,6 +73,8 @@ export function ShareButton({
   /** Title for the OS share sheet. */
   title: string;
   text?: string;
+  /** Show a static "Copy link" beside the glyph. */
+  withLabel?: boolean;
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -121,9 +132,10 @@ export function ShareButton({
       ) : (
         <Link2 aria-hidden="true" size={13} strokeWidth={2.25} />
       )}
+      {withLabel ? <span aria-hidden="true">Copy link</span> : null}
       {/*
-        The word is for assistive technology only, so the visible control
-        keeps its fixed size while the announcement still changes.
+        The announcement is for assistive technology only, so the visible
+        control keeps its fixed size while what is announced still changes.
       */}
       <span aria-live="polite" className="sr-only">
         {copied ? "Link copied" : "Share"}

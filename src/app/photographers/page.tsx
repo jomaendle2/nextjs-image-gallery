@@ -15,17 +15,66 @@ import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { listContributorsWithPreviews } from "@/lib/auth/contributors";
 import { membershipConfigured } from "@/lib/members/offer";
-import { alternates } from "@/lib/metadata";
+import { alternates, ogCard, shareCard } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  alternates: alternates("/photographers"),
-  title: "Photographers — the beauty of earth.",
-  description: "The photographers contributing to the beauty of earth.",
-};
+const DESCRIPTION = "The photographers contributing to the beauty of earth.";
+
+/**
+ * A card that shows the work, not the wordmark.
+ *
+ * This page and `/globe` were the two public pages people actually send —
+ * "here is who is in it" and "here is where it is from" — and both previewed
+ * with the site-wide card, so a link recruiting a photographer looked
+ * identical to a link to the front page. `/by/[slug]` has had a card of its
+ * own for a while; this is the same argument one level up.
+ *
+ * `generateMetadata` rather than a static object, because the strip has to be
+ * built from real photographs. It runs the same query the page does — both
+ * behind this route's hourly revalidation, so the pair costs two queries an
+ * hour rather than two per visitor.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const contributors = await listContributorsWithPreviews();
+  const card = ogCard({
+    title: "Photographers",
+    /*
+     * No subtitle at zero rather than "0 photographers". `ogCard` drops an
+     * empty one and `/api/og` falls back to "Photographs from around the
+     * world" — which is what a recruitment link should say on the day there
+     * is nobody to count.
+     */
+    subtitle:
+      contributors.length === 0
+        ? ""
+        : count(contributors.length, "photographer"),
+    /*
+     * One from each of the first three, rather than three from the first.
+     * The card is about who is here, and a strip drawn entirely from one
+     * person's work says the opposite of the page it previews.
+     */
+    previews: contributors
+      .slice(0, 3)
+      .map((person) => person.previews[0]?.blob_url)
+      .filter((url) => url !== undefined),
+  });
+
+  return {
+    alternates: alternates("/photographers"),
+    title: "Photographers — the beauty of earth.",
+    description: DESCRIPTION,
+    ...shareCard({
+      title: "Photographers — the beauty of earth.",
+      description: DESCRIPTION,
+      url: "/photographers",
+      card,
+      alt: "The photographers contributing to the beauty of earth, with a strip of their work",
+    }),
+  };
+}
 
 /**
  * The way in, for both directions.

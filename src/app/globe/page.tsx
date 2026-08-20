@@ -13,7 +13,7 @@ import { SiteNav } from "@/components/ui/SiteNav";
 import { TextLink } from "@/components/ui/TextLink";
 import { WordmarkLink } from "@/components/ui/WordmarkLink";
 import { membershipConfigured } from "@/lib/members/offer";
-import { alternates } from "@/lib/metadata";
+import { alternates, ogCard, shareCard } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import {
   groupIntoCells,
@@ -27,12 +27,47 @@ import { count } from "@/lib/plural";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  alternates: alternates("/globe"),
-  title: "Where these were taken — the beauty of earth.",
-  description:
-    "Every place a photographer has marked, blurred to about a kilometre.",
-};
+const DESCRIPTION =
+  "Every place a photographer has marked, blurred to about a kilometre.";
+
+/**
+ * Its own card, with the number on it.
+ *
+ * No strip of photographs here, and that is the honest choice rather than an
+ * omission: this page is a map, and three photographs would preview it as a
+ * gallery. What it can say that the site-wide card cannot is how much is on
+ * it — "41 places" is the reason to open a globe.
+ *
+ * **Places, not cells**, and the card said cells until it was read beside the
+ * page. `globe.ts` states the rule in bold: cells are what the globe draws,
+ * places are what the page lists — so the card promised "63 places" and the
+ * header two lines below the fold said "41 places" about the same data. A
+ * share card is a listing surface, so it counts what the listing counts.
+ *
+ * At zero, no subtitle at all. `ogCard` drops an empty one and `/api/og`
+ * falls back to "Photographs from around the world", which beats advertising
+ * a globe with "0 places" on it.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const places = groupIntoPlaces(groupIntoCells(await listGlobePoints()));
+  const card = ogCard({
+    title: "Where these were taken",
+    subtitle: places.length === 0 ? "" : count(places.length, "place"),
+  });
+
+  return {
+    alternates: alternates("/globe"),
+    title: "Where these were taken — the beauty of earth.",
+    description: DESCRIPTION,
+    ...shareCard({
+      title: "Where these were taken — the beauty of earth.",
+      description: DESCRIPTION,
+      url: "/globe",
+      card,
+      alt: "A globe marked with every place a photographer has marked",
+    }),
+  };
+}
 
 /**
  * The gallery by place.

@@ -4,6 +4,7 @@ import {
   BODY_SMALL,
   ITEM_HEADING,
   SECTION_HEADING,
+  WORKSPACE_CARD,
 } from "@/components/ui/field";
 
 /**
@@ -70,9 +71,23 @@ function Step({
  * themselves where they are filled in, which is the project's own rule
  * about where such statements belong.
  */
-export function FirstRun() {
+export function FirstRun({ invitedBy }: { invitedBy: string | null }) {
   return (
-    <section className="mb-8 rounded-3xl border border-white/[0.08] p-6">
+    <section className={WORKSPACE_CARD}>
+      {/*
+        Who brought them here, when a photographer rather than the owner did.
+
+        An invitation from a peer is the one arrival on this site that
+        somebody chose personally, and the workspace greeted everybody
+        identically — so the warmest fact about a new photographer's first
+        screen was one the site knew and did not say. Absent for anybody the
+        owner brought in, by either door, because "the gallery invited you" is
+        not news — `inviterName` filters on the inviter's role for that.
+      */}
+      {invitedBy === null ? null : (
+        <p className={`mb-4 ${BODY_SMALL}`}>{invitedBy} invited you here.</p>
+      )}
+
       <h2 className={SECTION_HEADING}>Nobody reviews any of this</h2>
       <p className={`mt-2 ${BODY}`}>
         You publish your own photographs. Pressing Publish puts one on the site
