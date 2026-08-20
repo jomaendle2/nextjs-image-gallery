@@ -4,12 +4,19 @@
   "functions": {
     "src/app/api/photos/draft/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/cron/nudge-contributors/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
     {
       "path": "/api/cron/announce-reminder",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/nudge-contributors",
+      "schedule": "0 9 * * *"
     }
   ]
 }

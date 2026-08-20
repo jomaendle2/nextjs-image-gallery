@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  escapeHtml,
   sendApplicationApproved,
   sendInvitation,
   sendLoginEmail,
   sendMembershipWelcome,
 } from "./email";
+import { escapeHtml } from "./mailer";
 import { LOGIN_TTL_MINUTES } from "./ttl";
 
 describe("escapeHtml", () => {
@@ -117,7 +117,11 @@ describe("sendInvitation", () => {
     // what `noSecrets` is looking for, and it cannot tell a fixture from a
     // leak.
     const url = `https://example.test/contribute/verify?${new URLSearchParams({ token: "fixture-token" })}`;
-    await sendInvitation("shooter@example.com", "Shooter", "Jo", url);
+    await sendInvitation("shooter@example.com", {
+      displayName: "Shooter",
+      invitedByName: "Jo",
+      signInUrl: url,
+    });
 
     expect(sent[0]?.text).toContain(url);
     expect(sent[0]?.html).toContain(`href="${url}"`);
@@ -126,7 +130,7 @@ describe("sendInvitation", () => {
   it("falls back to the form rather than mailing no link at all", async () => {
     // `invitationUrl` returns the form's URL when minting fails, and an
     // invitation with no way in would be worse than one pointing at a form.
-    await sendInvitation("shooter@example.com", "Shooter");
+    await sendInvitation("shooter@example.com", { displayName: "Shooter" });
 
     expect(sent[0]?.html).toMatch(/href="https?:\/\/[^"]+\/contribute"/);
   });
@@ -137,17 +141,25 @@ describe("sendInvitation", () => {
      * one ever sent to a new photographer arrived signed by nobody — a
      * stranger told they had been chosen, by no one in particular.
      */
-    await sendInvitation("shooter@example.com", "Shooter", "Jo Mändle");
+    await sendInvitation("shooter@example.com", {
+      displayName: "Shooter",
+      invitedByName: "Jo Mändle",
+    });
 
     expect(sent[0]?.text).toContain("Jo Mändle has invited you");
   });
 
   it("says that nobody reviews the work", async () => {
     // The most reassuring fact about this gallery, and it was stated nowhere.
-    await sendInvitation("shooter@example.com", "Shooter", "Jo");
+    await sendInvitation("shooter@example.com", {
+      displayName: "Shooter",
+      invitedByName: "Jo",
+    });
 
     expect(sent[0]?.text).toContain("Nobody reviews it");
-    expect(sent[0]?.html).toContain("nobody reviews it");
+    // Case-insensitive: the HTML now opens the sentence, where the plain-text
+    // alternative has it mid-paragraph. The claim is what matters, not where.
+    expect(sent[0]?.html).toMatch(/nobody reviews it/i);
   });
 });
 

@@ -47,9 +47,28 @@ describe("MIGRATIONS", () => {
   const isNullabilityChange = (statement: string): boolean =>
     /ALTER COLUMN \w+ (?:DROP|SET) NOT NULL/i.test(statement);
 
+  /*
+   * The fourth kind: a seed row, idempotent because the key it would collide
+   * with is the key it declares. `INSERT … ON CONFLICT DO NOTHING` re-runs to
+   * zero rows, which is the same guarantee `IF NOT EXISTS` gives DDL — and
+   * `INSERT IF NOT EXISTS` is not a thing Postgres has to write instead.
+   *
+   * Narrow deliberately: the conflict clause has to *do nothing*. `DO UPDATE`
+   * would re-run to a write, which is exactly what this rule exists to keep
+   * out of a migration list that runs on every deploy.
+   */
+  const isConflictGuardedInsert = (statement: string): boolean =>
+    /^\s*INSERT\s+INTO/i.test(statement) &&
+    /ON CONFLICT[\s\S]*DO NOTHING/i.test(statement);
+
   it("guards every schema statement so it can be re-run", () => {
     const guarded = MIGRATIONS.filter(
-      (s) => !(isBackfill(s) || isNullabilityChange(s)),
+      (s) =>
+        !(
+          isBackfill(s) ||
+          isNullabilityChange(s) ||
+          isConflictGuardedInsert(s)
+        ),
     );
     for (const statement of guarded) {
       expect(statement).toMatch(/IF NOT EXISTS/);
@@ -72,6 +91,52 @@ describe("MIGRATIONS", () => {
     expect(
       isNullabilityChange("ALTER TABLE t ADD COLUMN c TEXT NOT NULL;"),
     ).toBe(false);
+  });
+
+  it("only exempts inserts that really do nothing on a conflict", () => {
+    // The same narrowness the nullability exemption has, for the same
+    // reason: the exemption must not become a hole an unguarded INSERT can
+    // pass through.
+    expect(
+      isConflictGuardedInsert(
+        "INSERT INTO t (a) VALUES (1) ON CONFLICT DO NOTHING;",
+      ),
+    ).toBe(true);
+    expect(isConflictGuardedInsert("INSERT INTO t (a) VALUES (1);")).toBe(
+      false,
+    );
+    // `DO UPDATE` re-runs to a write. That is the thing being excluded.
+    expect(
+      isConflictGuardedInsert(
+        "INSERT INTO t (a) VALUES (1) ON CONFLICT (a) DO UPDATE SET a = 2;",
+      ),
+    ).toBe(false);
+    expect(isConflictGuardedInsert("SELECT 1 -- ON CONFLICT DO NOTHING")).toBe(
+      false,
+    );
+  });
+
+  /*
+   * The seed that keeps the nudge sequence from ambushing the existing list.
+   *
+   * Its correctness rests entirely on the date being a *literal*. Written as
+   * `now() - INTERVAL '1 day'` it would re-capture whoever was invited since
+   * the last deploy on every deploy — silently skipping the first three
+   * stages for photographers who were invited yesterday and are owed all six
+   * — and it would do so while still passing every other test in this file,
+   * because it would still be perfectly idempotent in the ON CONFLICT sense.
+   */
+  it("seeds the nudge ledger from a fixed date, never a rolling one", () => {
+    const seeds = MIGRATIONS.filter((s) =>
+      s.includes("INSERT INTO contributor_nudges"),
+    );
+    expect(seeds).toHaveLength(1);
+    const [seed] = seeds;
+    expect(seed).toBeDefined();
+    expect(seed).toMatch(/TIMESTAMPTZ '\d{4}-\d{2}-\d{2}/);
+    expect(seed).not.toMatch(/now\(\)\s*-\s*INTERVAL/i);
+    // Both halves fixed: a rolling stamp would re-run to a different row.
+    expect(seed).not.toMatch(/VALUES[\s\S]*now\(\)/i);
   });
 
   it("bounds every backfill with a predicate", () => {

@@ -35,6 +35,23 @@ Three things:
 - **Cron** (`vercel.json`) calls `/api/cron/announce-reminder` at 09:00 every
   Monday. It does not send anything to anybody — it emails *you* if there are
   published photographs the mailing list has not been told about.
+- **Cron** also calls `/api/cron/nudge-contributors` at 09:00 every day. This
+  one does mail photographers: whoever was invited and has published nothing.
+  Two sequences — six messages over three months for an empty page, three for
+  a stalled draft — and every stop condition is checked at send time, so
+  uploading or publishing ends the sequence mid-flight. Each stage is claimed
+  in `contributor_nudges` before it is sent, so a retried run sends nothing.
+  Both routes want `CRON_SECRET`; without it they answer 500 rather than
+  running unauthenticated.
+
+  Read what it *would* do before it does it:
+
+  ```bash
+  curl -H "Authorization: Bearer $CRON_SECRET" \
+    'https://<domain>/api/cron/nudge-contributors?dry=1'
+  ```
+
+  The dry run computes the identical plan and claims nothing.
 
 ### Neon — the database
 
@@ -82,10 +99,36 @@ a missing one prints the message to the terminal, which is how you read a
 sign-in link locally. In production it *throws*: printing would put live
 tokens in the platform log while telling somebody to check an empty inbox.
 
-Nine templates in `src/lib/auth/email.ts`: sign-in link, invitation,
-application approved, subscribe confirmation, subscribe welcome, new-work
-announcement, and the weekly reminder to you. Every value interpolated into one is HTML-escaped,
-because contributors type titles and captions.
+Eleven templates across two files. `src/lib/auth/email.ts` has the eight that
+go to a person the gallery knows: sign-in link, invitation, application
+approved, application declined, membership welcome, the weekly reminder to
+you, and the two nudges to photographers who were invited and have not
+published — one for an empty page, one for a stalled draft.
+`src/lib/subscribers/email.ts` has the three that go to the mailing list:
+subscribe confirmation, subscribe welcome, and the new-work announcement.
+Every value interpolated into one is HTML-escaped, because contributors type
+titles and captions.
+
+The transport and the design are both `src/lib/auth/mailer.ts`: the provider
+call, the escaping, and the kit every template renders through — the shell,
+the eyebrow that names which kind of message this is, the type rungs, the one
+accent button, and `photo()`. The templates say what each message *is*; that
+file is how any of them looks and how it leaves the building. Nudge copy lives
+apart again, in `src/lib/auth/nudge-copy.ts`, so its wording can be tested
+without a mail provider — the arrangement `src/lib/announcement.ts` already
+uses.
+
+**Photographs are in the messages that argue for something** and nowhere else:
+the invitation and the subscribe welcome show the newest published photograph,
+the draft nudge shows the photographer's own unpublished one, and the third
+upload nudge shows what is on the gallery now. A sign-in link carries none —
+it is a credential, and a picture on it is decoration on a door key.
+
+Read them without sending anything:
+
+```bash
+npm run preview:email
+```
 
 ---
 

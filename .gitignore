@@ -56,6 +56,9 @@ next-env.d.ts
 skills-lock.json
 .claude/skills/
 
+# Rendered email previews from `npm run preview:email` — regenerate, do not commit
+.email-previews/
+
 # Git worktrees Claude Code checks out inside the repo. Never committable,
 # and each holds a copy of biome.json — which Biome reads as a second root
 # configuration and refuses to run at all until it is out of the way.

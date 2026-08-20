@@ -73,7 +73,7 @@ describe("I1 — state changes on POST, never on GET", () => {
    */
   it("no page mutates while rendering", () => {
     const mutators =
-      /await\s+(confirm|unsubscribe|consumeLoginToken|removePhoto|setPublished)\s*\(/;
+      /await\s+(confirm|unsubscribe|consumeLoginToken|removePhoto|setPublished|muteNudges)\s*\(/;
     const offenders = allSourceFiles()
       .filter((file) => file.endsWith("page.tsx"))
       .filter((file) => mutators.test(readFileSync(file, "utf8")));
@@ -367,7 +367,13 @@ describe("I9 — missing security config fails closed", () => {
    * platform log while telling the person to check an empty inbox.
    */
   it("email refuses to fail silently in production", () => {
-    const email = read("lib", "auth", "email.ts");
+    /*
+     * `mailer.ts` rather than `email.ts` since the transport was split out of
+     * it — the templates are the half that grows, and the file holding this
+     * behaviour should not grow with them. The rule is unchanged and so is
+     * the code it reads; only the file it lives in moved.
+     */
+    const email = read("lib", "auth", "mailer.ts");
     const fallback = email.slice(
       email.indexOf("if (apiKey === undefined"),
       email.indexOf("const response = await fetch"),

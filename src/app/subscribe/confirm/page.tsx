@@ -36,6 +36,7 @@ export default async function ConfirmPage({
       <StatusPage
         detail="You will hear from us when new photographs are published. Every message carries a one-tap link to stop, including the one just sent."
         title="You're following"
+        tone="done"
       />
     );
   }

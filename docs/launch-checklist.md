@@ -53,10 +53,11 @@ by `schema.test.ts` — so running them on every build is safe by construction.
 
 ### ~~Verify a domain in Resend~~ — done
 
-`thebeautyof.earth` is **verified**. All nine templates were sent through
+`thebeautyof.earth` is **verified**. All eleven templates were sent through
 it to a real inbox: sign-in link, invitation, application approved,
-subscribe confirmation, subscribe welcome, new-work announcement, and the
-weekly reminder.
+application declined, membership welcome, subscribe confirmation, subscribe
+welcome, new-work announcement, the weekly reminder, and the two nudges to
+photographers who have not published — the empty page and the stalled draft.
 
 Re-run any time with:
 
@@ -197,7 +198,7 @@ UPDATE photos SET announced_at = now() WHERE published_at IS NOT NULL;
   community rather than a personal portfolio the moment a second name
   appears, and `/photographers` is the page that says so.
 - **Check the announcement renders in a real client** —
-  `scripts/smoke-email.mts` sends all nine templates to an address you name.
+  `scripts/smoke-email.mts` sends all eleven templates to an address you name.
 
 ---
 
@@ -338,7 +339,7 @@ inferred:
 - **Membership** — 20 checks against real Stripe signatures covering
   forgery, replay, dunning, out-of-order delivery and row takeover; 7 more
   for the billing portal.
-- **Email** — all nine templates delivered through Resend to a real inbox.
+- **Email** — all eleven templates delivered through Resend to a real inbox.
 - **Legal pages, navigation, mobile layout** — every route 200, no
   horizontal scroll at 390px, no console errors.
 

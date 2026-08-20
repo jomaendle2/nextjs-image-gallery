@@ -1,11 +1,18 @@
 /**
  * Sends one of every message this site can send.
  *
- * There are seven templates and they are the only part of the product that
- * reaches somebody outside the browser, which makes them the part where a
- * mistake is least recoverable: a broken link in an announcement goes to the
- * whole list at once and cannot be edited afterwards. This walks all seven so
- * they can be read in a real client, on a real phone, before that happens.
+ * These are the only part of the product that reaches somebody outside the
+ * browser, which makes them the part where a mistake is least recoverable: a
+ * broken link in an announcement goes to the whole list at once and cannot be
+ * edited afterwards. This walks every one of them so they can be read in a
+ * real client, on a real phone, before that happens.
+ *
+ * Twelve messages from ten senders: the upload nudge is walked at three of its
+ * six stages, because a sequence is only checkable as a sequence — whether
+ * stage 6 really reads as the last one is a question about the messages
+ * together rather than about any one of them — and the invitation is walked
+ * twice, with a photograph and without, because that fallback is the one
+ * thing about the redesign that reading the code cannot confirm.
  *
  * With `RESEND_API_KEY` and `EMAIL_FROM` set it really sends, to an address
  * given on the command line. Without them it prints the plain-text part,
@@ -25,15 +32,19 @@ import { buildAnnouncement } from "../src/lib/announcement.ts";
 import {
   sendAnnouncementReminder,
   sendApplicationApproved,
+  sendDraftNudge,
   sendInvitation,
   sendLoginEmail,
-  sendNewWorkAnnouncement,
-  sendSubscribeConfirmation,
-  sendSubscribeWelcome,
+  sendUploadNudge,
 } from "../src/lib/auth/email.ts";
 import { sql } from "../src/lib/database.ts";
 import { toGalleryImage } from "../src/lib/photos/map.ts";
 import { siteOrigin } from "../src/lib/site-url.ts";
+import {
+  sendNewWorkAnnouncement,
+  sendSubscribeConfirmation,
+  sendSubscribeWelcome,
+} from "../src/lib/subscribers/email.ts";
 import { check, finish } from "./harness.mts";
 
 const [, , to] = process.argv;
@@ -48,9 +59,17 @@ const live =
   process.env["RESEND_API_KEY"] !== undefined &&
   process.env["EMAIL_FROM"] !== undefined;
 
+/*
+ * Fixture links, assembled rather than written out: a literal `?token=…` in
+ * source is what biome's `noSecrets` looks for, and it cannot tell a fixture
+ * from a leak.
+ */
+const signIn = `${origin}/contribute/verify?${new URLSearchParams({ token: "smoke-test-token" })}`;
+const quiet = `${origin}/contribute/quiet?${new URLSearchParams({ token: "smoke-test-token" })}`;
+
 console.log(
   live
-    ? `Sending seven messages to ${to} through Resend.\n`
+    ? `Sending twelve messages to ${to} through Resend.\n`
     : "No RESEND_API_KEY / EMAIL_FROM — printing instead of sending.\n" +
         "This is the same fallback the dev server uses.\n",
 );
@@ -71,8 +90,8 @@ const photos = (await sql`
 `) as never[];
 
 /*
- * Sequential on purpose: seven messages arriving in a guaranteed order are far
- * easier to check off against this list than seven racing into an inbox.
+ * Sequential on purpose: twelve messages arriving in a guaranteed order are
+ * far easier to check off against this list than twelve racing into an inbox.
  *
  * A send has no boolean to assert on — it either returns or throws — so this
  * turns the throw into the harness's `check`.
@@ -90,7 +109,30 @@ await step("sign-in link", () =>
   sendLoginEmail(to, `${origin}/contribute/verify?token=smoke-test-token`),
 );
 
-await step("invitation", () => sendInvitation(to, "Smoke Test"));
+/*
+ * With a photograph and without, because the difference is the whole point of
+ * the redesign and only one of the two can be checked by reading code.
+ */
+await step("invitation, with the photograph", () =>
+  sendInvitation(to, {
+    displayName: "Smoke Test",
+    invitedByName: "Jo",
+    signInUrl: signIn,
+    showcase:
+      photos[0] === undefined
+        ? undefined
+        : {
+            url: (photos[0] as { blob_url: string }).blob_url,
+            alt: "A photograph from the gallery.",
+            caption: "From the gallery",
+            href: origin,
+          },
+  }),
+);
+
+await step("invitation, with nothing published yet", () =>
+  sendInvitation(to, { displayName: "Smoke Test" }),
+);
 
 await step("application approved", () =>
   sendApplicationApproved(to, "Smoke Test"),
@@ -117,6 +159,38 @@ await step("new work announcement", () =>
 
 await step("weekly reminder to the owner", () =>
   sendAnnouncementReminder(to, photos.length),
+);
+
+/*
+ * The nudges, at the three stages worth reading with your own eyes.
+ *
+ * Stage 1 is the one most people will ever see; stage 2 carries the objection
+ * this whole sequence exists to answer; stage 6 has to read unmistakably as
+ * the last message rather than as another reminder. Check the opt-out link in
+ * each — it is the one link in these mails that has to work even when
+ * everything else about them has been ignored.
+ */
+
+for (const stage of [1, 2, 6]) {
+  await step(`upload nudge, stage ${stage} of six`, () =>
+    sendUploadNudge(to, {
+      displayName: "Smoke Test",
+      stage,
+      signInUrl: signIn,
+      quietUrl: quiet,
+      hasSignedIn: stage > 1,
+    }),
+  );
+}
+
+await step("draft nudge, stage 1 of three", () =>
+  sendDraftNudge(to, {
+    displayName: "Smoke Test",
+    stage: 1,
+    drafts: 2,
+    signInUrl: signIn,
+    quietUrl: quiet,
+  }),
 );
 
 finish();
