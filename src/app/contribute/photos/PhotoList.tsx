@@ -40,7 +40,7 @@ import { listClassName } from "./view";
  * LIMIT — is what needs to change, not this component.
  *
  * Measured with `npm run probe:scale` rather than guessed; the numbers are
- * in `docs/next-version.md`. Re-run it rather than re-reasoning.
+ * in `docs/roadmap.md`. Re-run it rather than re-reasoning.
  *
  * This component owns the state and nothing else: the two bars it composes
  * are in their own files, and the filtering itself is in `filter.ts`, where

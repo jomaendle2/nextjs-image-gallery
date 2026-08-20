@@ -1,10 +1,9 @@
 # Security architecture
 
 Written after two review rounds found fifteen defects in code that had
-already been reviewed once. The individual fixes are in the git history and
-in `security-review.md`; this is the part worth keeping — what the system
-trusts, what it must never trust, and the rules that would have caught those
-defects before they were written.
+already been reviewed once. The individual fixes are in the git history; this
+is the part worth keeping — what the system trusts, what it must never trust,
+and the rules that would have caught those defects before they were written.
 
 Every invariant below is numbered, and every one of them is here because
 something violated it. None is hypothetical.
@@ -238,20 +237,42 @@ oracle for the list it exists to protect.
 **Rule:** identical words are not enough; the observable work must be
 comparable. Move the send off the request path.
 
+### I13 — Saving is not publishing
+
+*Held by construction, and pinned by a test.*
+
+`publishPhoto` once set `published_at` on every save, so a photographer
+editing a caption on a draft published it by accident and could not tell
+until it was in the feed. The column now moves only when the form says
+publish: the update carries a `CASE WHEN`, the form carries an explicit
+intent, and saving without it answers "Draft saved. Not published yet."
+
+Two checks in `src/lib/security-interface.test.ts`, under this number, hold
+both halves.
+
+Recorded here late. The tests have named I13 since the fix; this list ran
+I1…I12 and then jumped to I14, because the numbering is maintained by hand
+and the code is not — and a gap in a numbered list that other documents cite
+by number reads as a mistake in whoever is reading it.
+
 ### I14 — The map library never reaches a public page
 
 *Held by construction, and pinned by a test.*
 
-MapTiler is the sixth processor in `PROCESSORS`, and the only one a *visitor*
-never reaches. The location picker lives on `/contribute/photos`, behind a
-session; nothing on a public page contacts MapTiler, no cookie is set, and no
-consent banner is triggered. That claim is what `/privacy` says, so it has to
-be enforced rather than remembered.
+MapTiler is one of two entries in `PROCESSORS` that a *visitor* never
+reaches — the Vercel AI Gateway is the other, and was added after this was
+written, which is why this paragraph used to call MapTiler the only one and
+number it wrongly besides. The location picker lives on `/contribute/photos`,
+behind a session; nothing on a public page contacts MapTiler, no cookie is
+set, and no consent banner is triggered. That claim is what `/privacy` says,
+so it has to be enforced rather than remembered.
 
 Four checks in `src/lib/security-location.test.ts`: exactly one file in the
-codebase mentions the map library and it is `LocationPicker.tsx`; nothing
-under `src/components/gallery` mentions it; no `route.ts` matches
+codebase mentions the map library and it is `MapSurface.tsx`; nothing under
+`src/components/gallery` mentions it; no `route.ts` matches
 `/maptiler|\btiles?\b/i`; and no file names a `NEXT_PUBLIC_*MAP*` variable.
+`biome.json` says the same thing a second way, as a restricted import, so
+that reaching for the library fails in the editor rather than in CI.
 
 **No tile proxy**, deliberately, recorded as the third of those checks. A
 `/api/tiles` route would be a public endpoint spending metered third-party
@@ -293,7 +314,17 @@ only path from a request body to a prompt; and existing only when somebody
 typed or clicked one. The feature is gone (it read as a second location field
 on a form that already had one, and confused the first real user), and with
 it went the request body itself: the suggest route no longer parses input at
-all, so the prompt is built entirely from the stored display copy and EXIF.
+all, so nothing a caller composes on the way in reaches a prompt.
+
+The prompt is not built from the photograph alone, though, and this paragraph
+said for a while that it was. It carries the stored display copy, its EXIF,
+**and the Location the photographer typed** — which the model is given so it
+can confirm or refine a place rather than re-deriving one from pixels and
+contradicting the person who was standing there. That text is already printed
+under the photograph on a public page and already in the RSS feed, so it is
+published text going to a processor that has published it nowhere; the
+comment on the AI Gateway row in `src/lib/legal.ts` says the same at length.
+The coordinate is what still never travels, in either direction.
 
 That is a strictly smaller surface than the invariant used to defend. If a
 hint-shaped feature ever returns, I16 returns with it — the retired tests sat
@@ -364,11 +395,11 @@ Tracked against the invariants above. Status is updated as each lands.
 | 8 | `memberExists` enrols an address permanently | I4 | open — low value to an attacker; links still go to the real inbox |
 | 9 | Swallowed query errors cache 404s for an hour | — | **done** — `listGalleryImages` throws, `getGalleryImages` forgives |
 | 10 | Member view counting is fire-and-forget | — | **done** — `after()` |
-| 11 | `/photo/[id]` serialises the whole gallery | — | open — inherent to a shared link opening a browsable viewer; fine at this size, revisit past ~200 photographs |
+| 11 | `/photo/[id]` serialises the whole gallery | — | open — inherent to a shared link opening a browsable viewer; fine at this size, and the threshold is the one [the roadmap](../roadmap.md) sets for windowing the gallery rather than a second number |
 | 12 | Sitemap counts drafts | — | **done** — separate `published_count` |
 | 13 | No session pruning | — | **done** — pruned alongside login tokens |
 | 14 | `/api/photo/[id]/details` unlimited | I11 | **done** — `memberDetailsLimiter`, 120 per 15 min, keyed by member. Tolerable while the response was prose; a coordinate set is worth collecting |
-| 15 | No index behind the globe query | — | open — `photos_globe_idx` when the table justifies it; see `next-version.md` |
+| 15 | No index behind the globe query | — | open — `photos_globe_idx` when the table justifies it; see [the roadmap](../roadmap.md) |
 
 ### I17 — Mail nobody asked for carries a way out of it
 

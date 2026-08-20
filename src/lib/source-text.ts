@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 /**
  * Reading the source as text, for tests that assert *shape* rather than
@@ -50,20 +50,107 @@ export function code(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 }
 
+/** The repository root, for the tests that read outside `src`. */
+export const ROOT = join(SRC, "..");
+
 /**
  * Every `.ts`/`.tsx` file under `src`, so a new violation cannot hide in a
  * directory nobody thought to name. Test files are excluded: they quote the
  * very patterns they forbid.
+ *
+ * The exclusion is `.test.ts` and not `.test.tsx`, which is exact rather than
+ * careless — there are none of the latter, and widening it here would quietly
+ * change what every invariant above can see.
  */
-export function allSourceFiles(dir: string = SRC): string[] {
+export function allSourceFiles(): string[] {
+  return walk(
+    SRC,
+    (entry) => /\.tsx?$/.test(entry) && !entry.endsWith(".test.ts"),
+  );
+}
+
+/**
+ * The traversal, once, with the policy left to the caller.
+ *
+ * `keep` decides on the filename and `skip` on the full path, because those
+ * are the two shapes every caller has wanted: an extension, and one directory
+ * or file that is output rather than source.
+ *
+ * Shared for the reason the docblock above gives about `allSourceFiles`. The
+ * exclusions are the interesting part and belong at each call site; the
+ * `readdirSync`/`statSync`/recurse is not, and there were three copies of it —
+ * the third added by the tests that check the documentation, which is one more
+ * place for a walk to quietly stop descending.
+ */
+export function walk(
+  dir: string,
+  keep: (entry: string) => boolean,
+  skip: (full: string) => boolean = () => false,
+): string[] {
   const found: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      found.push(...allSourceFiles(full));
-    } else if (/\.tsx?$/.test(entry) && !entry.endsWith(".test.ts")) {
+  /*
+   * `withFileTypes`, so that asking whether an entry is a directory costs
+   * nothing. The obvious spelling stats every entry — and then a caller whose
+   * `skip` stats for size, which is the only kind of `skip` anybody has
+   * written, stats all of them a second time.
+   *
+   * Directories are tested against `skip` and files against `keep` first, so
+   * a size limit is asked only about files that would otherwise be returned.
+   * Both orders matter to a live caller: `markdownUnder` skips a whole
+   * directory, and `codeUnder` skips by a size that means nothing for one.
+   */
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!skip(full)) {
+        found.push(...walk(full, keep, skip));
+      }
+    } else if (keep(entry.name) && !skip(full)) {
       found.push(full);
     }
   }
   return found;
+}
+
+/**
+ * How large a source file can be before it is taken to be generated data.
+ *
+ * The coastline tiers under `src/lib/geo` are 70 KB, 495 KB and 2.5 MB of
+ * coordinate arrays; the largest thing anybody has written by hand here is
+ * 31 KB. Scanning the three of them was about a quarter of what the
+ * documentation tests cost, and for a check that matches text it is worse
+ * than useless: a bare filename found inside a two-megabyte float array is a
+ * false positive, not a finding.
+ *
+ * By size rather than by name, and that is not squeamishness — `world.test.ts`
+ * asserts that no module mentions the heavy tiers outside a dynamic import,
+ * so a list of them here would break the invariant that keeps them out of the
+ * bundle. Size is also what actually matters, and it needs no maintenance
+ * when a fourth tier is generated.
+ */
+export const GENERATED_BYTES = 64 * 1024;
+
+/**
+ * Every hand-written code file under one directory, generated data aside.
+ *
+ * `src` and `scripts` are both spelled `.ts`/`.tsx` and `.mts`/`.mjs` in
+ * different proportions, and every caller that has wanted one has wanted the
+ * other — so the extension set lives here rather than being split by
+ * directory at each call site, which is how the second caller came to read
+ * three megabytes of coordinates looking for an environment variable.
+ */
+export function codeUnder(dir: string): string[] {
+  return walk(
+    dir,
+    (entry) => /\.(?:tsx?|mts|mjs)$/.test(entry),
+    (full) => statSync(full).size > GENERATED_BYTES,
+  );
+}
+
+/** Repo-relative and posix, the one spelling every check compares in. */
+export function rel(absolute: string): string {
+  return absolute
+    .slice(ROOT.length + 1)
+    .split(sep)
+    .join("/");
 }

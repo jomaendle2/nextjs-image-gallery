@@ -1,4 +1,5 @@
 import process from "node:process";
+import { isProduction } from "@/lib/deployment";
 
 /**
  * Whether a model can be asked to look at a photograph at all.
@@ -112,7 +113,7 @@ let announced = false;
  * module keeps circling, said before it happens rather than after.
  */
 function announce(usable: boolean, viaOidc: boolean): void {
-  if (announced || process.env["VERCEL_ENV"] !== "production") {
+  if (announced || !isProduction()) {
     return;
   }
   announced = true;

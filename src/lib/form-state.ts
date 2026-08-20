@@ -11,6 +11,15 @@
  * Its own module with no directive, because a `"use server"` file may export
  * only async functions and every one of these lives beside its actions.
  *
+ * Under `src/lib` rather than `src/app`, which it was for a while. That
+ * placement was read off the constraint above — it had to be outside the
+ * actions files — and `src/app` was simply where the actions were. It made
+ * this the one thing three modules under `src/lib` reached *upward* for, and
+ * so the one exception to the layering rule `biome.json` now states. There is
+ * no React here, no Next import and no directive; it is library code, and
+ * `formText` in particular is a validation primitive for forms an
+ * unauthenticated stranger can post to.
+ *
  * `tone` drives how the message is shown, and its names are `Notice`'s so a
  * form can hand one straight over. `sent` is the terminal success a form
  * uses to swap itself for a confirmation panel; `success` leaves the form in

@@ -8,13 +8,13 @@ import {
   useEffect,
   useState,
 } from "react";
-import { IDLE } from "@/app/form-state";
 import { ActionError } from "@/components/ui/ActionError";
 import { TOUCH_LINK } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { PlaceGuess } from "@/lib/ai/suggestion";
+import { IDLE } from "@/lib/form-state";
 import { MAX_PHOTO_TAGS, type PhotoTag } from "@/lib/photos/tags";
 import type { OwnPhotoRow } from "@/lib/photos/types";
 import {

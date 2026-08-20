@@ -5,7 +5,7 @@
  * and local builds are untouched — they have sensible fallbacks and nobody
  * is emailed from them.
  *
- * The rule this follows is the one in `docs/security-architecture.md`:
+ * The rule this follows is the one in `docs/architecture/security.md`:
  * configuration that matters fails closed. A build that stops with a
  * sentence telling you which variable to set costs minutes. The alternative
  * is what nearly shipped — `SITE_URL` unset, `siteOrigin()` falling through
@@ -23,6 +23,7 @@
  * deliberately unset teaches people to bypass it.
  */
 import process from "node:process";
+import { isProduction } from "../src/lib/deployment.ts";
 
 interface Required {
   name: string;
@@ -46,7 +47,7 @@ const REQUIRED: Required[] = [
 
 function main(): void {
   // Preview and development have working fallbacks and mail nobody.
-  if (process.env["VERCEL_ENV"] !== "production") {
+  if (!isProduction()) {
     console.log("preflight: not a production build, skipping.");
     return;
   }
@@ -71,7 +72,7 @@ function main(): void {
     console.error(`    vercel env add ${name} production\n`);
   }
   console.error(
-    "See docs/launch-checklist.md. This check runs only for production;\n" +
+    "See docs/operations/setup.md. This check runs only for production;\n" +
       "preview and local builds are unaffected.\n",
   );
   process.exit(1);

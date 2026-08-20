@@ -16,8 +16,9 @@
  * So this does the two things a guard can honestly do from inside the repo.
  * It **prints the host**, because "which database is `.env.local` pointing at
  * today" is a question nobody can answer from memory. And it **requires
- * `--apply`**, following `name-photographs.mts`, the repo's only dry-run
- * precedent — which turns an accident into a deliberate act.
+ * `--apply`**, which turns an accident into a deliberate act. That pattern
+ * came from a one-off migration script since deleted; `erase-contributor.mts`
+ * is the fullest example of it now.
  *
  * What it cannot do is create a branch to run against. That is a dashboard
  * action, and pretending otherwise would be worse than saying so.
@@ -82,7 +83,7 @@ export function confirmDestructive(what: string): void {
     console.error(
       "  Refusing to run without --apply.\n" +
         "  Check the host above. If it is production, stop and point\n" +
-        "  DATABASE_URL at a Neon branch first — see docs/launch-checklist.md.\n" +
+        "  DATABASE_URL at a Neon branch first — see docs/operations/runbook.md.\n" +
         "\n" +
         "    npm run <script> -- --apply\n",
     );

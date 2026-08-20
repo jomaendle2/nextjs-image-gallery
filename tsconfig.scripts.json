@@ -18,5 +18,11 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.mts", "scripts/**/*.ts"]
+  /*
+   * `vitest.config.mts` is here for the same reason `scripts/` is: it is
+   * `.mts`, and the glob in `tsconfig.json` ends in `.ts`, which does not
+   * match that. So it was typechecked by nothing at all — the exact hole this
+   * file was written to close, with one file still left in it.
+   */
+  "include": ["scripts/**/*.mts", "vitest.config.mts"]
 }

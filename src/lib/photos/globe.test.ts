@@ -341,7 +341,7 @@ describe("the payload stays small as the gallery grows", () => {
    * payload — and handing it the full cells would ship about 33 KB for the
    * sake of three numbers a dot.
    *
-   * This is the same trap `docs/next-version.md` §2 records for the gallery,
+   * This is the same trap `docs/roadmap.md` §2 records for the gallery,
    * where the cost is 5.4 KB per photograph. Here the cost is per *place*,
    * which is what makes a globe affordable at all.
    */

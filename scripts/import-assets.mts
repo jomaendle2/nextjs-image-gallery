@@ -203,8 +203,8 @@ async function main(): Promise<void> {
      * gone and `display_url` is `NOT NULL`, which is what turns this from a
      * quiet inconsistency into an insert that fails.
      *
-     * Same shape as the ingest route and `backfill-display.mts`: a second
-     * blob under `photos/display/`, and both of its columns recorded.
+     * Same shape as the ingest route: a second blob under
+     * `photos/display/`, and both of its columns recorded.
      */
     const display = await put(
       `photos/display/${seed.id}-${seed.file}`,

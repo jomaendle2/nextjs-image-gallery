@@ -72,11 +72,14 @@ const features: Stripe.BillingPortal.ConfigurationCreateParams.Features = {
 };
 
 /*
- * `privacy_policy_url` and `terms_of_service_url` are deliberately absent:
- * this site has neither page yet, and pointing Stripe's portal at two 404s
- * is worse than pointing it nowhere. Both are required before taking real
- * money from Germany — see docs/security-review.md — and both belong here
- * the moment they exist.
+ * `privacy_policy_url` and `terms_of_service_url` are absent, and this
+ * comment used to say why: the site had neither page, and pointing Stripe's
+ * portal at two 404s is worse than pointing it nowhere.
+ *
+ * Both pages exist now — `/privacy` and `/terms`, rendered from
+ * `src/lib/legal.ts` — so the reason has expired and only the omission is
+ * left. Both are required for taking money from Germany. Add them here,
+ * built from `SITE_URL` like every other outbound link.
  */
 const businessProfile = {
   headline: "the beauty of earth. — your membership",

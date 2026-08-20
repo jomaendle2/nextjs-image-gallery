@@ -269,7 +269,22 @@
         "noParameterProperties": "error",
         "noProcessEnv": "off",
         "noRestrictedGlobals": "error",
-        "noRestrictedImports": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "maplibre-gl": {
+                "message": "Invariant I14, docs/architecture/security.md: the map library must never reach a public page. MapSurface.tsx is the one door in, and src/lib/security-location.test.ts pins it there."
+              },
+              "maplibre-gl/dist/maplibre-gl.css": {
+                "message": "As maplibre-gl itself. Import MapSurface.tsx."
+              },
+              "stripe": {
+                "message": "The SDK is ~19MB and Next traces imports, so a footer that merely asks whether payments exist would ship all of it. src/lib/stripe.ts constructs it; call membershipConfigured() from @/lib/members/offer instead. See docs/architecture/toolchain.md."
+              }
+            }
+          }
+        },
         "noRestrictedTypes": "error",
         "noRootType": "error",
         "noShoutyConstants": "error",
@@ -484,8 +499,74 @@
   },
   "overrides": [
     {
+      "includes": ["src/lib/**", "src/hooks/**", "src/data/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "maplibre-gl": {
+                    "message": "Invariant I14, docs/architecture/security.md: the map library must never reach a public page. MapSurface.tsx is the one door in, and src/lib/security-location.test.ts pins it there."
+                  },
+                  "maplibre-gl/dist/maplibre-gl.css": {
+                    "message": "As maplibre-gl itself. Import MapSurface.tsx."
+                  },
+                  "stripe": {
+                    "message": "The SDK is ~19MB and Next traces imports, so a footer that merely asks whether payments exist would ship all of it. src/lib/stripe.ts constructs it; call membershipConfigured() from @/lib/members/offer instead. See docs/architecture/toolchain.md."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@/app/**", "@/components/**"],
+                    "message": "Layering: src/lib, src/hooks and src/data sit underneath the app, not beside it. Move the shared thing down \u2014 @/app/form-state was the only one that reached up, and it is now @/lib/form-state. See docs/architecture/toolchain.md."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "maplibre-gl": {
+                    "message": "Invariant I14, docs/architecture/security.md: the map library must never reach a public page. MapSurface.tsx is the one door in, and src/lib/security-location.test.ts pins it there."
+                  },
+                  "maplibre-gl/dist/maplibre-gl.css": {
+                    "message": "As maplibre-gl itself. Import MapSurface.tsx."
+                  },
+                  "stripe": {
+                    "message": "The SDK is ~19MB and Next traces imports, so a footer that merely asks whether payments exist would ship all of it. src/lib/stripe.ts constructs it; call membershipConfigured() from @/lib/members/offer instead. See docs/architecture/toolchain.md."
+                  },
+                  "@/lib/database": {
+                    "message": "The SQL client is server-only, and authorisation lives in the WHERE clause. Go through a repository in src/lib/*/repository.ts. See docs/architecture/security.md, invariant I2."
+                  }
+                },
+                "patterns": [
+                  {
+                    "group": ["@/app/**"],
+                    "message": "Layering: a component may not import from src/app. Move the shared thing down into src/lib. See docs/architecture/toolchain.md."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": [
         "src/app/api/**",
+        "src/lib/deployment.ts",
         "src/lib/database.ts",
         "src/lib/auth/**",
         "src/lib/photos/**",
@@ -493,8 +574,7 @@
         "src/lib/maptiler.ts",
         "src/lib/members/offer.ts",
         "src/lib/site-url.ts",
-        "src/lib/stripe.ts",
-        "src/components/ui/EnvironmentBanner.tsx"
+        "src/lib/stripe.ts"
       ],
       "linter": {
         "rules": {
@@ -521,7 +601,11 @@
       }
     },
     {
-      "includes": ["src/**/*.test.ts", "src/lib/source-text.ts"],
+      "includes": [
+        "src/**/*.test.ts",
+        "src/lib/source-text.ts",
+        "src/lib/doc-text.ts"
+      ],
       "linter": {
         "rules": {
           "correctness": {
@@ -529,6 +613,16 @@
           },
           "performance": {
             "useTopLevelRegex": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**/*.test.ts", "scripts/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
           }
         }
       }

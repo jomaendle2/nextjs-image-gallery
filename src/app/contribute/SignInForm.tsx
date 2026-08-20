@@ -7,11 +7,11 @@ import {
   useId,
   useState,
 } from "react";
-import { IDLE } from "@/app/form-state";
 import { FIELD, LABEL } from "@/components/ui/field";
 import { GlassButton } from "@/components/ui/glass-button";
 import { Notice } from "@/components/ui/Notice";
 import { useFocusOnSuccess } from "@/hooks/useFocusOnSuccess";
+import { IDLE } from "@/lib/form-state";
 import { requestSignIn, type SignInState } from "./actions";
 
 const INITIAL: SignInState = IDLE;

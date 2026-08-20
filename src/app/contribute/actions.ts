@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { type FormState, failed, sent } from "@/app/form-state";
 import { sendLoginEmail } from "@/lib/auth/email";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { looksLikeEmail, normaliseEmail } from "@/lib/auth/slug";
@@ -12,10 +11,11 @@ import {
   mintLoginToken,
   pruneLoginTokens,
 } from "@/lib/auth/tokens";
+import { type FormState, failed, sent } from "@/lib/form-state";
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 
-/** One shape for every form on the site. See `@/app/form-state`. */
+/** One shape for every form on the site. See `@/lib/form-state`. */
 export type SignInState = FormState;
 
 /*

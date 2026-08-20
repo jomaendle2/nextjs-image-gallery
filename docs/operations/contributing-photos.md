@@ -91,43 +91,17 @@ whichever machine happened to process the upload.
 
 ## Operator setup
 
-### 1. Storage and database
+[setup.md](setup.md) has the environment variables and the first-run steps —
+storage, database, email, and minting your own first sign-in link. Two things
+specific to bringing photographers in:
 
-```bash
-vercel env pull .env.local   # DATABASE_URL, BLOB_READ_WRITE_TOKEN
-npm run db:migrate           # additive, idempotent
-```
+**Inviting.** Sign in as the owner and go to `/contribute/admin`. Enter a
+display name, an email address, and optionally the photographer's own website
+— which becomes an outbound link on every one of their credits. There is no
+pending state: the row is the invitation.
 
-### 2. Email
-
-Sign-in links are printed to the server console until an email provider is
-configured, which is enough for local development. For production:
-
-```bash
-vercel env add RESEND_API_KEY production
-vercel env add EMAIL_FROM production      # a sender you have verified with Resend
-vercel env add SITE_URL production        # https://your-domain
-```
-
-`SITE_URL` matters for more than tidiness. Sign-in links carry a token, and
-building them from the request `Host` header would let anyone hitting the
-sign-in form choose where an invited contributor's token gets delivered.
-
-### 3. Inviting people
-
-Sign in as the owner and go to `/contribute/admin`. Enter a display name, an
-email address, and optionally the photographer's own website — which becomes
-an outbound link on every one of their credits.
-
-There is no pending state. The row is the invitation.
-
-### 4. Getting yourself in the first time
-
-If no email provider is configured yet, mint your own link:
-
-```bash
-npm run auth:link -- you@example.com
-```
+**Being invited.** A contributor spends one of their three invitations from
+`/contribute/invite`. [The runbook](runbook.md) has all three doors in.
 
 ## Owner tools
 
@@ -160,6 +134,8 @@ rather than a 403 — there is no reason to confirm the page exists.
 | Upload token | `src/app/api/uploads/token/route.ts` |
 | Ingest | `src/app/api/photos/draft/route.ts` |
 | Alt text | `src/lib/photos/alt-text.ts` |
+| Coarsening a marked point | `src/lib/photos/coarsen.ts` |
+| Suggested details | `src/app/api/photos/[id]/suggest/route.ts`, `src/lib/ai/suggest.ts` |
 | Structured data (JSON-LD) | `src/lib/structured-data.ts` |
 | Feeds | `src/lib/feed.ts`, `src/app/feed.xml/`, `src/app/by/[slug]/feed.xml/` |
 | Security headers | `next.config.ts` |

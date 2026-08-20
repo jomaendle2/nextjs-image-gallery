@@ -14,7 +14,7 @@ import { allSourceFiles, read, SRC } from "./source-text";
  * tell people is true.
  *
  * Split from that file when it passed four hundred lines, along the seam
- * that was already there. `docs/security-architecture.md` remains the index
+ * that was already there. `docs/architecture/security.md` remains the index
  * of every invariant; neither file is the complete list, and the doc says so.
  */
 

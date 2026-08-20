@@ -12,7 +12,7 @@ import { photoTitle } from "@/lib/photos/title";
  * label, a count, a thumbnail URL with its dimensions, and the photographs to
  * link to. Putting those in the canvas's props would serialise them into
  * every visit to `/globe`, including the large majority who never open the
- * globe at all, which is the precise trade `docs/next-version.md` §2 exists
+ * globe at all, which is the precise trade `docs/roadmap.md` §2 exists
  * to refuse.
  *
  * So the cost is moved onto the click that needs it. The page's payload is
@@ -29,7 +29,7 @@ import { photoTitle } from "@/lib/photos/title";
  * eight hundred photographs — `photos` should move to a per-cell route and
  * this one should keep only labels, counts and thumbnails. Written down now
  * so it is a threshold somebody crosses deliberately rather than a surprise,
- * the same way `next-version.md` §2 records the windowing trigger.
+ * the same way `docs/roadmap.md` §2 records the windowing trigger.
  *
  * **It publishes nothing new.** Every label, count, title and id here is
  * already in the HTML of `/globe`. The additions are a blob URL and the three

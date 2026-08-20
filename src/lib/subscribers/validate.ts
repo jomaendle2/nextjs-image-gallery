@@ -5,9 +5,9 @@
  * unauthenticated stranger can post to.
  */
 
-import { formText } from "@/app/form-state";
 import { MAX_URL } from "@/lib/applications/validate";
 import { looksLikeEmail } from "@/lib/auth/slug";
+import { formText } from "@/lib/form-state";
 
 export type SubscribeResult =
   | { ok: true; email: string }

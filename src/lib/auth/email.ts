@@ -94,7 +94,13 @@ export async function sendInvitation(
      * nothing published, and a message with a broken image would undo exactly
      * the trust this exists to build.
      */
-    showcase?: MailPhoto;
+    /*
+     * `| undefined` explicitly, because `exactOptionalPropertyTypes` is on
+     * and every caller computes this: `showcaseForMail` answers "there is no
+     * photograph to show" with `undefined`, which is a value it worked out
+     * rather than a key it forgot.
+     */
+    showcase?: MailPhoto | undefined;
   },
 ): Promise<void> {
   const { displayName, invitedByName, signInUrl, showcase } = options;
@@ -381,7 +387,7 @@ export async function sendUploadNudge(
      * evidence. The other five stay text — four and five are deliberately
      * quiet, and a picture on them would be a nudge pretending to be news.
      */
-    showcase?: MailPhoto;
+    showcase?: MailPhoto | undefined;
   },
 ): Promise<void> {
   const message = buildNudge(
@@ -422,7 +428,7 @@ export async function sendDraftNudge(
      * publishes it. Every stage of this track carries it, because every stage
      * of this track is about that photograph.
      */
-    draft?: MailPhoto;
+    draft?: MailPhoto | undefined;
   },
 ): Promise<void> {
   const message = buildNudge(

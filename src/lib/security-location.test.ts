@@ -21,7 +21,7 @@ import { allSourceFiles, code, read, SRC } from "./source-text";
  * directories without changing behaviour, and a second `coarsen` call site
  * works perfectly right up until the day the two answers differ. The check
  * has to be on the shape of the source, which is the approach
- * `docs/security-architecture.md` §6 describes.
+ * `docs/architecture/security.md` §6 describes.
  */
 
 describe("I14 — the map never reaches a public page", () => {

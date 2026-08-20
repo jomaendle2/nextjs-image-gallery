@@ -24,6 +24,15 @@ function prefersShareSheet(): boolean {
   );
 }
 
+/*
+ * `text` is spread in only when there is one. `ShareData`'s fields are
+ * optional, and under `exactOptionalPropertyTypes` passing an explicit
+ * `undefined` is not the same as omitting the key.
+ */
+function shareData(title: string, url: string, text?: string): ShareData {
+  return { title, url, ...(text === undefined ? {} : { text }) };
+}
+
 /**
  * Hands the reader a link to whatever they are looking at.
  *
@@ -74,7 +83,7 @@ export function ShareButton({
 
     if (prefersShareSheet()) {
       try {
-        await navigator.share({ title, text, url });
+        await navigator.share(shareData(title, url, text));
         return;
       } catch (error) {
         // Closing the sheet is a decision, not a failure — respect it and

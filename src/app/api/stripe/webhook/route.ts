@@ -1,6 +1,7 @@
 import process from "node:process";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+// biome-ignore lint/style/noRestrictedImports: a type-only import, erased at build. The rule cannot tell the two apart, and the bundle cost it exists to stop is zero here.
 import type Stripe from "stripe";
 import { sendMembershipWelcome } from "@/lib/auth/email";
 import { mintLoginToken } from "@/lib/auth/tokens";
