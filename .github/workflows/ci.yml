@@ -1,0 +1,43 @@
+# The three gates that were passing on somebody's laptop.
+#
+# Vercel already builds every push, so a broken build has never reached main
+# unseen. `typecheck`, `lint` and `test` had no such backstop: they were run
+# by whoever remembered, and a pull request that failed all three would have
+# arrived looking exactly like one that passed.
+#
+# One job rather than three. These take seconds and share an install, and
+# three jobs would spend more time restoring node_modules than running.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first one's answer irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          # The version Vercel builds with, so CI cannot pass on a runtime
+          # production does not have. `package.json` pins npm; this pins node.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Typecheck covers `scripts/` as well as the app — see
+      # `tsconfig.scripts.json` for why that needs a second invocation.
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test

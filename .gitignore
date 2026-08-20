@@ -58,3 +58,14 @@ skills-lock.json
 
 # Rendered email previews from `npm run preview:email` — regenerate, do not commit
 .email-previews/
+
+# Git worktrees Claude Code checks out inside the repo. Never committable,
+# and each holds a copy of biome.json — which Biome reads as a second root
+# configuration and refuses to run at all until it is out of the way.
+.claude/worktrees/
+
+# Caption snapshots, which `npm run recaption -- --apply` writes before it
+# edits anything. Live database text, kept so a run can be put back — not
+# documentation, and not something to carry into a commit by accident. The
+# two already tracked here stay tracked; git ignores this only for new files.
+docs/snapshots/

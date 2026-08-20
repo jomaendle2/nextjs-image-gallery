@@ -109,12 +109,12 @@ export default function PrivacyPage() {
             photographer may choose to mark a spot on a map. When they do, we
             store two things: the point they marked, which only members see, and
             a deliberately blunt version of it — the centre of a square roughly
-            a hundred kilometres across — which is what the globe draws. Both
-            exist because a photographer decided they should. A title, a
-            description or a place name may be suggested by a model that has
-            been shown the photograph — the copy that carries no metadata, not
-            the original — and nothing it suggests is stored until the
-            photographer has read it and saved it themselves.
+            a kilometre across — which is what the globe draws. Both exist
+            because a photographer decided they should. A title, a description
+            or a place name may be suggested by a model that has been shown the
+            photograph — the copy that carries no metadata, not the original —
+            and nothing it suggests is stored until the photographer has read it
+            and saved it themselves.
           </li>
           <li>
             <strong className="font-medium text-white/85">

@@ -22,20 +22,35 @@
  *
  * **Frozen once anything is published.** Changing it moves every dot on the
  * globe and needs a backfill of every stored coarse point, so
- * `coarsen.test.ts` pins the value — the point is not that 100 is sacred but
- * that changing it has to be a decision somebody makes on purpose.
+ * `coarsen.test.ts` pins the value — the point is not that any number is
+ * sacred but that changing it has to be a decision somebody makes on purpose.
+ *
+ * It was 100 until the globe learned to magnify. At 1x a hundred-kilometre
+ * cell is about three pixels and reads as exact; at the 16x the globe now
+ * reaches it is nearer fifty, and a dot sitting fifty pixels off the headland
+ * it names does not read as "roughly here", it reads as wrong. The blur had
+ * not changed — the picture had simply become good enough to show it.
+ *
+ * One kilometre keeps the shape of the promise and drops the visible error to
+ * under half a pixel at the deepest stop. What it still refuses to say is the
+ * part that matters: a kilometre names a beach, a ridge or a stretch of road,
+ * and not a door, a viewpoint or a parked car. The exact point remains
+ * member-only and is still never part of a public query.
  */
-export const CELL_KM = 100;
+export const CELL_KM = 1;
 
 /**
  * The worst distance between a real point and the point published for it.
  *
  * A cell is at most `CELL_KM` across on both axes, so the furthest a corner
- * can sit from the centre is `sqrt(50² + 50²)` ≈ 70.7 km. The picker quotes
- * this constant rather than a number typed into a sentence, so what a
- * photographer is told cannot drift away from what the code does.
+ * can sit from the centre is `sqrt(0.5² + 0.5²)` ≈ 0.707 km. Rounded *up*,
+ * because this number is quoted to photographers as a guarantee and a
+ * guarantee may overstate what it protects but must never understate it.
+ *
+ * The picker quotes this constant rather than a number typed into a sentence,
+ * so what a photographer is told cannot drift away from what the code does.
  */
-export const MAX_ERROR_KM = 71;
+export const MAX_ERROR_KM = 1;
 
 /** Mean length of a degree of latitude. Longitude shrinks with `cos(lat)`. */
 const KM_PER_DEGREE = 111.32;
@@ -47,7 +62,7 @@ const ROWS = Math.ceil(180 / LAT_STEP);
 
 const FULL_TURN = 360;
 
-/** Four places ≈ 11 m, far below the blur, and short in JSON. */
+/** Four places ≈ 11 m, still an order of magnitude below the blur, and short in JSON. */
 const PLACES = 10_000;
 
 export interface CoarsePoint {
@@ -87,9 +102,11 @@ function toRadians(degrees: number): number {
  * less, which is the opposite of what degree-rounding does.
  *
  * The result is a function of the cell and of nothing else about the input,
- * so two photographs from the same valley collapse to one identical point.
+ * so two photographs from the same spot collapse to one identical point.
  * That is also the right visual behaviour — a globe should not trace
- * somebody's walk.
+ * somebody's walk. At a kilometre it collapses a viewpoint rather than a
+ * valley, so a day spent moving around one area now reads as a few marks
+ * where it used to read as one; `globe.ts` groups them for the headings.
  */
 export function coarsen(lat: number, lng: number): CoarsePoint {
   const row = clamp(Math.floor((lat + 90) / LAT_STEP), 0, ROWS - 1);

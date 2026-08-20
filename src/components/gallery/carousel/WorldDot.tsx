@@ -6,15 +6,19 @@ import {
   WORLD_VIEW_BOX,
 } from "@/lib/geo/world-path";
 import { CELL_KM } from "@/lib/photos/coarsen";
+import { count } from "@/lib/plural";
 
 /**
  * Roughly where on earth, as one mark on a flat world.
  *
  * A photographer's public point is the centre of a cell about {@link CELL_KM}
- * kilometres across, and this draws it at the only scale where that is
- * honest: the whole world is 360 degrees wide here, so a hundred kilometres
- * is well under a pixel and the mark cannot imply a precision the data does
- * not have.
+ * kilometre across, and this draws it at the only scale where that is
+ * honest: the whole world is 360 degrees wide here, so the cell is a small
+ * fraction of a pixel and the mark cannot imply a precision the data does
+ * not have. That was true when the cell was a hundred kilometres and it is
+ * true by a wider margin now — this map is the one place where shrinking the
+ * blur changed nothing at all, because it was already far below what a pixel
+ * can say.
  *
  * **No map library, no third party, no network call, no new dependency, and
  * nothing added to the payload of a page.** The projection is
@@ -75,7 +79,7 @@ export function WorldDot({ pin }: { pin: GalleryPin }) {
         xmlns="http://www.w3.org/2000/svg"
       >
         <title>
-          {`A world map with one mark showing roughly where this photograph was taken, accurate to about ${CELL_KM} kilometres.`}
+          {`A world map with one mark showing roughly where this photograph was taken, accurate to about ${count(CELL_KM, "kilometre")}.`}
         </title>
 
         {/*
