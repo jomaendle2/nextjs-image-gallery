@@ -9,7 +9,7 @@ import process from "node:process";
  * origin in their dashboard.
  *
  * **Only the contributor upload page ever contacts it.** Nothing on a public
- * page does — invariant I14 in `docs/security-architecture.md` enforces that
+ * page does — invariant I14 in `docs/architecture/security.md` enforces that
  * by asserting exactly one file in the codebase mentions the map library at
  * all. That is what keeps the no-cookie-banner claim on `/privacy` true: the
  * page is behind a session, no cookie is set, and no visitor to the gallery

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import type { FormState } from "@/app/form-state";
+import type { FormState } from "@/lib/form-state";
 import { showcaseForMail } from "@/lib/photos/showcase";
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
@@ -19,7 +19,7 @@ import {
 } from "@/lib/subscribers/repository";
 import { validateSubscription } from "@/lib/subscribers/validate";
 
-/** One shape for every form on the site. See `@/app/form-state`. */
+/** One shape for every form on the site. See `@/lib/form-state`. */
 export type SubscribeState = FormState;
 
 /*

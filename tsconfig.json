@@ -13,12 +13,27 @@
     "verbatimModuleSyntax": true,
     "jsx": "react-jsx",
     "incremental": true,
-    /* Strictness */
+    /* Strictness. See docs/architecture/toolchain.md for what is off, and why. */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    /*
+     * Every script under `scripts/` is run by node's type *stripping*, not a
+     * compiler — see `scripts/alias-loader.mjs`. Stripping erases annotations
+     * and refuses everything else, so an enum or a parameter property in any
+     * file those scripts transitively import is a SyntaxError at run time.
+     * `vercel-build` is one of those scripts, so run time can mean "on a
+     * production deploy". Here rather than only in `tsconfig.scripts.json`
+     * because `scripts/migrate.mts` imports `src/lib/schema.ts`, which puts
+     * application code inside the same blast radius.
+     */
+    "erasableSyntaxOnly": true,
     "plugins": [
       {
         "name": "next"

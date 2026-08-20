@@ -296,7 +296,7 @@ export function GlobeOverlay({
  * `<img>` mounts only when a card renders, so a reader who opens the globe
  * and turns it without pointing at anything downloads no photographs at all.
  * That is the whole reason the picture is one per *cell* chosen on the server
- * rather than one per photograph, which `docs/next-version.md` §2 measured at
+ * rather than one per photograph, which `docs/roadmap.md` §2 measured at
  * 5.4 KB a row and refused.
  *
  * `bg_color` rather than a blur placeholder, for the same argument in

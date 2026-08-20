@@ -19,6 +19,7 @@ import {
   type Item,
   type ItemStatus,
   itemId,
+  restated,
   retryBatch,
 } from "./upload-batch";
 import { useDropZone } from "./useDropZone";
@@ -120,7 +121,7 @@ export function UploadForm() {
     (index: number, status: ItemStatus, error?: string) => {
       setItems((previous) =>
         previous.map((item, i) =>
-          i === index ? { ...item, status, error } : item,
+          i === index ? restated(item, status, error) : item,
         ),
       );
     },

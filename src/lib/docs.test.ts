@@ -1,6 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { brokenRefs, exists, NPM_SCRIPT, prose, SRC_PATH } from "./doc-text";
+import { ROOT, read } from "./source-text";
 
 /**
  * Keeps the documentation honest about things that can be checked.
@@ -21,30 +23,11 @@ import { describe, expect, it } from "vitest";
  * The genuinely dangerous rot is semantic and no test will catch it. But
  * these are the cheap half, and a document whose file paths are wrong is
  * usually a document whose explanations are wrong too.
+ *
+ * This file holds the claims a document makes about the code: a path, a
+ * command, a count. Pointers between documents, pointers from code back into
+ * the documentation, and the shape of the tree are in `docs-tree.test.ts`.
  */
-
-const ROOT = join(import.meta.dirname, "..", "..");
-const DOCS = join(ROOT, "docs");
-
-function docFiles(): string[] {
-  return readdirSync(DOCS)
-    .filter((name) => name.endsWith(".md"))
-    .map((name) => join(DOCS, name));
-}
-
-function allProse(): { file: string; text: string }[] {
-  return [
-    { file: "README.md", text: readFileSync(join(ROOT, "README.md"), "utf8") },
-    {
-      file: "DESIGN.md",
-      text: readFileSync(join(ROOT, "DESIGN.md"), "utf8"),
-    },
-    ...docFiles().map((file) => ({
-      file: file.replace(ROOT, ""),
-      text: readFileSync(file, "utf8"),
-    })),
-  ];
-}
 
 describe("the documentation refers to things that exist", () => {
   /*
@@ -53,49 +36,33 @@ describe("the documentation refers to things that exist", () => {
    * at has moved.
    */
   it("every src/ and scripts/ path mentioned is real", () => {
-    const broken: string[] = [];
-    for (const { file, text } of allProse()) {
-      /*
-       * `.mts` matters and was missing from the first version of this
-       * pattern — every operational script in this repository uses it, so
-       * the check silently covered nothing it was written for. Caught by
-       * renaming a referenced file and finding the test still green.
-       */
-      const paths = text.match(
-        /(?:src|scripts)\/[\w./[\]-]+\.(?:mts|mjs|tsx?)/g,
-      );
-      for (const path of new Set(paths ?? [])) {
-        if (!existsSync(join(ROOT, path))) {
-          broken.push(`${file} → ${path}`);
-        }
-      }
-    }
-    expect(broken).toEqual([]);
+    /*
+     * `.mts` matters and was missing from the first version of this pattern —
+     * every operational script in this repository uses it, so the check
+     * silently covered nothing it was written for. Caught by renaming a
+     * referenced file and finding the test still green.
+     */
+    expect(brokenRefs(prose(), SRC_PATH, exists)).toEqual([]);
   });
 
   it("every npm script mentioned is defined", () => {
     const pkg = JSON.parse(
       readFileSync(join(ROOT, "package.json"), "utf8"),
-    ) as { scripts: Record<string, string> };
+    ) as {
+      scripts: Record<string, string>;
+    };
     const defined = new Set(Object.keys(pkg.scripts));
 
-    const missing: string[] = [];
-    for (const { file, text } of allProse()) {
-      /*
-       * The trailing-argument form matters and was missing: the pattern
-       * required a backtick straight after the name, so `npm run smoke:email
-       * -- you@example.com` and `npm run mint-link -- you@…` were invisible.
-       * Those two are the break-glass commands — the ones read while
-       * something is already broken — and they were the only ones unchecked.
-       */
-      for (const match of text.matchAll(/`npm run ([\w:-]+)(?: --[^`]*)?`/g)) {
-        const [, name] = match;
-        if (name !== undefined && !defined.has(name)) {
-          missing.push(`${file} → npm run ${name}`);
-        }
-      }
-    }
-    expect(missing).toEqual([]);
+    /*
+     * The trailing-argument form matters and was missing: the pattern
+     * required a backtick straight after the name, so `npm run smoke:email
+     * -- you@example.com` and `npm run mint-link -- you@…` were invisible.
+     * Those two are the break-glass commands — the ones read while
+     * something is already broken — and they were the only ones unchecked.
+     */
+    expect(
+      brokenRefs(prose(), NPM_SCRIPT, (name) => defined.has(name)),
+    ).toEqual([]);
   });
 });
 
@@ -104,38 +71,24 @@ describe("counts stated in prose match the code", () => {
    * "Six templates" survived the addition of a seventh. A number in prose is
    * the most checkable claim there is and the easiest to leave behind.
    */
-  it("the stated number of email templates is right", () => {
-    /*
-     * Two files now, and the count is their sum. The subscriber-facing three
-     * moved to `lib/subscribers/email.ts` when `auth/email.ts` hit this
-     * project's ceiling on file length — and a counter that kept reading one
-     * file would have reported the split as three deleted templates, which is
-     * exactly the kind of confidently wrong number this test exists to catch.
-     */
-    const sources = [
-      join(ROOT, "src", "lib", "auth", "email.ts"),
-      join(ROOT, "src", "lib", "subscribers", "email.ts"),
-    ].map((file) => readFileSync(file, "utf8"));
-    const actual = sources.reduce(
-      (total, text) =>
-        total + (text.match(/^export async function send/gm) ?? []).length,
-      0,
-    );
+  const words: Record<number, string> = {
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
+  };
 
-    const words: Record<number, string> = {
-      5: "five",
-      6: "six",
-      7: "seven",
-      8: "eight",
-      9: "nine",
-      10: "ten",
-      11: "eleven",
-    };
+  it("the stated number of email templates is right", () => {
+    const actual = templates().length;
     const expected = words[actual];
     expect(expected, `no word for ${actual} templates`).toBeDefined();
 
     const wrong: string[] = [];
-    for (const { file, text } of allProse()) {
+    for (const { file, text } of prose()) {
       for (const match of text.matchAll(/(\w+) templates/gi)) {
         const said = match[1]?.toLowerCase();
         // Only the counting words; "seven templates in" but not "email templates".
@@ -150,4 +103,66 @@ describe("counts stated in prose match the code", () => {
     }
     expect(wrong).toEqual([]);
   });
+
+  /*
+   * The count was right and the list was short: two documents said nine
+   * templates and then named seven, having gained `sendMembershipWelcome`
+   * and `sendApplicationDeclined` without gaining a sentence. A check on the
+   * numeral and not the enumeration certifies the half nobody gets wrong.
+   */
+  it("wherever the templates are enumerated, all of them are", () => {
+    const all = templates();
+    const short: string[] = [];
+
+    /*
+     * Three, because naming one or two is a sentence about those two and
+     * naming three is a list. The threshold is the whole design of this
+     * check: it cannot tell what a document meant, so it infers intent from
+     * how many it named, and the number has to be low enough to catch a
+     * list that lost an entry and high enough not to fire on prose.
+     */
+    const ENUMERATING = 3;
+
+    for (const { file, text } of prose()) {
+      const named = all.filter((name) => text.includes(name));
+      if (named.length >= ENUMERATING && named.length < all.length) {
+        const absent = all.filter((name) => !text.includes(name));
+        short.push(
+          `${file} names ${named.length} of ${all.length}, missing ${absent.join(", ")}`,
+        );
+      }
+    }
+
+    expect(
+      short,
+      "A document that lists the email templates lists all of them. Name " +
+        "each `sendX` as it is spelled in src/lib/auth/email.ts, so that " +
+        "adding one and forgetting the prose fails here.",
+    ).toEqual([]);
+  });
 });
+
+/**
+ * Every message the site can send, by the name of the function that sends it.
+ *
+ * Two files, and the count is their sum. The subscriber-facing three moved to
+ * `lib/subscribers/email.ts` when `auth/email.ts` hit this project's ceiling
+ * on file length — and a counter that kept reading one file would have
+ * reported that split as three deleted templates, which is exactly the kind
+ * of confidently wrong number this test exists to catch.
+ *
+ * A third home is a matter of time, so the list is here rather than inline:
+ * adding one is a single line, and forgetting to is the failure above.
+ */
+const TEMPLATE_SOURCES = [
+  ["lib", "auth", "email.ts"],
+  ["lib", "subscribers", "email.ts"],
+];
+
+function templates(): string[] {
+  return TEMPLATE_SOURCES.flatMap((parts) =>
+    (read(...parts).match(/^export async function (send\w+)/gm) ?? []).map(
+      (line) => line.replace("export async function ", ""),
+    ),
+  );
+}

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { allSourceFiles, read, SRC } from "./source-text";
 
 /**
- * The invariants from `docs/security-architecture.md`, as tests.
+ * The invariants from `docs/architecture/security.md`, as tests.
  *
  * Every one of these is here because something violated it, and in two cases
  * violated it twice — the second time in code written days after the first

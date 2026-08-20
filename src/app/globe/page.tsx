@@ -77,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * nothing to half the things that visit it.
  *
  * **No thumbnails.** At three hundred photographs that would reproduce the
- * 5.4 KB-per-photograph problem `docs/next-version.md` §2 already tracks,
+ * 5.4 KB-per-photograph problem `docs/roadmap.md` §2 already tracks,
  * and the instinct to add them is the obvious next idea somebody will have.
  * The doc says so too.
  */

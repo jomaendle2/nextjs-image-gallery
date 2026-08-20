@@ -1,12 +1,12 @@
 "use server";
 
 import { headers } from "next/headers";
-import type { FormState } from "@/app/form-state";
 import { submitApplication } from "@/lib/applications/repository";
 import { validateApplication } from "@/lib/applications/validate";
+import type { FormState } from "@/lib/form-state";
 import { clientIp, signInLimiter } from "@/lib/rate-limit";
 
-/** One shape for every form on the site. See `@/app/form-state`. */
+/** One shape for every form on the site. See `@/lib/form-state`. */
 export type ApplyState = FormState;
 
 /*

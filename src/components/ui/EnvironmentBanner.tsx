@@ -1,5 +1,5 @@
-import process from "node:process";
 import { AlertTriangle } from "lucide-react";
+import { deploymentEnv } from "@/lib/deployment";
 
 /**
  * Says out loud when a deployment is not production but writes as if it were.
@@ -20,13 +20,7 @@ import { AlertTriangle } from "lucide-react";
  * not change anything — the risk lives entirely where the buttons are.
  */
 export function EnvironmentBanner() {
-  /*
-   * `VERCEL_ENV` is "production" only on the production deployment; previews
-   * report "preview" and a local `next dev` reports nothing at all. Both of
-   * the latter are cases where somebody may not realise which data they are
-   * touching.
-   */
-  const env = process.env["VERCEL_ENV"];
+  const env = deploymentEnv();
   if (env === "production") {
     return null;
   }

@@ -45,6 +45,7 @@ const MARKED_ZOOM = 9;
  */
 async function loadMapLibre() {
   const [library] = await Promise.all([
+    // biome-ignore lint/style/noRestrictedImports: this file is the one door in. Invariant I14 allows exactly one, and security-location.test.ts asserts it is this one.
     import("maplibre-gl"),
     /*
      * The stylesheet comes with the chunk rather than the page. MapLibre
@@ -53,6 +54,7 @@ async function loadMapLibre() {
      * this file would put it in the dashboard's stylesheet for every
      * contributor who never opens a map.
      */
+    // biome-ignore lint/style/noRestrictedImports: as the library above.
     import("maplibre-gl/dist/maplibre-gl.css"),
   ]);
   return library;

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ROOT } from "@/lib/source-text";
 
 /**
  * The four places one colour is written down.
@@ -26,8 +27,7 @@ import { describe, expect, it } from "vitest";
  * A comment asserting an invariant is a wish. This is the invariant.
  */
 
-const ROOT = join(import.meta.dirname, "..", "..");
-
+/* Root-relative rather than `source-text`'s `read`, which is relative to `src`. */
 function read(...parts: string[]): string {
   return readFileSync(join(ROOT, ...parts), "utf8");
 }

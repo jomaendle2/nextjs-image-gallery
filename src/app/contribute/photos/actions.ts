@@ -1,8 +1,8 @@
 "use server";
 
 import { del } from "@vercel/blob";
-import { type FormState, failed, formText, succeeded } from "@/app/form-state";
 import { requireContributor } from "@/lib/auth/session";
+import { type FormState, failed, formText, succeeded } from "@/lib/form-state";
 import { MAX_DESCRIPTION, MAX_TECHNIQUE, MAX_TITLE } from "@/lib/photos/caps";
 import {
   deletePhoto,

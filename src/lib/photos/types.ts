@@ -66,7 +66,7 @@ export interface PhotoRow {
  *
  * Five fields, and no blur placeholder or dimensions: the globe draws dots
  * and lists links, so anything shaped like a thumbnail would reintroduce the
- * per-photograph payload cost that `docs/next-version.md` §2 already tracks.
+ * per-photograph payload cost that `docs/roadmap.md` §2 already tracks.
  * Only the coarse pair, which is the whole reason a public globe is possible.
  */
 export interface GlobePointRow {
