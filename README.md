@@ -34,6 +34,7 @@ and the roadmap. Working on the code, by hand or with an agent, starts at
 | `/contribute/apply` | The public application form |
 | `/contribute/invite` | A contributor spending one of their three invitations |
 | `/contribute/verify` | Where a sign-in link lands, with the button that spends it |
+| `/contribute/quiet` | Where the opt-out link in a reminder lands, with the button that spends it |
 | `/contribute/admin` | Owner only; 404 for everyone else |
 | `/imprint`, `/privacy`, `/terms` | The legal pages, rendered from `src/lib/legal.ts` |
 

@@ -78,6 +78,8 @@ describe("counts stated in prose match the code", () => {
     8: "eight",
     9: "nine",
     10: "ten",
+    11: "eleven",
+    12: "twelve",
   };
 
   it("the stated number of email templates is right", () => {
@@ -140,9 +142,27 @@ describe("counts stated in prose match the code", () => {
   });
 });
 
+/**
+ * Every message the site can send, by the name of the function that sends it.
+ *
+ * Two files, and the count is their sum. The subscriber-facing three moved to
+ * `lib/subscribers/email.ts` when `auth/email.ts` hit this project's ceiling
+ * on file length — and a counter that kept reading one file would have
+ * reported that split as three deleted templates, which is exactly the kind
+ * of confidently wrong number this test exists to catch.
+ *
+ * A third home is a matter of time, so the list is here rather than inline:
+ * adding one is a single line, and forgetting to is the failure above.
+ */
+const TEMPLATE_SOURCES = [
+  ["lib", "auth", "email.ts"],
+  ["lib", "subscribers", "email.ts"],
+];
+
 function templates(): string[] {
-  const email = read("lib", "auth", "email.ts");
-  return (email.match(/^export async function (send\w+)/gm) ?? []).map((line) =>
-    line.replace("export async function ", ""),
+  return TEMPLATE_SOURCES.flatMap((parts) =>
+    (read(...parts).match(/^export async function (send\w+)/gm) ?? []).map(
+      (line) => line.replace("export async function ", ""),
+    ),
   );
 }

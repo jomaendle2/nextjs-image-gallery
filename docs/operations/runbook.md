@@ -96,6 +96,28 @@ people getting two, and the second is the one that loses trust.
 
 The Monday cron only reminds you. Nothing goes out without you pressing it.
 
+## Check what the reminders would send
+
+`/api/cron/nudge-contributors` fires at 09:00 daily and is the only schedule
+that mails anybody but you. Before its first firing on a new deployment, read
+the plan without letting it act:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  'https://<domain>/api/cron/nudge-contributors?dry=1'
+```
+
+The dry run computes the identical plan and claims nothing. What you are
+confirming is that no contributor invited *before* the feature shipped is due
+for an early stage — that is the seed statement in the schema having worked.
+If they are, stop: the whole existing list is about to walk a three-month
+sequence from the beginning.
+
+Somebody who wants out uses the link in the message, which lands on
+`/contribute/quiet`. It stops reminders and nothing else — sign-in links and
+announcements rest on different consent, and being tired of being asked to
+publish is not asking to be locked out.
+
 ## Refund or cancel somebody's membership
 
 From the Stripe dashboard. The webhook will pick it up and their access ends

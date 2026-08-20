@@ -128,3 +128,48 @@ describe("the upload cap is stated from MAX_UPLOAD_BYTES", () => {
     );
   });
 });
+
+/**
+ * I12c — a mail that promises a photograph is sent one.
+ *
+ * `showcaseForMail` exists because an invitation used to be an unsolicited
+ * message telling a stranger they had been chosen, by a gallery whose work
+ * they could not see without following a link they had no reason to trust.
+ * One picture is the whole argument. Both invitations were wired up; the
+ * subscriber welcome was given the same optional parameter, the same
+ * nine-line comment explaining why it matters — "this is the one message a
+ * new subscriber gets before the announcements start, and it was a paragraph
+ * promising photographs" — and no caller that passes it.
+ *
+ * The parameter being optional is what let that happen quietly: an omitted
+ * optional argument is not a type error, so the only thing that could have
+ * caught it is a test that reads the call sites. This is that test.
+ */
+describe("I12c — the messages that argue for the gallery show it", () => {
+  const CALLERS = [
+    {
+      what: "the owner's invitation",
+      parts: ["app", "contribute", "admin", "actions.ts"],
+    },
+    {
+      what: "a contributor's invitation",
+      parts: ["app", "contribute", "invite", "actions.ts"],
+    },
+    {
+      what: "the subscriber's welcome",
+      parts: ["app", "subscribe", "actions.ts"],
+    },
+  ];
+
+  it.each(CALLERS)("$what fetches a photograph to send", ({ parts }) => {
+    expect(read(...parts)).toMatch(/showcaseForMail\(\)/);
+  });
+
+  it("the nudge that says there is new work here does too", () => {
+    // The cron's is fetched once for the whole run rather than per recipient,
+    // so it reads differently — but it is the same promise.
+    expect(
+      read("app", "api", "cron", "nudge-contributors", "route.ts"),
+    ).toMatch(/showcaseForMail\(\)/);
+  });
+});

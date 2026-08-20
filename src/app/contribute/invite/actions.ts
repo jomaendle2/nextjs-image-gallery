@@ -8,6 +8,7 @@ import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
 import { invitationUrl } from "@/lib/auth/tokens";
 import { type FormState, failed, succeeded } from "@/lib/form-state";
+import { showcaseForMail } from "@/lib/photos/showcase";
 import { clientIp, inviteLimiter } from "@/lib/rate-limit";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -81,12 +82,12 @@ export async function inviteAsContributor(
    * invite, for the same reason.
    */
   try {
-    await sendInvitation(
-      email,
+    await sendInvitation(email, {
       displayName,
-      actor.display_name,
-      await invitationUrl(email),
-    );
+      invitedByName: actor.display_name,
+      signInUrl: await invitationUrl(email),
+      showcase: await showcaseForMail(),
+    });
   } catch (error) {
     console.error("Invitation email failed:", error);
     return failed(

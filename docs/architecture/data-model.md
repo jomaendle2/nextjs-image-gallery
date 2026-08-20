@@ -1,6 +1,6 @@
 # The data model
 
-Nine tables. `src/lib/schema.ts` is the source of truth — a list of additive,
+Ten tables. `src/lib/schema.ts` is the source of truth — a list of additive,
 idempotent statements rather than a migration folder, so the columns a table
 has now are its `CREATE TABLE` plus every `ALTER TABLE … ADD COLUMN IF NOT
 EXISTS` below it. Read the file for the exact shape; this says what each
@@ -40,6 +40,12 @@ revoking removes the work and restoring brings it back.
 `invites_remaining` (default 3) and `invited_by` carry the peer-invitation
 chain. `src/lib/auth/contributors.ts` is the only file in `src/` that inserts
 into this table, which a test asserts.
+
+Three columns serve the reminders: `nudge_token` is the opt-out secret that
+goes in every nudge, `nudges_muted_at` stops reminders **and nothing else**
+(sign-in links and announcements rest on different consent), and
+`first_signed_in_at` is stamped inside `consumeLoginToken` so a sequence can
+tell "never arrived" from "arrived and left".
 
 ## `photos`
 
@@ -97,6 +103,25 @@ Written only by the Stripe webhook. `stripe_customer_id` is UNIQUE, which is
 what makes an account takeover by re-registering an address fail rather than
 overwrite. `current_period_end` is what access is actually checked against,
 so a cancellation mid-period keeps working until it expires.
+
+## `contributor_nudges`
+
+The send log for the reminders, and the whole idempotency mechanism. Primary
+key is `(contributor_id, track, stage)`, so `INSERT … ON CONFLICT DO NOTHING
+RETURNING` claims a stage before it is sent: a retried cron run, two
+overlapping runs, or a hand-run during an incident send nothing. Claiming
+first means a failed send costs one missed message rather than a duplicate
+tomorrow — the same trade `markAnnounced` already makes.
+
+`track` is `empty` or `draft`, and the counters are per track, so a first
+upload is greeted by draft stage 1 rather than by the third message of a
+sequence the photographer never began.
+
+One migration statement here matters more than the table: it marks the early
+stages as already sent for everyone created before a hard-coded date, so the
+feature does not ambush the existing list on the day it ships. Literal rather
+than `now() - INTERVAL`, or every deploy re-captures whoever was invited since
+the last one. `schema.test.ts` pins it.
 
 ## `photo_member_views`
 

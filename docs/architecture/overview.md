@@ -32,9 +32,23 @@ content cannot leak — it is never in the page to begin with. Invariant I6 in
   upload is stored twice: the untouched original, and a re-encoded display
   copy that the gallery actually serves. The display copy carries no
   metadata, which is what keeps camera GPS out of the public file.
-- **Cron** (`vercel.json`) calls `/api/cron/announce-reminder` at 09:00 every
-  Monday. It sends nothing to anybody — it emails *you* if there are
-  published photographs the mailing list has not been told about.
+- **Cron** (`vercel.json`) runs two schedules, and only one of them mails
+  anybody but you.
+
+  `/api/cron/announce-reminder`, 09:00 every Monday, sends nothing to anybody
+  — it emails *you* if there are published photographs the mailing list has
+  not been told about.
+
+  `/api/cron/nudge-contributors`, 09:00 every day, does mail photographers:
+  whoever was invited and has published nothing. Two sequences — six messages
+  over three months for an empty page, three for a stalled draft — and every
+  stop condition is checked at send time, so uploading or publishing ends the
+  sequence mid-flight. Each stage is claimed in `contributor_nudges` before it
+  is sent, so a retried run sends nothing twice.
+
+  Both want `CRON_SECRET`; without it they answer 500 rather than running
+  unauthenticated. [The runbook](../operations/runbook.md) has the dry run to
+  read before a first firing.
 
 ### Neon — the database
 
@@ -49,7 +63,7 @@ its schema with it rather than waiting for somebody to remember.
 safely re-runnable, which is the thing standing between this project and a
 migration that half-applies in production.
 
-The nine tables and what each holds are in [data-model.md](data-model.md).
+The ten tables and what each holds are in [data-model.md](data-model.md).
 
 ### Stripe — payments
 
@@ -81,8 +95,11 @@ terminal, which is how you read a sign-in link locally. In production it
 *throws*: printing would put live tokens in the platform log while telling
 somebody to check an empty inbox.
 
-Every template is in `src/lib/auth/email.ts`, and every value interpolated
-into one is HTML-escaped, because contributors type titles and captions.
+Eleven templates across two files, split by who the message goes to. Every
+value interpolated into one is HTML-escaped, because contributors type titles
+and captions.
+
+`src/lib/auth/email.ts` — the eight that go to somebody the gallery knows:
 
 | Function | Sent when |
 | --- | --- |
@@ -91,13 +108,40 @@ into one is HTML-escaped, because contributors type titles and captions.
 | `sendApplicationApproved` | An application on `/contribute/apply` is accepted |
 | `sendApplicationDeclined` | …or declined |
 | `sendMembershipWelcome` | Stripe confirms a first payment |
-| `sendSubscribeConfirmation` | Somebody asks to join the mailing list |
+| `sendAnnouncementReminder` | The Monday cron finds unannounced work |
+| `sendUploadNudge` | The daily cron finds an invited photographer with an empty page |
+| `sendDraftNudge` | …or one whose photographs are all still drafts |
+
+`src/lib/subscribers/email.ts` — the three that go to the mailing list:
+
+| Function | Sent when |
+| --- | --- |
+| `sendSubscribeConfirmation` | Somebody asks to join the list |
 | `sendSubscribeWelcome` | …and confirms it |
 | `sendNewWorkAnnouncement` | You press Announce |
-| `sendAnnouncementReminder` | The Monday cron finds unannounced work |
 
-`docs.test.ts` holds this list to `email.ts`: adding a template and not the
-row fails the suite.
+`docs.test.ts` reads both files and holds these tables to them: adding a
+template and not the row fails the suite, and so does the split moving again
+without this prose following it.
+
+**Transport and design are `src/lib/auth/mailer.ts`** — the provider call, the
+escaping, and the kit every template renders through: the shell, the eyebrow
+naming which kind of message this is, the type rungs, the one accent button,
+and `photo()`. The templates say what each message *is*; that file is how any
+of them looks and how it leaves the building. Nudge wording lives apart again
+in `src/lib/auth/nudge-copy.ts`, so it can be tested without a mail provider —
+the arrangement `src/lib/announcement.ts` already uses.
+
+**Photographs appear in the messages that argue for something** and nowhere
+else: the invitation and the subscribe welcome show the newest published
+photograph, the draft nudge shows the photographer's own unpublished one, and
+the third upload nudge shows what is on the gallery now. A sign-in link
+carries none — it is a credential, and a picture on it is decoration on a door
+key.
+
+Read any of them without sending anything with `npm run preview:email`; the
+rendered set is in
+[../operations/email-previews/README.md](../operations/email-previews/README.md).
 
 ### The rest
 

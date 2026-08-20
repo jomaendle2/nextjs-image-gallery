@@ -44,7 +44,7 @@ Real requests against a running dev server. Nothing left behind.
 | `npm run smoke:upload` | 13 | The ingest path. Mints its own session; nothing to paste. |
 | `npm run smoke:membership` | 23 | Webhook forgery, replay, dunning, ordering, takeover. Signs its own events, so no tunnel needed. |
 | `npm run smoke:portal` | 7 | The member's side: real customer, real session, real cookie. |
-| `npm run smoke:email -- you@example.com` | — | Sends one of every email template. The address is required, because this one really sends. |
+| `npm run smoke:email -- you@example.com` | — | Sends all eleven email templates, nudges included. The address is required, because this one really sends. |
 
 ## Break glass and one-offs
 
@@ -53,6 +53,7 @@ Real requests against a running dev server. Nothing left behind.
 | `npm run mint-link -- you@example.com` | A sign-in link when mail is down. |
 | `npm run stripe:portal-setup` | Creates the Stripe billing portal configuration. Once per Stripe mode. |
 | `npm run probe:scale` | Measures the authoring page at 50–600 photographs. Inserts drafts, reads the page, deletes them. |
+| `npm run preview:email` | Renders every message to `.email-previews/` (gitignored). Sends nothing, needs no mail provider. See [email-previews](email-previews/README.md). |
 
 `scripts/build-world.mts` has no npm script on purpose. It regenerates the
 coastline data in `src/lib/geo/`, takes a while, and its output is committed;

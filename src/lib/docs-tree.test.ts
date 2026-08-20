@@ -142,8 +142,18 @@ describe("the code's pointers into the documentation resolve", () => {
   it("every bare markdown filename names a document that exists", () => {
     const known = knownMarkdown();
 
+    /*
+     * Prose as well as code, and prose was the half this missed. The check
+     * was written after two *comments* named a document without its folder,
+     * so it only ever walked `pointers()` — and a sentence in
+     * `architecture/security.md` went on naming a review that had been
+     * deleted, in exactly the spelling this pattern exists to catch, because
+     * documents were not being asked the question.
+     */
     expect(
-      brokenRefs(pointers(), BARE_DOC, (name) => known.has(name)),
+      brokenRefs([...pointers(), ...prose()], BARE_DOC, (name) =>
+        known.has(name),
+      ),
       "That document does not exist under any folder. Name it by its path " +
         "so the check above can see it too, and so a reader knows where to " +
         "look.",

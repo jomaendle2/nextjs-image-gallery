@@ -44,7 +44,7 @@ const HOME = "src/lib/deployment.ts";
 const BUILD_MODE =
   /process\.env\[\s*["']NODE_ENV["']\s*\]\s*===\s*["']production["']/;
 const BUILD_MODE_HOMES = [
-  "src/lib/auth/email.ts",
+  "src/lib/auth/mailer.ts",
   "src/lib/auth/session.ts",
   "src/lib/security.test.ts",
 ];

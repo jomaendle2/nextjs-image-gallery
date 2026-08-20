@@ -27,6 +27,7 @@ Procedural. Changes when a workflow does.
 | [operations/runbook.md](operations/runbook.md) | Signing in as admin, publishing, announcing, refunding, erasing somebody, or running anything destructive |
 | [operations/scripts.md](operations/scripts.md) | Looking for the command that does the thing |
 | [operations/contributing-photos.md](operations/contributing-photos.md) | A photographer asked how any of this works |
+| [operations/email-previews/README.md](operations/email-previews/README.md) | Changing the wording of a message, and wanting to see what it looks like now |
 
 ## Ahead
 

@@ -23,6 +23,7 @@
     "smoke:membership": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-membership.mts",
     "smoke:portal": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-portal.mts",
     "smoke:email": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-email.mts",
+    "preview:email": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/preview-email.mts",
     "stripe:portal-setup": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/setup-billing-portal.mts",
     "probe:scale": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/scale-probe.mts",
     "smoke:pages": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/smoke-pages.mts",

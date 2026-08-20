@@ -3,13 +3,14 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import type { FormState } from "@/lib/form-state";
+import { showcaseForMail } from "@/lib/photos/showcase";
+import { clientIp, signInLimiter } from "@/lib/rate-limit";
+import { siteOrigin } from "@/lib/site-url";
 import {
   sendSubscribeConfirmation,
   sendSubscribeWelcome,
-} from "@/lib/auth/email";
-import type { FormState } from "@/lib/form-state";
-import { clientIp, signInLimiter } from "@/lib/rate-limit";
-import { siteOrigin } from "@/lib/site-url";
+} from "@/lib/subscribers/email";
 import {
   confirmSubscription,
   pruneUnconfirmed,
@@ -129,6 +130,14 @@ async function confirm(token: string): Promise<boolean> {
     await sendSubscribeWelcome(
       confirmed.email,
       `${siteOrigin()}/subscribe/unsubscribe?token=${encodeURIComponent(confirmed.unsubscribeSecret)}`,
+      /*
+       * What they just signed up to see. The same argument both invitations
+       * make, and it lands harder here: this is the only message a new
+       * subscriber gets before the announcements start, and without it the
+       * message is a paragraph promising photographs to somebody who just
+       * asked to be shown some.
+       */
+      await showcaseForMail(),
     );
   } catch (error) {
     /*
