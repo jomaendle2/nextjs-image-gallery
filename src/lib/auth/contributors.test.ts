@@ -47,6 +47,7 @@ const {
   listNudgeCounts,
   muteNudges,
 } = await import("./contributors");
+const { NUDGE_SEED_AT } = await import("@/lib/schema");
 
 beforeEach(() => {
   issued.length = 0;
@@ -142,6 +143,34 @@ describe("listContributors, on a database the migration has not reached", () => 
 });
 
 describe("listNudgeCounts", () => {
+  it("counts only reminders that were actually sent", async () => {
+    /*
+     * The seed migration writes three `contributor_nudges` rows for every
+     * contributor invited before it ran — stages 1-3 of the empty track,
+     * marked sent so the sequence starts on its monthly tail rather than
+     * ambushing the existing list. Nothing was mailed for those rows.
+     *
+     * A plain `COUNT(*)` therefore opens the admin table on day one showing
+     * "3 reminders sent" beside every photographer on it, which is the one
+     * thing the cell exists to tell the truth about: the comment above it
+     * says it shows what the cron "has actually done to this person", and
+     * for the entire pre-existing list it would be showing what the cron
+     * explicitly did *not* do.
+     *
+     * The seed's stamp is a fixed literal precisely so it can be recognised
+     * again, and `NUDGE_SEED_AT` is that literal shared rather than retyped —
+     * a second copy here that drifted from the migration's would silently
+     * start counting the seed again.
+     */
+    responses = [[]];
+
+    await listNudgeCounts();
+
+    const [statement] = issued;
+    expect(statement?.text).toContain("sent_at >");
+    expect(statement?.values).toContain(NUDGE_SEED_AT);
+  });
+
   it("returns a count per contributor", async () => {
     responses = [
       [

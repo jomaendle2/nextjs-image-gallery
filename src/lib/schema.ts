@@ -8,6 +8,23 @@
  * One statement per array entry, because the Neon HTTP driver sends a single
  * statement per round trip.
  */
+/**
+ * The stamp the nudge seed writes, and the one thing that tells it apart.
+ *
+ * Shared rather than retyped because two readers need it and they need one
+ * and the same value: the migration writes it, and `listNudgeCounts` subtracts it
+ * so the admin table's "reminders sent" counts messages that were actually
+ * sent rather than the three stages the seed marked done on everybody's
+ * behalf. A second copy that drifted would put the seed back in the count
+ * without failing anything.
+ *
+ * Fixed, never rolling — `schema.test.ts` pins that, and the reason is in the
+ * comment on the seed itself: `now() - INTERVAL '1 day'` would re-capture
+ * whoever was invited since the last deploy, every deploy, and skip the first
+ * three stages for photographers who are owed all six.
+ */
+export const NUDGE_SEED_AT = "2026-08-19 00:00:00+00";
+
 export const MIGRATIONS: readonly string[] = [
   /*
    * View counts, which predate the contributor feature.
@@ -516,10 +533,10 @@ export const MIGRATIONS: readonly string[] = [
    * them conflicts.
    */
   `INSERT INTO contributor_nudges (contributor_id, track, stage, sent_at)
-     SELECT c.id, 'empty', s.stage, TIMESTAMPTZ '2026-08-19 00:00:00+00'
+     SELECT c.id, 'empty', s.stage, TIMESTAMPTZ '${NUDGE_SEED_AT}'
        FROM contributors c
        CROSS JOIN (VALUES (1), (2), (3)) AS s(stage)
-      WHERE c.created_at < TIMESTAMPTZ '2026-08-19 00:00:00+00'
+      WHERE c.created_at < TIMESTAMPTZ '${NUDGE_SEED_AT}'
      ON CONFLICT DO NOTHING;`,
 
   /*
