@@ -38,19 +38,30 @@
  * this whole block should go.
  */
 import process from "node:process";
-import { deploymentEnv, isProduction } from "../src/lib/deployment.ts";
+import {
+  deploymentEnv,
+  isProduction,
+  onVercel,
+} from "../src/lib/deployment.ts";
 import { MIGRATIONS } from "../src/lib/schema.ts";
 
 /**
  * Whether this build is allowed to change the schema.
  *
- * Absent `VERCEL_ENV` means a local run — `npm run db:migrate` against a
+ * No platform at all means a local run — `npm run db:migrate` against a
  * developer's own database, which is the command's original purpose and must
  * keep working.
+ *
+ * `onVercel()` rather than `deploymentEnv() === undefined`, which is what
+ * this asked first and is wrong in the one direction that matters here.
+ * `deploymentEnv()` narrows to three known values and answers `undefined` for
+ * anything else, so a Custom Environment — `VERCEL_ENV` set to the
+ * environment's own name — was indistinguishable from a laptop, and a branch
+ * build would have run all of `MIGRATIONS` against the shared database.
  */
 function mayMigrate(): boolean {
   return (
-    deploymentEnv() === undefined ||
+    !onVercel() ||
     isProduction() ||
     process.env["ALLOW_PREVIEW_MIGRATIONS"] === "1"
   );
@@ -59,7 +70,8 @@ function mayMigrate(): boolean {
 async function main(): Promise<void> {
   if (!mayMigrate()) {
     console.log(
-      `migrate: ${deploymentEnv()} build, skipping ${MIGRATIONS.length} statements.\n` +
+      `migrate: ${deploymentEnv() ?? "unrecognised VERCEL_ENV"} build, ` +
+        `skipping ${MIGRATIONS.length} statements.\n` +
         "migrate: preview shares the production database — see the note in this file.\n" +
         "migrate: set ALLOW_PREVIEW_MIGRATIONS=1 to run them anyway.",
     );

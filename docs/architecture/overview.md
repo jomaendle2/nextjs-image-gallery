@@ -129,6 +129,23 @@ runs the schema on a local machine (nothing) and on production, and refuses on
 a preview, so collapsing "no Vercel" into "development" would start migrating
 from `vercel dev`.
 
+The module exports two predicates because "nothing at all" is two different
+answers. `deploymentEnv()` narrows to the three values it recognises and
+answers `undefined` for anything else, which reads exactly like no platform
+while meaning the opposite — and Vercel Custom Environments set `VERCEL_ENV`
+to the environment's own name, so a fourth value is a dashboard setting away.
+`onVercel()` asks only whether the variable is set at all. The migration gate
+wants that one: it ran on `deploymentEnv() === undefined` for a while, which
+would have let a branch build on a custom environment migrate the shared
+database.
+
+`NODE_ENV` is a different question and is not this module's. `next build` sets
+it to `"production"` for any built deployment, preview included, so it asks
+whether this was compiled for release. The `Secure` cookie flag and
+`auth/email.ts`'s refusal to print a sign-in link both want that broader
+answer; `deployment.test.ts` pins where the spelling may appear so neither
+gets folded into `isProduction()`.
+
 ## Things that will bite you
 
 - **View counts do not move outside production, and that is deliberate.** A

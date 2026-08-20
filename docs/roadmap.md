@@ -39,8 +39,9 @@ including the statements that rewrite `exif` and backfill
 in full every build — and no down-migrations, so correctness rests entirely
 on `schema.test.ts`'s idempotency assertion.
 
-`migrate.mts` now refuses outside production unless
-`ALLOW_PREVIEW_MIGRATIONS=1` is set. That is a mitigation, not the fix: a
+`migrate.mts` now refuses anywhere Vercel is running it except production,
+unless `ALLOW_PREVIEW_MIGRATIONS=1` is set — including an environment whose
+`VERCEL_ENV` it does not recognise, which is the direction that fails closed. That is a mitigation, not the fix: a
 preview branch needing a new column now renders a broken preview instead of
 migrating production, which is the better of two bad outcomes and still a bad
 one. **The gate should be deleted the day preview gets its own branch

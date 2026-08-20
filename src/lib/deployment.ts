@@ -38,6 +38,31 @@ export function deploymentEnv(): DeploymentEnv | undefined {
 }
 
 /**
+ * Whether the platform is running this at all, whatever it calls it.
+ *
+ * Not `deploymentEnv() !== undefined`, and the difference is the whole reason
+ * this exists. `deploymentEnv()` narrows to the three values it knows and
+ * answers `undefined` for anything else — which reads identically to "no
+ * Vercel at all" while meaning the opposite. Vercel Custom Environments set
+ * `VERCEL_ENV` to the environment's own name, so a fourth value is a setting
+ * away rather than hypothetical.
+ *
+ * `migrate.mts` turns on exactly this question: absent means somebody's own
+ * machine and their own database, and every other answer is a deployment
+ * that must not migrate the shared one on its own say-so. Asking the narrowed
+ * function instead let an unrecognised value through as though no platform
+ * were there, and the migration list rewrites `exif` and backfills
+ * `display_pathname`.
+ *
+ * So it reads the variable's presence rather than its value, and an
+ * unfamiliar platform is treated as a platform. That is the direction that
+ * fails closed.
+ */
+export function onVercel(): boolean {
+  return process.env["VERCEL_ENV"] !== undefined;
+}
+
+/**
  * The live site, and nothing else.
  *
  * Every caller wants this one: preview and a laptop are both "somebody
@@ -47,3 +72,24 @@ export function deploymentEnv(): DeploymentEnv | undefined {
 export function isProduction(): boolean {
   return deploymentEnv() === "production";
 }
+
+/*
+ * A closing note on the other variable, because the next person to tidy this
+ * module will find it and think it belongs here.
+ *
+ * `process.env["NODE_ENV"] === "production"` appears in two files — the
+ * `Secure` flag on both session cookies, and the refusal in `auth/email.ts`
+ * to print a sign-in link when no mail provider is configured. They read like
+ * further copies of `isProduction()` and they are not: `next build` sets
+ * `NODE_ENV` to `"production"` for any built deployment, preview included, so
+ * it asks "was this compiled for release", not "is this the live site".
+ *
+ * Both want that broader answer. A preview is served over HTTPS, so its
+ * cookie should carry `Secure`; a preview writes to a platform log people can
+ * read, so a magic-link token — a valid credential for the life of the link —
+ * must not be printed there either. Folding either into `isProduction()`
+ * would silently undo it, and neither failure looks like a broken preview.
+ *
+ * `deployment.test.ts` pins where the spelling may appear, so that a third
+ * home has to be argued for rather than added.
+ */

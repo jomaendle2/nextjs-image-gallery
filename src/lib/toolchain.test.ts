@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ROOT } from "./source-text";
+import { allSourceFiles, code, ROOT, rel } from "./source-text";
 
 /**
  * The linter configuration, as the few things a test can hold.
@@ -128,5 +128,87 @@ describe("the restricted imports say the same thing everywhere", () => {
   it("the exemption comes last", () => {
     expect(exempt.length).toBe(1);
     expect(zones.at(-1)).toBe(exempt[0]);
+  });
+});
+
+/**
+ * The layering rule again, in the spelling Biome cannot see.
+ *
+ * `noRestrictedImports` matches specifiers as text, so its `@/app/**` and
+ * `@/components/**` patterns hold only for the alias. A probe from `src/lib`
+ * importing `"@/components/ui/field"` is blocked; the same file importing
+ * `"../components/ui/field"` lints clean. That is the whole rule, avoidable
+ * by typing two dots — including invariant I2, which is why the SQL client is
+ * out of reach of a component.
+ *
+ * Both, rather than moving the rule here. Biome is what reads it while you
+ * type, and that feedback is the reason the rule lives in configuration at
+ * all; this is what makes the boundary true rather than merely advertised.
+ * Relative depth is not enumerable in a glob, so the specifier is resolved to
+ * a path and the question asked about the path.
+ *
+ * Tests and `scripts/` are exempt in both places — the last override turns
+ * the rule off for them, and `allSourceFiles` drops `.test.ts` — because a
+ * test reaches wherever it must to assert on what it finds there.
+ */
+
+const IMPORTS = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
+
+const LAYERS = [
+  {
+    under: ["src/lib/", "src/hooks/", "src/data/"],
+    banned: ["src/app/", "src/components/"],
+    why: "src/lib, src/hooks and src/data sit underneath the app, not beside it. Move the shared thing down.",
+  },
+  {
+    under: ["src/components/"],
+    banned: ["src/app/"],
+    why: "A component may not import from src/app. Move the shared thing down into src/lib.",
+  },
+  {
+    under: ["src/components/"],
+    banned: ["src/lib/database"],
+    why: "Invariant I2: the SQL client is server-only and authorisation lives in the WHERE clause. Go through a repository in src/lib/*/repository.ts.",
+  },
+];
+
+/** Where a specifier lands, repo-relative, or null if it leaves the repo. */
+function target(file: string, specifier: string): string | null {
+  if (specifier.startsWith("@/")) {
+    return `src/${specifier.slice(2)}`;
+  }
+  if (specifier.startsWith(".")) {
+    return rel(resolve(dirname(file), specifier));
+  }
+  return null;
+}
+
+/** Every banned crossing this one file makes, with the reason attached. */
+function crossingsIn(file: string): string[] {
+  const from = rel(file);
+  const specifiers = [
+    ...code(readFileSync(file, "utf8")).matchAll(IMPORTS),
+  ].flatMap((match) => (match[1] === undefined ? [] : [match[1]]));
+
+  return LAYERS.filter((layer) =>
+    layer.under.some((dir) => from.startsWith(dir)),
+  ).flatMap((layer) =>
+    specifiers
+      .filter((specifier) => {
+        const to = target(file, specifier);
+        return to !== null && layer.banned.some((dir) => to.startsWith(dir));
+      })
+      .map((specifier) => `${from} → ${specifier} (${layer.why})`),
+  );
+}
+
+describe("the layering holds however an import is spelled", () => {
+  it("nothing underneath the app reaches up into it", () => {
+    expect(
+      allSourceFiles().flatMap(crossingsIn),
+      "biome.json states this rule for the @/ spelling; a relative " +
+        "specifier reaching the same file is the same crossing. See " +
+        "docs/architecture/toolchain.md.",
+    ).toEqual([]);
   });
 });

@@ -79,10 +79,22 @@ Verify a change here by probing rather than by reading: write the forbidden
 import into a scratch file in each folder and confirm it fails. Reading the
 JSON will not tell you what it does.
 
-`src/lib/toolchain.test.ts` holds the half a probe cannot: that the copies
-still agree, and that the "off" entry is still last. It cannot check
-enforcement — only that the three blocks say the same thing, which is what
-goes wrong when somebody edits one reason and not the other two.
+**The patterns match text, so they only hold for the `@/` spelling.** A file
+in `src/lib` importing `"@/components/ui/field"` is blocked; the same file
+importing `"../components/ui/field"` lints clean. Relative depth is not
+something a glob can enumerate, so the rule cannot be closed in this file —
+which would leave the layering rule, and I2's guard on the SQL client,
+avoidable by typing two dots.
+
+`src/lib/toolchain.test.ts` holds the halves a probe cannot. That the copies
+still agree, and that the "off" entry is still last: a linter run cannot check
+enforcement, only that the three blocks say the same thing, which is what goes
+wrong when somebody edits one reason and not the other two. And the crossing
+itself, in every spelling — it resolves each specifier to a path and asks
+about the path, so a relative import that reaches `src/app`, `src/components`
+or `src/lib/database` from underneath fails there even though Biome saw
+nothing. Both are kept: Biome is what reads the rule while you type, and that
+feedback is the reason it lives in configuration at all.
 
 These complement `src/lib/security-location.test.ts` and
 `src/lib/security-membership.test.ts` rather than replacing them. A linter
