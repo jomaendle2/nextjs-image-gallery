@@ -1,4 +1,9 @@
-import { BODY, ITEM_HEADING, SECTION_HEADING } from "@/components/ui/field";
+import {
+  BODY,
+  ITEM_HEADING,
+  SECTION_HEADING,
+  WORKSPACE_CARD,
+} from "@/components/ui/field";
 import { ShareButton } from "@/components/ui/ShareButton";
 import { TextLink } from "@/components/ui/TextLink";
 import { count } from "@/lib/plural";
@@ -31,7 +36,7 @@ import { count } from "@/lib/plural";
  */
 export function JustLive({ slug, invites }: { slug: string; invites: number }) {
   return (
-    <section className="mb-8 rounded-3xl border border-white/[0.08] p-6">
+    <section className={WORKSPACE_CARD}>
       <h2 className={SECTION_HEADING}>Your first photograph is live</h2>
       <p className={`mt-2 max-w-prose text-pretty ${BODY}`}>
         It is on the gallery, on your own page, and in the feed — and it went

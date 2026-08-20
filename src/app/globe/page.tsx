@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const places = groupIntoPlaces(groupIntoCells(await listGlobePoints()));
   const card = ogCard({
     title: "Where these were taken",
-    ...(places.length === 0 ? {} : { subtitle: count(places.length, "place") }),
+    subtitle: places.length === 0 ? "" : count(places.length, "place"),
   });
 
   return {

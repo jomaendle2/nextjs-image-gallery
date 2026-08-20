@@ -44,6 +44,20 @@ export const TOUCH_LINK =
   "-mx-2 -my-3 inline-flex min-h-11 min-w-11 items-center px-2 py-3";
 
 /**
+ * The bordered card the contributor workspace states things in.
+ *
+ * `FirstRun` and `JustLive` are the two of these, and they are the two ends of
+ * the same screen: one greets somebody who has published nothing, the other
+ * marks the moment they have published their first. They are never on the
+ * page together, which is exactly how the pair would drift — nobody sees the
+ * two borders side by side to notice one is a different radius.
+ *
+ * Here for the reason at the top of this file rather than because two is a
+ * crowd: the shell was copied the moment the second card existed.
+ */
+export const WORKSPACE_CARD = "mb-8 rounded-3xl border border-white/[0.08] p-6";
+
+/**
  * A link inside a sentence, on a reading page.
  *
  * Accent rather than white: on these pages a link is the only thing that does

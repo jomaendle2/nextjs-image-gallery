@@ -47,9 +47,10 @@ export async function generateMetadata(): Promise<Metadata> {
      * world" — which is what a recruitment link should say on the day there
      * is nobody to count.
      */
-    ...(contributors.length === 0
-      ? {}
-      : { subtitle: count(contributors.length, "photographer") }),
+    subtitle:
+      contributors.length === 0
+        ? ""
+        : count(contributors.length, "photographer"),
     /*
      * One from each of the first three, rather than three from the first.
      * The card is about who is here, and a strip drawn entirely from one
