@@ -38,6 +38,17 @@ jobs:
       # `tsconfig.scripts.json` for why that needs a second invocation.
       - run: npm run typecheck
 
-      - run: npm run lint
+      # `if: !cancelled()` on everything after the first gate, so one push
+      # gets one answer rather than three rounds of it. Steps stop at the
+      # first failure by default, which meant a typecheck error hid whatever
+      # lint and the tests had to say — push a fix, wait, learn about lint,
+      # push a fix, wait, learn about the tests. The job still fails; it just
+      # fails with the whole list.
+      #
+      # Not `always()`: that would run these after a cancelled run too, and
+      # a superseded push has nothing to report.
+      - if: ${{ !cancelled() }}
+        run: npm run lint
 
-      - run: npm test
+      - if: ${{ !cancelled() }}
+        run: npm test
