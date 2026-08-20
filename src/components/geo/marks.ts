@@ -16,10 +16,13 @@ import { project, type View } from "./projection";
  *
  * `DOT_HALO` in `paint.ts` is 11, so both forgive rather more than the mark
  * draws — which is the right way round, but only just. These deliberately
- * fall short of the 44px touch floor the rest of the site keeps: at the
- * unzoomed size two cells a hundred kilometres apart sit about five pixels
- * apart, and a 44px radius would make a whole coastline into one target. Zoom
- * is what separates crowded marks, and the copy in `GlobeStage` says so.
+ * fall short of the 44px touch floor the rest of the site keeps, and the
+ * reason got stronger rather than weaker when cells shrank to a kilometre:
+ * marks that used to be forced apart by the coarsening now land on top of
+ * each other at the unzoomed size, so a 44px radius would make a whole
+ * coastline one target. Zoom is what separates crowded marks — more so than
+ * before, since it is now the only thing that does — and the copy in
+ * `GlobeStage` says so.
  */
 export const HOVER_RADIUS = 18;
 export const TAP_RADIUS = 24;

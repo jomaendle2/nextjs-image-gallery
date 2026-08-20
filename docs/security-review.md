@@ -40,7 +40,7 @@ target `/membership?welcome=1` is guessable, and guessing it grants nothing.
 > per 15 minutes, keyed by member): unlimited was tolerable while the
 > response was prose, and is not once it is a coordinate somebody could
 > collect the whole set of. Second, the sentence further down that "nothing
-> on the site reveals a location" is now narrower than the truth: a ~100 km
+> on the site reveals a location" is now narrower than the truth: a ~1 km
 > dot is public wherever a photographer marked one, deliberately, and
 > `/privacy` says so. What is unchanged is that nothing is ever read out of
 > a file. See I14 and I15 in `security-architecture.md`.

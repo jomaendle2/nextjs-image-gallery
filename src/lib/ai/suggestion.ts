@@ -14,6 +14,7 @@
  */
 
 import { MAX_DESCRIPTION, MAX_LOCATION, MAX_TITLE } from "@/lib/photos/caps";
+import { type PhotoTag, readPhotoTags } from "@/lib/photos/tags";
 import type { Pin } from "@/lib/photos/types";
 
 /** The location field is saved under the title's cap; so is this. */
@@ -63,6 +64,16 @@ export interface RawSuggestion {
   title: string;
   description: string;
   places: RawPlace[];
+  /**
+   * Subjects picked from `PHOTO_TAGS`, typed as plain strings on purpose.
+   *
+   * The schema hands the model an enum, so in practice these are always
+   * valid — but this interface describes what arrived over a wire, not what
+   * was asked for, and `readPhotoTags` is what turns the one into the other.
+   * Typing it as `PhotoTag[]` here would assert the check had already
+   * happened.
+   */
+  tags: string[];
 }
 
 /**
@@ -79,6 +90,7 @@ export interface PartialRawSuggestion {
   title?: string | undefined;
   description?: string | undefined;
   places?: (Partial<RawPlace> | undefined)[] | undefined;
+  tags?: (string | undefined)[] | undefined;
 }
 
 /**
@@ -102,6 +114,15 @@ export interface PhotoSuggestion {
   description: string;
   /** Nought to two, most likely first. Empty is an honest answer. */
   places: PlaceGuess[];
+  /**
+   * Subjects, checked against the vocabulary and capped.
+   *
+   * Offered exactly as the places are — as chips nobody is obliged to press.
+   * Unlike the places there is no confidence on them, because there is
+   * nothing to hedge: a photograph either shows a coastline or it does not,
+   * and the photographer can see which from the photograph.
+   */
+  tags: PhotoTag[];
 }
 
 /**
@@ -202,6 +223,9 @@ export function shapePartial(
   if (raw.places !== undefined) {
     partial.places = shapePlaces(raw.places);
   }
+  if (raw.tags !== undefined) {
+    partial.tags = readPhotoTags(raw.tags);
+  }
 
   return partial;
 }
@@ -211,6 +235,7 @@ export function shapeSuggestion(raw: RawSuggestion): PhotoSuggestion {
     title: clamp(raw.title, MAX_TITLE),
     description: clamp(raw.description, MAX_DESCRIPTION),
     places: shapePlaces(raw.places ?? []),
+    tags: readPhotoTags(raw.tags ?? []),
   };
 }
 
@@ -241,5 +266,12 @@ export function salvage(
     return null;
   }
 
-  return shapeSuggestion({ title, description, places: [] });
+  /*
+   * Tags go the way the places do, and for a weaker version of the same
+   * reason. A tag cannot arrive half-written — it is an enum member, so a
+   * truncated one is simply not a tag and `readPhotoTags` drops it — but a
+   * *list* can arrive half-emitted, and salvaging two of the four subjects
+   * the model was about to name would look like a considered shortlist.
+   */
+  return shapeSuggestion({ title, description, places: [], tags: [] });
 }

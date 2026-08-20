@@ -79,7 +79,25 @@ export function PhotoGrid({
                   className="object-cover transition-transform duration-500 ease-glass group-hover:scale-[1.04]"
                   fill={true}
                   placeholder="blur"
-                  priority={index < 4}
+                  /*
+                   * Eager, but only the first tile is *preloaded*.
+                   *
+                   * This was `priority={index < 4}`, which in Next 16 means
+                   * `preload` — four `<link rel=preload as=image>` tags in the
+                   * head, competing with each other and with the document for
+                   * the same connection. The docs are explicit that preload is
+                   * the wrong tool "when you have multiple images that could
+                   * be the LCP element depending on the viewport", and a
+                   * responsive 2/3/4-column grid is exactly that: which tile
+                   * is largest depends on how wide the window is.
+                   *
+                   * So the first row still loads without waiting to be
+                   * scrolled to — `loading="eager"` is what actually buys
+                   * that — and only tile zero, the one that is the LCP on
+                   * every column count, is promoted ahead of the queue.
+                   */
+                  fetchPriority={index === 0 ? "high" : undefined}
+                  loading={index < 4 ? "eager" : "lazy"}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   src={image.src.src}
                 />

@@ -6,7 +6,7 @@ import { listPublishedPhotos } from "@/lib/photos/repository";
 /**
  * The public half of a photographer's pin, if they marked one.
  *
- * The centre of a cell about 100 km across — `coarsen.ts` explains why the
+ * The centre of a cell about a kilometre across — `coarsen.ts` explains why the
  * cells are equal-ground-width rather than rounded degrees. Roughly forty
  * bytes per photograph against a measured 5.4 KB, which is what makes it
  * affordable in the payload of every gallery page rather than behind a
@@ -39,7 +39,7 @@ export interface GalleryImage {
   bgColor: string;
   location: string | null;
   exif: PhotoExif | null;
-  /** Where the photographer marked, blurred to a ~100 km cell. */
+  /** Where the photographer marked, blurred to a ~1 km cell. */
   pin: GalleryPin | null;
   /**
    * Whether this photograph has member-only notes behind it.

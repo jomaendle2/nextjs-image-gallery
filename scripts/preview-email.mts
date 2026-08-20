@@ -58,19 +58,45 @@ function write(name: string, html: string): void {
  * argument for stamping `first_signed_in_at` is that those are different
  * messages, and this is where that is checkable by eye.
  */
+/*
+ * A real photograph from the live gallery, so the previews show what a
+ * recipient sees rather than a grey box. Any published display copy would do;
+ * this is one of them, and it is public.
+ */
+const SAMPLE = {
+  url: "https://hqthnmomxieqm6os.public.blob.vercel-storage.com/photos/display/DSC09217-2-T1SoAvHwYHXM0qM7HvpagalmVjdwr8-6Ipx1dhO6HoEpSygXin6VjSfZZxYdk.jpg",
+  alt: "A published photograph from the gallery.",
+  caption: "From the gallery — a published photograph",
+  href: `${origin}/photo/preview`,
+};
+
+function shell(message: {
+  html: string;
+  preheader: string;
+  footnote: string;
+}): string {
+  return page(message.html, {
+    preheader: message.preheader,
+    footnote: message.footnote,
+  });
+}
+
 write(
   "upload-1-never-signed-in",
-  page(
-    buildNudge(uploadCopy("Anna Lindberg", 1, false), signInUrl, quietUrl).html,
-  ),
+  shell(buildNudge(uploadCopy("Anna Lindberg", 1, false), signInUrl, quietUrl)),
 );
 
 for (const stage of EMPTY_STAGES_HOURS.map((_hours, index) => index + 1)) {
   write(
     `upload-${stage}`,
-    page(
-      buildNudge(uploadCopy("Anna Lindberg", stage, true), signInUrl, quietUrl)
-        .html,
+    shell(
+      buildNudge(
+        uploadCopy("Anna Lindberg", stage, true),
+        signInUrl,
+        quietUrl,
+        // Only stage 3 carries one, which is what the sender does.
+        stage === 3 ? SAMPLE : undefined,
+      ),
     ),
   );
 }
@@ -82,18 +108,30 @@ for (const stage of EMPTY_STAGES_HOURS.map((_hours, index) => index + 1)) {
  * survive being read in an inbox.
  */
 for (const stage of DRAFT_STAGES_HOURS.map((_hours, index) => index + 1)) {
+  const draft = {
+    url: SAMPLE.url,
+    alt: "A photograph you have not published yet.",
+  };
   write(
     `draft-${stage}-single`,
-    page(
-      buildNudge(draftCopy("Anna Lindberg", stage, 1), signInUrl, quietUrl)
-        .html,
+    shell(
+      buildNudge(
+        draftCopy("Anna Lindberg", stage, 1),
+        signInUrl,
+        quietUrl,
+        draft,
+      ),
     ),
   );
   write(
     `draft-${stage}-several`,
-    page(
-      buildNudge(draftCopy("Anna Lindberg", stage, 3), signInUrl, quietUrl)
-        .html,
+    shell(
+      buildNudge(
+        draftCopy("Anna Lindberg", stage, 3),
+        signInUrl,
+        quietUrl,
+        draft,
+      ),
     ),
   );
 }
@@ -114,7 +152,7 @@ const sheet = written
     const html = readFileSync(file, "utf8");
     return `<figure style="margin:0">
       <figcaption style="margin:0 0 8px;font:600 13px ui-sans-serif,system-ui;color:#0b0e12">${name}</figcaption>
-      <iframe srcdoc="${html.replace(/"/g, "&quot;")}" style="width:420px;height:520px;border:1px solid #d5d8dd;border-radius:12px" title="${name}"></iframe>
+      <iframe srcdoc="${html.replace(/"/g, "&quot;")}" style="width:420px;height:640px;border:1px solid #d5d8dd;border-radius:12px" title="${name}"></iframe>
     </figure>`;
   })
   .join("\n");

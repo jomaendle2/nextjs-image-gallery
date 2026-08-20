@@ -104,9 +104,24 @@ export function CarouselImage({
            * replaced by the photograph.
            */
           className="max-w-full z-20 max-h-full w-auto object-contain rounded-2xl overflow-hidden ring-1 ring-inset ring-white/12 shadow-[0_30px_80px_-28px_oklch(0%_0_0_/_0.7),0_4px_14px_-6px_oklch(0%_0_0_/_0.45)] transition-transform duration-500 group-hover:scale-[1.02] group-active:scale-[0.98] motion-reduce:transition-none"
+          /*
+           * `fetchPriority` explicitly, because in Next 16 nothing else sets
+           * it. `priority` is deprecated here in favour of `preload`, and
+           * `preload` only emits the `<link>` — the browser still assigned the
+           * resulting request **Low** priority, behind every script on the
+           * page. Measured on a throttled phone that put 600ms of "load
+           * delay" in front of a 690ms LCP: the image was discovered on time
+           * and then waited its turn.
+           *
+           * `preload` as well as eager loading, and the two do different jobs:
+           * the link starts the fetch from `<head>` before the `<img>` is
+           * parsed, and `fetchPriority` decides where that fetch sits in the
+           * queue. Only the photograph being looked at gets either.
+           */
+          fetchPriority={priority ? "high" : undefined}
           loading={priority ? "eager" : "lazy"}
           placeholder="blur"
-          priority={priority}
+          preload={priority}
           ref={ref}
           /*
            * What the slot is actually worth, not what the viewport is.

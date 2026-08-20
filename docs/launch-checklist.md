@@ -228,6 +228,43 @@ policy, a number of days is. **Blobs are not covered by any of this.** Vercel
 Blob has no snapshot, so a deleted blob is gone; that is the argument for
 `--apply` on every destructive script rather than for a backup.
 
+### Re-coarsen the stored dots in the same deploy that changes `CELL_KM`
+
+A published dot is stored rather than derived, deliberately, so that it
+cannot move because somebody later tuned the arithmetic. The cost of that
+decision is a migration: change `CELL_KM` and every sentence quoting it —
+the privacy page, the picker's guarantee, the alt text under each dot —
+starts describing an accuracy the stored `coarse_lat`/`coarse_lng` do not
+have. The dots come out blunter than the page claims rather than sharper, so
+the error is on the safe side, but it is still a claim that is not true yet.
+
+So the two go out together:
+
+```
+npm run db:backfill-pins         # first: holds the originals for rows that
+                                 # predate the picker
+npm run db:recoarsen             # prints the plan
+npm run db:recoarsen -- --apply  # writes it
+```
+
+Order matters. `recoarsen` rewrites only from a surviving exact point — it
+will not re-coarsen an already-coarse one, because a 100 km cell centre put
+through a 1 km grid yields a tidy 1 km cell still 71 km from the truth,
+precise-looking and exactly as wrong. `backfill-pins` is what supplies an
+exact point for rows that have none, re-deriving it from the place name the
+photographer published. Anything with neither is listed rather than touched,
+and stays on the old grid until somebody gives it a point by hand.
+
+`/globe` is statically rendered with `revalidate = 3600`, so corrected dots
+reach readers on the next deploy or within the hour, not immediately.
+
+**Run for the 100 km → 1 km change on 2026-08-19.** `backfill-pins` supplied
+the four rows stored "public only", `recoarsen --apply` rewrote the rest, and
+all 28 published points were verified afterwards as bit-exact what `coarsen()`
+produces and inside the 1 km promise — nothing stranded. The procedure above
+stands for the next time the constant moves; `coarsen.test.ts` pins the value
+so that moving it is a decision somebody makes on purpose and reads this.
+
 ### Run destructive scripts against a branch, not production
 
 Every `db:*` and `smoke:*` script loads `.env.local`, which points at

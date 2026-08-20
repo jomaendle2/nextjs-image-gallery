@@ -1,4 +1,13 @@
-import { escapeHtml } from "@/lib/auth/mailer";
+import {
+  block,
+  button,
+  escapeHtml,
+  eyebrow,
+  MAIL,
+  type MailPhoto,
+  paragraph,
+  photo,
+} from "@/lib/auth/mailer";
 import { count } from "@/lib/plural";
 
 /**
@@ -19,6 +28,10 @@ import { count } from "@/lib/plural";
 /** One rendered nudge, before it is wrapped in the gallery's mail shell. */
 export interface NudgeCopy {
   subject: string;
+  /** The label above the lead, naming which kind of message this is. */
+  kind: string;
+  /** The line the inbox shows after the subject, never the wordmark. */
+  preheader: string;
   lead: string;
   detail: string[];
   cta: string;
@@ -51,6 +64,8 @@ export function uploadCopy(
     case 1:
       return {
         subject: "Your page is waiting — the beauty of earth.",
+        kind: "Your page",
+        preheader: "Nobody reviews it. A title, a description, and it is live.",
         lead: hasSignedIn
           ? `${first}, you signed in — and your page is still empty.`
           : `${first}, your page on the gallery is ready, and there is nothing on it yet.`,
@@ -65,6 +80,8 @@ export function uploadCopy(
     case 2:
       return {
         subject: "Upload the originals — the beauty of earth.",
+        kind: "Before you upload",
+        preheader: "The gallery never opens the GPS block.",
         lead: "One thing worth knowing before you upload: the gallery never opens the GPS block.",
         detail: [
           "Upload the full-size originals. The file is read for the camera and the exposure, a display copy is made from it, and the location the camera wrote is never read — where you stood stays yours unless you choose to write it down or mark it on the map yourself.",
@@ -75,6 +92,9 @@ export function uploadCopy(
     case 3:
       return {
         subject: "Three invitations, unspent — the beauty of earth.",
+        kind: "Three invitations",
+        preheader:
+          "New work on the gallery, and three invitations of your own.",
         lead: "There is new work on the gallery since you were invited, and three invitations of your own sitting unused.",
         detail: [
           "Every photographer here can bring in three more, and yours are still unspent. They are the only way anybody new arrives — the gallery has no open sign-up.",
@@ -85,6 +105,8 @@ export function uploadCopy(
     case 4:
       return {
         subject: "Still here — the beauty of earth.",
+        kind: "Reminder",
+        preheader: "One photograph is all it takes.",
         lead: "Your page is still there, and still empty. One photograph is all it takes.",
         detail: [],
         cta: "Publish something",
@@ -92,6 +114,8 @@ export function uploadCopy(
     case 5:
       return {
         subject: "The link, again — the beauty of earth.",
+        kind: "Reminder",
+        preheader: "Just the link, in case now is a better moment.",
         lead: "No news — this is only the link, in case now is a better moment than the last one was.",
         detail: [],
         cta: "Sign in",
@@ -99,6 +123,8 @@ export function uploadCopy(
     default:
       return {
         subject: "The last of these — the beauty of earth.",
+        kind: "The last reminder",
+        preheader: "The invitation does not expire. The reminders stop here.",
         lead: "This is the last of these you will get from us.",
         detail: [
           "The invitation itself does not expire. Your page is kept, this address stays one that can publish, and you can sign in whenever you like — there simply will not be another reminder.",
@@ -128,6 +154,8 @@ export function draftCopy(
     case 1:
       return {
         subject: `${waiting} waiting for a title — the beauty of earth.`,
+        kind: "In drafts",
+        preheader: "A title and a description, and it publishes itself.",
         lead: `${first}, you uploaded ${waiting}, and ${singular ? "it is" : "they are"} not live yet.`,
         detail: [
           `A title and a description ${singular ? "is" : "are"} all that stands between the draft and your page. Nobody reviews it — pressing publish is the whole of it.`,
@@ -137,6 +165,8 @@ export function draftCopy(
     case 2:
       return {
         subject: "Still in drafts — the beauty of earth.",
+        kind: "In drafts",
+        preheader: "Two sentences, and everything else is optional.",
         lead: `${waiting} of yours ${singular ? "is" : "are"} still sitting in drafts.`,
         detail: [
           "The description is two sentences, not an essay, and everything else is optional — the location, the map pin, all of it. Title, a line about what it is, publish.",
@@ -146,6 +176,8 @@ export function draftCopy(
     default:
       return {
         subject: "The last reminder — the beauty of earth.",
+        kind: "The last reminder",
+        preheader: "Nothing is deleted. This is only the last mention of it.",
         /*
          * Names the count even though it is the last one, and especially
          * because it is. A final message that says only "we will stop
@@ -196,8 +228,12 @@ export function oneClickUnsubscribe(url: string): Record<string, string> {
 export interface NudgeMessage {
   subject: string;
   text: string;
-  /** The body only. `sendNudge` wraps it in the gallery's mail shell. */
+  /** The body rows only. The sender wraps them in the gallery's shell. */
   html: string;
+  /** The small print under the rule, which is where the opt-out lives. */
+  footnote: string;
+  /** The line the inbox shows after the subject, instead of the wordmark. */
+  preheader: string;
   headers: Record<string, string>;
 }
 
@@ -217,14 +253,20 @@ export function buildNudge(
   copy: NudgeCopy,
   signInUrl: string,
   quietUrl: string,
+  /**
+   * A photograph, where one argues better than a sentence.
+   *
+   * The draft track's is the strongest image this software can send
+   * anybody: their own unpublished photograph, in their own inbox, above a
+   * button that publishes it. The copy could only ever describe that; this
+   * is the thing itself, and it is the difference between "you have two
+   * drafts" and seeing one.
+   *
+   * Absent from the short late stages on purpose. A message whose whole
+   * point is to be quiet and easy to ignore does not open with a picture.
+   */
+  image?: MailPhoto,
 ): NudgeMessage {
-  const detailHtml = copy.detail
-    .map(
-      (paragraph) =>
-        `<p style="margin:0 0 20px;color:#6b7178;font-size:14px;line-height:1.6">${escapeHtml(paragraph)}</p>`,
-    )
-    .join("\n");
-
   return {
     subject: copy.subject,
     text: [
@@ -237,16 +279,16 @@ export function buildNudge(
       `No more of these — one click, and only these stop: ${quietUrl}`,
       ...FOOTER_TEXT,
     ].join("\n"),
-    html: `<p style="margin:0 0 20px;color:#a8adb4;line-height:1.6">${escapeHtml(copy.lead)}</p>
-       ${detailHtml}
-       <p style="margin:0 0 24px">
-         <a href="${escapeHtml(signInUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#e8eaed;color:#0b0e12;text-decoration:none;font-weight:600">${escapeHtml(copy.cta)}</a>
-       </p>
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         <a href="${escapeHtml(quietUrl)}" style="color:#6b7178">No more of these</a>
-         — one click, and only these stop. Sign-in links and the gallery's own
-         announcements are unaffected.
-       </p>`,
+    html: `${image === undefined ? "" : photo(image)}
+      ${block(
+        `${eyebrow(copy.kind)}
+         <div style="font-size:21px;line-height:1.4;letter-spacing:-0.02em;color:${MAIL.text};margin:0 0 14px">${escapeHtml(copy.lead)}</div>
+         ${copy.detail.map((line) => paragraph(line)).join("\n")}
+         ${button(signInUrl, copy.cta)}`,
+        "24px 28px 28px",
+      )}`,
+    footnote: `<a href="${escapeHtml(quietUrl)}" style="color:${MAIL.faint}">No more of these</a> — one click, and only these stop. Sign-in links and the gallery's own announcements are unaffected.`,
+    preheader: copy.preheader,
     headers: oneClickUnsubscribe(quietUrl),
   };
 }

@@ -35,6 +35,7 @@ export default async function QuietPage({
       <StatusPage
         detail="No more reminders to this address. Your sign-in link still works and your page is still yours — publish whenever you like."
         title="That is the last of them"
+        tone="done"
       />
     );
   }
@@ -44,6 +45,7 @@ export default async function QuietPage({
       <StatusPage
         detail="That link did not match anybody. If it came from a reminder, the reminders have most likely already stopped."
         title="Nothing to stop"
+        tone="nothing-to-do"
       />
     );
   }

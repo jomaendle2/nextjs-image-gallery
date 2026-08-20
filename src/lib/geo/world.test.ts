@@ -33,6 +33,7 @@ const GEO = import.meta.dirname;
 const PATH_FILE = join(GEO, "world-path.ts");
 const GLOBE_FILE = join(GEO, "world.ts");
 const FINE_FILE = join(GEO, "world-fine.ts");
+const FINEST_FILE = join(GEO, "world-finest.ts");
 
 /*
  * A budget per file, sized by how many pages each one reaches. These are
@@ -55,6 +56,26 @@ const CEILINGS = {
   globe: 34_000,
   /* Fetched by `import()` when the globe is opened, and never otherwise. */
   fine: 210_000,
+  /*
+   * Fetched only when a reader zooms past what `fine` can draw, which takes a
+   * deliberate pinch or three presses of `+`.
+   *
+   * By far the largest number in this file, and the one most worth a
+   * tripwire, because the temptation it guards against is real: zoom is
+   * limited by how far apart the vertices are on screen, so "let me look
+   * closer" always cashes out as "more coastline". There is no tolerance
+   * that buys magnification cheaply, and a ceiling is what stops the next
+   * person discovering that by shipping a megabyte.
+   *
+   * **It sits about three per cent above the file, and that is deliberate.**
+   * A ceiling with room to spare is a ceiling that notices nothing: the file
+   * could grow by a third before anybody heard about it, which is exactly the
+   * invisible regression the other budgets here exist to catch. Close is what
+   * makes it a tripwire rather than a formality. So a tolerance change in
+   * `build-world.mts` is expected to fail this and be answered by moving both
+   * numbers on purpose — never by raising this one to make room.
+   */
+  finest: 900_000,
 } as const;
 
 describe("each file costs what the pages it reaches can afford", () => {
@@ -62,6 +83,7 @@ describe("each file costs what the pages it reaches can afford", () => {
     { name: "world-path.ts", file: PATH_FILE, ceiling: CEILINGS.path },
     { name: "world.ts", file: GLOBE_FILE, ceiling: CEILINGS.globe },
     { name: "world-fine.ts", file: FINE_FILE, ceiling: CEILINGS.fine },
+    { name: "world-finest.ts", file: FINEST_FILE, ceiling: CEILINGS.finest },
   ])("$name is under its ceiling, gzipped", ({ file, ceiling }) => {
     expect(gzipSync(readFileSync(file)).length).toBeLessThan(ceiling);
   });
@@ -206,6 +228,28 @@ describe("the finer coastline is never bundled", () => {
    * would be a slower page rather than a broken one, which is the class of
    * regression nobody notices for months.
    */
+  it.each(["world-fine", "world-finest"])(
+    "%s is reached only through a dynamic import",
+    (module) => {
+      const offenders = allSourceFiles()
+        /*
+         * Comments stripped, for the reason the original of this check gives
+         * below: several files explain why these must not be imported, and a
+         * check that punishes explaining the rule is a check that gets the
+         * explanation deleted.
+         */
+        .filter((file) => {
+          const source = code(readFileSync(file, "utf8"));
+          return (
+            source.includes(module) &&
+            !new RegExp(`import\\(\\s*["'][^"']*${module}`).test(source)
+          );
+        })
+        .map((f) => f.replace(SRC, ""));
+      expect(offenders).toEqual([]);
+    },
+  );
+
   it("is reached only through a dynamic import", () => {
     const offenders = allSourceFiles()
       /*
@@ -225,11 +269,28 @@ describe("the finer coastline is never bundled", () => {
     expect(offenders).toEqual([]);
   });
 
+  /*
+   * One file names all three tiers, and that is the point rather than tidiness.
+   *
+   * The lazy loading is only structural while there is a single place a
+   * static import could be introduced. Spread across the components that
+   * happen to want a coastline, "nothing imports this eagerly" becomes a
+   * convention, and a convention is what somebody undoes while tidying.
+   */
   it("is fetched from exactly one place", () => {
     const readers = allSourceFiles()
       .filter((file) => code(readFileSync(file, "utf8")).includes("world-fine"))
       .map((f) => f.replace(SRC, ""));
-    expect(readers).toEqual([join("/components", "geo", "GlobeCanvas.tsx")]);
+    expect(readers).toEqual([join("/components", "geo", "coastline.ts")]);
+  });
+
+  it("and so is the deep one", () => {
+    const readers = allSourceFiles()
+      .filter((file) =>
+        code(readFileSync(file, "utf8")).includes("world-finest"),
+      )
+      .map((f) => f.replace(SRC, ""));
+    expect(readers).toEqual([join("/components", "geo", "coastline.ts")]);
   });
 
   /*

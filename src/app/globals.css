@@ -61,6 +61,25 @@
   --ground: #0b0e12;
 
   /*
+   * The one ink the globe is drawn with.
+   *
+   * `paint.ts` contains no colour at all — it sets a single fill and stroke
+   * from the canvas's own computed colour and then varies nothing but
+   * `globalAlpha`. That discipline is what keeps a canvas inside a design
+   * system whose colours live here, and it means the globe can be tinted
+   * from this one line without touching a renderer.
+   *
+   * Barely off white, and deliberately so. The sphere is drawn at alphas
+   * between 0.05 and 0.26, so a colour that reads as blue at full strength
+   * would be invisible at a twentieth of it; this is white carried about a
+   * fifth of the way toward the cool blue the ground already has, which at
+   * those alphas is the difference between a grey earth and one that looks
+   * lit by a sky. The marks share it, which is right — they are the same
+   * light falling on the same sphere.
+   */
+  --globe-ink: #e4ecf2;
+
+  /*
    * The ground for pages that are documents rather than viewers — the
    * contribute flow, the apply form, the empty gallery.
    *

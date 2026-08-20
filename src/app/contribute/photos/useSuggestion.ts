@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OUR_FAULT_MESSAGE, type SuggestionRecord } from "@/lib/ai/stream";
 import type { PhotoSuggestion, PlaceGuess } from "@/lib/ai/suggestion";
+import type { PhotoTag } from "@/lib/photos/tags";
 import {
   fieldElement,
   fillsFrom,
   locationToFill,
+  pinToDrop,
   type SuggestionStage,
   stageOf,
   suggestionNote,
@@ -15,6 +17,7 @@ import {
 import { pointText } from "./LocationPicker";
 import { readNdjson } from "./ndjson";
 import { openSuggestion } from "./suggestRequest";
+import { useFormLedger } from "./useFormLedger";
 
 /**
  * Asking a model to look at a photograph, and putting its answer into the
@@ -42,19 +45,6 @@ function asRecord(value: unknown): SuggestionRecord | null {
     : null;
 }
 
-/**
- * A value for the picker's controlled field, stamped so that the same one
- * can be sent twice.
- *
- * The stamp is a counter rather than a clock. Two chips accepted inside the
- * same millisecond would collide on `Date.now()`, and a counter cannot.
- */
-let proposals = 0;
-function proposal(text: string): { text: string; at: number } {
-  proposals += 1;
-  return { text, at: proposals };
-}
-
 export interface Suggesting {
   /** What the model is doing, or null when it is not doing anything. */
   stage: SuggestionStage | null;
@@ -66,6 +56,13 @@ export interface Suggesting {
   canUndo: boolean;
   /** The places on offer, or none. Rendered as chips, never written. */
   places: PlaceGuess[];
+  /**
+   * The subjects on offer, or none. Chips too, and never written at all —
+   * not even by the auto-fill that now takes a sure place. Filing a
+   * photograph under a subject is a judgement its photographer can make by
+   * looking at it, so it stays a click.
+   */
+  tags: PhotoTag[];
   /** Whether an answer has landed, so an empty list can be said out loud. */
   answered: boolean;
   ask: () => void;
@@ -92,12 +89,9 @@ export function useSuggestion(
   const [stage, setStage] = useState<SuggestionStage | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [canUndo, setCanUndo] = useState(false);
   const [places, setPlaces] = useState<PlaceGuess[]>([]);
+  const [tags, setTags] = useState<PhotoTag[]>([]);
   const [answered, setAnswered] = useState(false);
-  const [proposed, setProposed] = useState<{ text: string; at: number } | null>(
-    null,
-  );
 
   /**
    * The run in flight, so it can be called off.
@@ -117,83 +111,23 @@ export function useSuggestion(
     [],
   );
 
-  /**
-   * What each field said before this feature first changed it.
-   *
-   * A ref rather than state: it is written on every chunk and read only when
-   * something is put back, so making it state would re-render the row for
-   * each token of a title nobody is looking at through React.
-   *
-   * **Not cleared when the button is pressed again**, which it used to be —
-   * and that was a way to lose text for good. A second run would replace the
-   * map wholesale, so the values from before the *first* run became
-   * unreachable and Undo put the form back to the first suggestion rather
-   * than to what the photographer had written. Entries are recorded on first
-   * write and removed only by being restored, so this map always holds the
-   * form as it stood before any of this started.
+  /*
+   * The undo ledger, which is the half of this feature answerable for the
+   * photographer's own words. `useFormLedger` explains why it is a separate
+   * file and not merely a shorter one.
    */
-  const before = useRef(new Map<TouchedField, string>());
-
-  /**
-   * The fields *this* run wrote by itself.
-   *
-   * Separate from the map above because the two questions differ. A failed
-   * run undoes what that run did; Undo undoes everything the feature has
-   * done since it was last pressed. A place somebody accepted from a chip
-   * two runs ago belongs to the second answer and not to the first.
-   */
-  const touched = useRef(new Set<TouchedField>());
-
-  /** Remember what a field held, the first time this feature changes it. */
-  const remember = useCallback((field: TouchedField, current: string) => {
-    if (!before.current.has(field)) {
-      before.current.set(field, current);
-    }
-    setCanUndo(true);
-  }, []);
-
-  const write = useCallback(
-    (suggestion: Partial<PhotoSuggestion>) => {
-      for (const [field, value] of fillsFrom(suggestion)) {
-        const element = fieldElement(field, photoId);
-        if (element !== null) {
-          remember(field, element.value);
-          touched.current.add(field);
-          element.value = value;
-        }
-      }
-    },
-    [photoId, remember],
-  );
-
-  /** Put back the fields named, and forget that they were ever written. */
-  const putBack = useCallback(
-    (fields: Iterable<TouchedField>) => {
-      for (const field of fields) {
-        const original = before.current.get(field);
-        if (original !== undefined) {
-          /*
-           * The pin goes back through the picker rather than through the
-           * element, because that field is controlled: writing `.value` on
-           * it would be overwritten by the next render, and the photographer
-           * would watch their coordinate reappear.
-           */
-          if (field === "pin") {
-            setProposed(proposal(original));
-          } else {
-            const element = fieldElement(field, photoId);
-            if (element !== null) {
-              element.value = original;
-            }
-          }
-          before.current.delete(field);
-          touched.current.delete(field);
-        }
-      }
-      setCanUndo(before.current.size > 0);
-    },
-    [photoId],
-  );
+  const {
+    canUndo,
+    proposed,
+    markTouched,
+    touchedFields,
+    remember,
+    write,
+    putBack,
+    propose,
+    clearTouched,
+    undoAll,
+  } = useFormLedger(photoId);
 
   /**
    * The validated answer replaces whatever the stream had been showing.
@@ -208,6 +142,7 @@ export function useSuggestion(
     (final: PhotoSuggestion, salvaged = false) => {
       write(final);
       setPlaces(final.places);
+      setTags(final.tags);
       /*
        * `answered` is what lets the empty list say "nothing in the frame
        * pointed anywhere" out loud, so a salvaged run must not set it: that
@@ -220,31 +155,51 @@ export function useSuggestion(
       const kept = new Set<TouchedField>(
         fillsFrom(final).map(([field]) => field),
       );
-      putBack([...touched.current].filter((field) => !kept.has(field)));
+      putBack(touchedFields().filter((field) => !kept.has(field)));
 
       // A sure place fills an empty Location field; `locationToFill` holds
       // the decision, this is only the write. Undo covers it like the rest.
       const location = fieldElement("location", photoId);
-      if (location !== null) {
-        const name = locationToFill(final.places, location.value);
-        if (name !== null) {
-          remember("location", location.value);
-          /*
-           * Recorded as this run's, so the failure path sweeps it. A stream
-           * dying after this write would otherwise restore title and
-           * description — under a message promising nothing changed — and
-           * leave the guess in the Location field with its chips cleared.
-           * `touched` was `Set<FillableField>`, which could not hold
-           * "location" at all; `TouchedField` is what lets it be swept.
-           */
-          touched.current.add("location");
-          location.value = name;
-        }
+      const name =
+        location === null ? null : locationToFill(final.places, location.value);
+      if (location !== null && name !== null) {
+        remember("location", location.value);
+        /*
+         * Recorded as this run's, so the failure path sweeps it. A stream
+         * dying after this write would otherwise restore title and
+         * description — under a message promising nothing changed — and
+         * leave the guess in the Location field with its chips cleared.
+         * `touched` was `Set<FillableField>`, which could not hold
+         * "location" at all; `TouchedField` is what lets it be swept.
+         */
+        markTouched("location");
+        location.value = name;
+      }
+
+      /*
+       * And the pin, on the same guess and under the same rule — the same
+       * decision, in fact, which is `name` above rather than a second look at
+       * the field. The field has been written into by the time this runs, so
+       * asking it again would answer "occupied" and refuse the pin in exactly
+       * the case the pin exists for.
+       *
+       * A photographer who has just watched "Taipei, Taiwan" fill itself in
+       * should not then have to press "Put a pin roughly here" to say the
+       * same thing again. The point goes through the picker rather than the
+       * DOM because that field is controlled — writing `.value` on it would
+       * be overwritten by the next render.
+       */
+      const pin = fieldElement("pin", photoId);
+      const point = pinToDrop(final.places, pin?.value ?? "", name !== null);
+      if (point !== null) {
+        remember("pin", pin?.value ?? "");
+        markTouched("pin");
+        propose(pointText(point));
       }
 
       setNote(suggestionNote());
     },
-    [write, putBack, photoId, remember],
+    [write, putBack, photoId, remember, markTouched, touchedFields, propose],
   );
 
   /**
@@ -264,6 +219,9 @@ export function useSuggestion(
         write(record.value);
         if (record.value.places !== undefined) {
           setPlaces(record.value.places);
+        }
+        if (record.value.tags !== undefined) {
+          setTags(record.value.tags);
         }
       } else if (record?.type === "done") {
         settle(record.value, record.salvaged === true);
@@ -315,8 +273,9 @@ export function useSuggestion(
     setNote(null);
     setStage("looking");
     setPlaces([]);
+    setTags([]);
     setAnswered(false);
-    touched.current = new Set();
+    clearTouched();
 
     const asking = async () => {
       const body = await openSuggestion(photoId, signal);
@@ -346,8 +305,15 @@ export function useSuggestion(
          * either way, and a half-written title left in the box would make
          * that untrue.
          */
-        putBack([...touched.current]);
+        putBack(touchedFields());
         setPlaces([]);
+        /*
+         * The subject chips go with the place chips, and for the same
+         * reason: the notice below promises nothing was changed, and a row
+         * of clickable subjects left over from a run that failed is a
+         * suggestion nobody's photograph produced.
+         */
+        setTags([]);
         setAnswered(false);
         setNote(null);
         setError(cause instanceof Error ? cause.message : OUR_FAULT_MESSAGE);
@@ -359,13 +325,13 @@ export function useSuggestion(
         setStage(null);
         onFilled();
       });
-  }, [photoId, onFilled, consume, putBack]);
+  }, [photoId, onFilled, consume, putBack, touchedFields, clearTouched]);
 
   const undo = useCallback(() => {
-    putBack([...before.current.keys()]);
+    undoAll();
     setNote(null);
     onFilled();
-  }, [putBack, onFilled]);
+  }, [undoAll, onFilled]);
 
   /**
    * A chip click is an edit like any other.
@@ -394,10 +360,10 @@ export function useSuggestion(
         return;
       }
       remember("pin", fieldElement("pin", photoId)?.value ?? "");
-      setProposed(proposal(pointText(place.point)));
+      propose(pointText(place.point));
       onFilled();
     },
-    [photoId, remember, onFilled],
+    [photoId, remember, onFilled, propose],
   );
 
   return {
@@ -406,6 +372,7 @@ export function useSuggestion(
     error,
     canUndo,
     places,
+    tags,
     answered,
     ask,
     undo,

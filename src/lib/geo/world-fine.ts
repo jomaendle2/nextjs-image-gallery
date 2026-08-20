@@ -5,7 +5,7 @@
  * domain:
  * https://cdn.jsdelivr.net/gh/martynafford/natural-earth-geojson@master/10m/physical/ne_10m_land.json
  *
- * Generated 2026-08-17 by \`scripts/build-world.mts\`:
+ * Generated 2026-08-19 by \`scripts/build-world.mts\`:
  *
  *     node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-world.mts
  *

@@ -165,7 +165,7 @@ export const PROCESSORS = [
    *
    * One row rather than two, and the name says why: the request goes to
    * Vercel's AI Gateway, which forwards it to whichever of the two model
-   * providers is answering — Google first, Anthropic when it is not. Naming
+   * providers is answering — Anthropic first, Google when it is not. Naming
    * only the one that usually answers would be a policy that is true on a
    * good day. Naming the gateway alone would hide the companies that
    * actually see the image.
@@ -183,16 +183,29 @@ export const PROCESSORS = [
    * button on their own draft, so nothing a visitor does reaches it and no
    * consent banner follows from it.
    *
-   * The data line used to also name a photographer's hint — a typed phrase
-   * and an optionally pointed-at area, blunted before sending. The hint
-   * feature is gone (it read as a second location field and confused the
-   * first real user), so the request now carries nothing anybody composed:
-   * only the stored copy and what the file already held.
+   * **The Location the photographer typed is sent too, and this row said it
+   * was not.** An earlier version of the feature took a free-text "hint",
+   * and when that was removed this comment was rewritten to say the request
+   * "carries nothing anybody composed". That became false again the moment
+   * the prompt started being told the photographer's own place — which it
+   * now is, so the model can confirm or refine it instead of re-deriving a
+   * place from pixels and contradicting the person who was standing there.
+   *
+   * It is worth being exact about what that is, because it is not a
+   * reinstated hint. It is the Location field, already printed under the
+   * photograph on a public page and already in the RSS feed: text the
+   * photographer published, sent to a processor that has published it
+   * nowhere. Still composed by a person, though, and a data line has to say
+   * what leaves rather than what it costs to say.
+   *
+   * The pin remains unsent in both directions. A coordinate is the one thing
+   * on this form that is machine-actionable, and the member-only precise
+   * pair never leaves the database for this feature at all.
    */
   {
-    name: "Vercel AI Gateway (Google, Anthropic)",
-    role: "Suggested titles, descriptions and places, on the photographer upload page only",
-    data: "A photograph and its camera settings — never the original file, and never a coordinate",
+    name: "Vercel AI Gateway (Anthropic, Google)",
+    role: "Suggested titles, descriptions, places and subjects, on the photographer upload page only",
+    data: "A photograph, its camera settings, and the location the photographer has typed — never the original file, and never a coordinate",
     basis: "Contract with contributors (Art. 6(1)(b) GDPR)",
   },
   {

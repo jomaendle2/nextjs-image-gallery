@@ -11,6 +11,7 @@ import {
   setPublished,
 } from "@/lib/photos/repository";
 import { revalidateFeeds } from "@/lib/photos/revalidate";
+import { readPhotoTags } from "@/lib/photos/tags";
 import type { OwnPhotoRow, PublishInput } from "@/lib/photos/types";
 
 /**
@@ -208,6 +209,23 @@ export async function savePhoto(
   const isSpecimen = formData.get("is_specimen") !== null;
 
   /*
+   * The subjects, read as the whole set the form is holding.
+   *
+   * `getAll` rather than `get`, because the chips render one hidden input
+   * per chosen tag — so a photograph with no tags sends the field zero
+   * times, which is the same absence as a photograph whose tags were all
+   * removed. That is correct here: both mean "no subjects", and the column
+   * is written either way.
+   *
+   * Not refused when it contains something unrecognised, just filtered.
+   * Nothing a photographer can do in the form produces an off-list tag —
+   * they pick from chips built out of the same list — so a stray value is a
+   * hand-built request, and answering it with a sentence about a control
+   * that does not exist would help nobody.
+   */
+  const tags = readPhotoTags(formData.getAll("tags"));
+
+  /*
    * Which button was pressed. Saving and publishing are separate actions on
    * one form, so a photographer can write a title without the photograph
    * going live — and the message afterwards says which of the two happened
@@ -239,6 +257,7 @@ export async function savePhoto(
        * NULLs rather than leaving the old dot on the globe.
        */
       pin: marked.pin,
+      tags,
     },
     actor,
     publish,

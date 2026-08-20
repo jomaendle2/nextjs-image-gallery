@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { SECTION_HEADING } from "@/components/ui/field";
 import { TextLink } from "@/components/ui/TextLink";
 import { listPendingApplications } from "@/lib/applications/repository";
-import { listContributors } from "@/lib/auth/contributors";
+import { listContributors, listNudgeCounts } from "@/lib/auth/contributors";
 import { getCurrentContributor } from "@/lib/auth/session";
 import { isOwner } from "@/lib/auth/types";
 import { countUnannouncedPhotos, listAllPhotos } from "@/lib/photos/repository";
@@ -43,13 +43,14 @@ export default async function AdminPage() {
     notFound();
   }
 
-  const [applications, contributors, photos, unannounced, subscribers] =
+  const [applications, contributors, photos, unannounced, subscribers, nudges] =
     await Promise.all([
       listPendingApplications(),
       listContributors(),
       listAllPhotos(),
       countUnannouncedPhotos(),
       countConfirmedSubscribers(),
+      listNudgeCounts(),
     ]);
 
   return (
@@ -155,9 +156,9 @@ export default async function AdminPage() {
                     with no visible trace is the kind that keeps mailing
                     somebody long after they wanted it to stop.
                   */}
-                  {row.nudge_count === 0
+                  {(nudges.get(row.id) ?? 0) === 0
                     ? null
-                    : ` · ${count(row.nudge_count, "reminder")} sent`}
+                    : ` · ${count(nudges.get(row.id) ?? 0, "reminder")} sent`}
                   {row.nudges_muted_at === null ? null : " · muted"}
                 </p>
               </div>

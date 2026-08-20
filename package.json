@@ -12,7 +12,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/migrate.mts",
@@ -28,8 +28,10 @@
     "smoke": "npm run smoke:invite -- --apply && npm run smoke:pages -- --apply && npm run smoke:upload -- --apply && npm run smoke:membership -- --apply && npm run smoke:portal -- --apply",
     "mint-link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts",
     "db:backfill-pins": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/backfill-pins.mts",
+    "db:recoarsen": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/recoarsen.mts",
     "db:import-assets": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/import-assets.mts",
     "db:erase-contributor": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/erase-contributor.mts",
+    "recaption": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/recaption.mts",
     "auth:link": "node --import ./scripts/alias-loader.mjs --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local scripts/mint-link.mts"
   },
   "dependencies": {

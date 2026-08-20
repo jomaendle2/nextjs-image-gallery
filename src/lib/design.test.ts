@@ -104,10 +104,20 @@ describe("the accent is used through the system, not around it", () => {
       .filter((file) => /bg-accent-fill(?!-)/.test(readFileSync(file, "utf8")))
       .map((file) => file.replace(SRC, ""));
 
-    // membership-details.tsx is the documented exception: its Row icons use
-    // the fill as a tone marker, which is not a button.
+    /*
+     * Two documented exceptions, and both are the same shape: an icon using
+     * the fill as a *tone marker*, which is not a button and cannot be
+     * confused for one — neither is clickable and neither sits where an
+     * action goes.
+     *
+     * `membership-details.tsx` marks what a membership includes.
+     * `StatusPage.tsx` marks whether the thing you came from your inbox to do
+     * actually happened; the five pages using it were previously
+     * indistinguishable from each other and from a 404.
+     */
     expect(offenders).toEqual([
       join("/app", "membership", "membership-details.tsx"),
+      join("/components", "StatusPage.tsx"),
     ]);
   });
 

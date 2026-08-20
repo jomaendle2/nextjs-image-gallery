@@ -21,23 +21,37 @@ interface Recorded {
 
 const issued: Recorded[] = [];
 let responses: Record<string, unknown>[][] = [];
+/** Set by a test that wants the next statement to fail, as Postgres would. */
+let failWith: (Error & { code?: string }) | null = null;
 
 function fakeSql(
   strings: TemplateStringsArray,
   ...values: unknown[]
 ): Promise<Record<string, unknown>[]> {
   issued.push({ text: strings.join("?"), values });
+  if (failWith !== null) {
+    const error = failWith;
+    failWith = null;
+    return Promise.reject(error);
+  }
   return Promise.resolve(responses.shift() ?? []);
 }
 
 vi.mock("@/lib/database", () => ({ sql: fakeSql }));
 
-const { claimNudge, ensureNudgeToken, listNudgeCandidates, muteNudges } =
-  await import("./contributors");
+const {
+  claimNudge,
+  ensureNudgeToken,
+  listContributors,
+  listNudgeCandidates,
+  listNudgeCounts,
+  muteNudges,
+} = await import("./contributors");
 
 beforeEach(() => {
   issued.length = 0;
   responses = [];
+  failWith = null;
 });
 
 describe("listNudgeCandidates", () => {
@@ -86,6 +100,79 @@ describe("listNudgeCandidates", () => {
     await listNudgeCandidates();
 
     expect(issued[0]?.text).toContain("WHERE c.revoked_at IS NULL");
+  });
+});
+
+describe("listContributors, on a database the migration has not reached", () => {
+  it("reads the new column through to_jsonb, never bare", async () => {
+    /*
+     * This test exists because the bare column failed a real build.
+     *
+     * Preview, development and production share one Neon database and
+     * `migrate.mts` refuses to migrate outside production, so a branch that
+     * adds a column runs against a database without it for as long as the
+     * branch is open. `listPublicContributorSlugs` wraps this query, so
+     * `/by/[slug]` prerenders through it — and `42703: column
+     * c.nudges_muted_at does not exist` was not a broken page, it was a
+     * failed deployment.
+     *
+     * `FEED_COLUMNS` already solved this for `has_member_details`. The rule
+     * is the same one: a column added on this branch is read as jsonb until
+     * the migration has landed in the shared database.
+     */
+    await listContributors();
+
+    const [statement] = issued;
+    expect(statement).toBeDefined();
+    expect(statement?.text).toContain(
+      "(to_jsonb(c) ->> 'nudges_muted_at') AS nudges_muted_at",
+    );
+    expect(statement?.text).not.toMatch(/\bc\.nudges_muted_at\b/);
+  });
+
+  it("does not name the ledger table at all", async () => {
+    // A missing *table* cannot be softened the way a missing column can —
+    // Postgres rejects the statement at parse time — so this query, which
+    // the build depends on, must not mention it. The count lives in
+    // `listNudgeCounts`, which is allowed to fail.
+    await listContributors();
+
+    expect(issued[0]?.text).not.toContain("contributor_nudges");
+  });
+});
+
+describe("listNudgeCounts", () => {
+  it("returns a count per contributor", async () => {
+    responses = [
+      [
+        { contributor_id: "a", n: 3 },
+        { contributor_id: "b", n: 1 },
+      ],
+    ];
+    const counts = await listNudgeCounts();
+
+    expect(counts.get("a")).toBe(3);
+    expect(counts.get("b")).toBe(1);
+  });
+
+  it("degrades to nothing when the table is not there yet", async () => {
+    /*
+     * `42P01` on a preview means one thing only: this branch's code against a
+     * database the migration has not reached. The admin page then renders
+     * without one cell, rather than 500ing — which matters because it is the
+     * page somebody would open to find out what was going on.
+     */
+    failWith = Object.assign(new Error("undefined table"), { code: "42P01" });
+
+    await expect(listNudgeCounts()).resolves.toEqual(new Map());
+  });
+
+  it("re-throws anything that is not a missing table", async () => {
+    // Swallowing the rest would hide a real bug behind a quietly absent
+    // column for as long as nobody counted the cells.
+    failWith = Object.assign(new Error("connection lost"), { code: "08006" });
+
+    await expect(listNudgeCounts()).rejects.toThrow("connection lost");
   });
 });
 

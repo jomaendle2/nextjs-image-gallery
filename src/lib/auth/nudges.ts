@@ -196,6 +196,9 @@ export interface NudgeRecipient extends NudgeCandidate {
   display_name: string;
   /** Null for somebody who has never redeemed a link. */
   first_signed_in_at: string | Date | null;
+  /** The oldest unpublished photograph, which the draft track's mail shows. */
+  draft_url?: string | null;
+  draft_description?: string | null;
 }
 
 /** One decided nudge: who, which sequence, which stage, and what to say. */
@@ -208,6 +211,9 @@ export interface PlannedNudge {
   /** Unpublished photographs, for the draft track's copy. */
   drafts: number;
   hasSignedIn: boolean;
+  /** Their oldest draft, shown in the message that is about it. */
+  draftUrl: string | null;
+  draftDescription: string | null;
 }
 
 /**
@@ -241,6 +247,8 @@ export function planNudges(
         stage,
         drafts: person.photo_count - person.published_count,
         hasSignedIn: person.first_signed_in_at !== null,
+        draftUrl: person.draft_url ?? null,
+        draftDescription: person.draft_description ?? null,
       },
     ];
   });

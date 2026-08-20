@@ -148,14 +148,19 @@ describe("buildNudge", () => {
 
   it("carries both links in both alternatives", () => {
     /*
-     * A plain-text alternative that drops the opt-out is an opt-out that
-     * only exists for people whose client renders HTML, which is not the
-     * same as an opt-out.
+     * A plain-text alternative that drops the opt-out is an opt-out that only
+     * exists for people whose client renders HTML, which is not the same as
+     * an opt-out.
+     *
+     * The two live in different parts of the HTML message and that is the
+     * design: the action is in the body, the way out is in the footnote under
+     * the rule, which is where every message on this site now puts its small
+     * print. Assert both, or a redesign that drops one still passes.
      */
     expect(message.text).toContain(SIGN_IN);
     expect(message.text).toContain(QUIET);
     expect(message.html).toContain(`href="${SIGN_IN}"`);
-    expect(message.html).toContain(`href="${QUIET}"`);
+    expect(message.footnote).toContain(`href="${QUIET}"`);
   });
 
   it("sets the RFC 8058 pair, both halves or neither", () => {
@@ -190,12 +195,31 @@ describe("buildNudge", () => {
     // The narrowness is the point: somebody tired of being asked to upload
     // has not asked to be locked out of their own account.
     expect(message.text).toMatch(/Sign-in links.*unaffected/s);
-    expect(message.html).toMatch(/Sign-in links[\s\S]*unaffected/);
+    expect(message.footnote).toMatch(/Sign-in links[\s\S]*unaffected/);
   });
 
   it("puts one call-to-action button in the body and no other", () => {
-    const buttons = message.html.match(/border-radius:999px/g) ?? [];
+    /*
+     * Two per button now, not one: the accent pill is a single-cell table so
+     * that Outlook draws it at all, and both the cell and the anchor inside
+     * it carry the radius. What matters is that there is one *button*, so
+     * count the anchors that are styled as one.
+     */
+    const buttons = message.html.match(/display:inline-block;padding:13px/g);
     expect(buttons).toHaveLength(1);
+  });
+
+  it("names the kind of message above the lead", () => {
+    // Eleven messages that arrived looking identical is the thing this
+    // redesign exists to fix; the label is what tells them apart at a glance.
+    expect(message.html).toContain("Your page");
+  });
+
+  it("carries a preview line that is not the wordmark", () => {
+    // Without one the inbox shows whatever the body starts with, which for
+    // every message on this site was "the beauty of earth." twice over.
+    expect(message.preheader.length).toBeGreaterThan(0);
+    expect(message.preheader).not.toContain("the beauty of earth");
   });
 });
 

@@ -47,7 +47,6 @@ export async function listContributors(): Promise<
     published_count: number;
     invites_remaining: number;
     invited_by_name: string | null;
-    nudge_count: number;
     nudges_muted_at: string | null;
   })[]
 > {
@@ -61,22 +60,33 @@ export async function listContributors(): Promise<
    * exactly the thin page the sitemap's own comment says it excludes.
    */
   /*
-   * The nudge count comes from a scalar subquery rather than a third join.
+   * `nudges_muted_at` is read through `to_jsonb`, and that is not decoration.
    *
-   * A `LEFT JOIN contributor_nudges` here would multiply against the photos
-   * join and inflate both counts above — the same fan-out `listNudgeCandidates`
-   * spells `COUNT(DISTINCT …)` to survive. There is one ledger row per stage
-   * and a handful of stages, so the subquery costs nothing worth defending.
+   * A bare `c.nudges_muted_at` raises `42703` until the migration has run —
+   * and this query is not a corner of one page. `listPublicContributorSlugs`
+   * wraps it, so `/by/[slug]` prerenders through it and the sitemap reads it:
+   * the undefined column failed the *build*, on a branch whose whole point is
+   * that the column is new. Preview, development and production share one
+   * Neon database and `scripts/migrate.mts` refuses to migrate outside
+   * production, so the window where this code is deployed and the column is
+   * not is real, expected, and lasts as long as this branch does.
+   *
+   * `to_jsonb(c)` closes it exactly as `FEED_COLUMNS` closes the same gap for
+   * `has_member_details`: a row turned into jsonb has whatever keys it has,
+   * and `->>` on a missing key is null rather than an error. Null is also the
+   * truthful answer here — an address with no column cannot have been muted.
+   *
+   * Do not simplify it back to the bare column until the migration has landed
+   * in the shared database, and take this paragraph with it when you do.
    */
   const rows = await sql`
     SELECT c.id, c.email, c.slug, c.display_name, c.site_url, c.role,
-           c.revoked_at, c.invites_remaining, c.nudges_muted_at,
+           c.revoked_at, c.invites_remaining,
+           (to_jsonb(c) ->> 'nudges_muted_at') AS nudges_muted_at,
            inviter.display_name AS invited_by_name,
            COUNT(p.id)::int AS photo_count,
            COUNT(p.id) FILTER (WHERE p.published_at IS NOT NULL)::int
-             AS published_count,
-           (SELECT COUNT(*) FROM contributor_nudges n
-             WHERE n.contributor_id = c.id)::int AS nudge_count
+             AS published_count
     FROM contributors c
     LEFT JOIN photos p ON p.author_id = c.id
     LEFT JOIN contributors inviter ON inviter.id = c.invited_by
@@ -89,9 +99,51 @@ export async function listContributors(): Promise<
     published_count: number;
     invites_remaining: number;
     invited_by_name: string | null;
-    nudge_count: number;
     nudges_muted_at: string | null;
   })[];
+}
+
+/**
+ * How many reminders each contributor has been sent, for the admin table.
+ *
+ * Its own query with its own error handling, because the ledger is a *table*
+ * rather than a column — and a missing table cannot be softened the way
+ * `to_jsonb` softens a missing column, since Postgres rejects the statement at
+ * parse time. So the tolerance is a catch, and it is narrow: `42P01` is
+ * "undefined table", which on a preview deployment means precisely one thing —
+ * this branch's code is running against a database the migration has not
+ * reached yet.
+ *
+ * Degrading to an empty map renders the admin table without its reminder
+ * column, which is the same page minus one cell. The alternative is a 500 on
+ * the page the owner would open to find out what was going on.
+ *
+ * Anything that is not `42P01` is re-thrown. A query failing for some other
+ * reason is a bug, and swallowing it here would hide it behind a quietly
+ * missing column for as long as nobody counted the cells.
+ */
+export async function listNudgeCounts(): Promise<Map<string, number>> {
+  try {
+    const rows = await sql`
+      SELECT contributor_id, COUNT(*)::int AS n
+      FROM contributor_nudges
+      GROUP BY contributor_id;
+    `;
+    return new Map(
+      rows.map((row) => [
+        row["contributor_id"] as string,
+        Number(row["n"] ?? 0),
+      ]),
+    );
+  } catch (error) {
+    if ((error as { code?: string }).code === "42P01") {
+      console.warn(
+        "contributor_nudges is not there yet; the admin table omits reminder counts.",
+      );
+      return new Map();
+    }
+    throw error;
+  }
 }
 
 /** A contributor as the nudge cron needs to see them, in one row. */
@@ -102,6 +154,9 @@ export interface NudgeCandidateRow extends NudgeCandidate {
   /** Null until the first nudge mints one. */
   nudge_token: string | null;
   first_signed_in_at: string | null;
+  /** The oldest unpublished photograph, for the draft track's mail. */
+  draft_url: string | null;
+  draft_description: string | null;
 }
 
 /**
@@ -134,6 +189,15 @@ export async function listNudgeCandidates(): Promise<NudgeCandidateRow[]> {
              AS published_count,
            MIN(p.created_at) FILTER (WHERE p.published_at IS NULL)
              AS oldest_unpublished_at,
+           -- The oldest draft itself, so the mail can show it. The display
+           -- copy and never the original: that is the one file here still
+           -- carrying whatever GPS the camera wrote, and a mail client
+           -- fetches whatever it is handed. The array trick takes the same
+           -- row MIN(created_at) already picked, without a second pass.
+           (ARRAY_AGG(p.display_url ORDER BY p.created_at ASC)
+              FILTER (WHERE p.published_at IS NULL))[1] AS draft_url,
+           (ARRAY_AGG(p.description ORDER BY p.created_at ASC)
+              FILTER (WHERE p.published_at IS NULL))[1] AS draft_description,
            COALESCE(MAX(n.stage) FILTER (WHERE n.track = 'empty'), 0)::int
              AS empty_stage,
            COALESCE(MAX(n.stage) FILTER (WHERE n.track = 'draft'), 0)::int
