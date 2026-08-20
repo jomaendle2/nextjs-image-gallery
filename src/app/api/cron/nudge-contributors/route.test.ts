@@ -19,6 +19,7 @@ const ensureNudgeToken = vi.fn();
 const sendUploadNudge = vi.fn();
 const sendDraftNudge = vi.fn();
 const invitationUrl = vi.fn();
+const latestShowcasePhoto = vi.fn();
 
 vi.mock("@/lib/auth/contributors", () => ({
   listNudgeCandidates: () => listNudgeCandidates(),
@@ -35,6 +36,15 @@ vi.mock("@/lib/auth/email", () => ({
 
 vi.mock("@/lib/auth/tokens", () => ({
   invitationUrl: (email: string) => invitationUrl(email),
+}));
+
+/*
+ * The repository is mocked rather than imported, and not only for speed:
+ * `src/lib/database` throws at module scope without `DATABASE_URL`, so an
+ * unmocked import of it fails the whole file before a single test runs.
+ */
+vi.mock("@/lib/photos/showcase", () => ({
+  latestShowcasePhoto: () => latestShowcasePhoto(),
 }));
 
 const { GET } = await import("./route");
@@ -83,6 +93,7 @@ beforeEach(() => {
   claimNudge.mockResolvedValue(true);
   ensureNudgeToken.mockResolvedValue("quiet-token");
   invitationUrl.mockResolvedValue("https://example.test/contribute/verify");
+  latestShowcasePhoto.mockResolvedValue(null);
   sendUploadNudge.mockResolvedValue(undefined);
   sendDraftNudge.mockResolvedValue(undefined);
   listNudgeCandidates.mockResolvedValue([]);

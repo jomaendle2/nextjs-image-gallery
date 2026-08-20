@@ -105,11 +105,22 @@ describe("counts stated in prose match the code", () => {
    * the most checkable claim there is and the easiest to leave behind.
    */
   it("the stated number of email templates is right", () => {
-    const email = readFileSync(
+    /*
+     * Two files now, and the count is their sum. The subscriber-facing three
+     * moved to `lib/subscribers/email.ts` when `auth/email.ts` hit this
+     * project's ceiling on file length — and a counter that kept reading one
+     * file would have reported the split as three deleted templates, which is
+     * exactly the kind of confidently wrong number this test exists to catch.
+     */
+    const sources = [
       join(ROOT, "src", "lib", "auth", "email.ts"),
-      "utf8",
+      join(ROOT, "src", "lib", "subscribers", "email.ts"),
+    ].map((file) => readFileSync(file, "utf8"));
+    const actual = sources.reduce(
+      (total, text) =>
+        total + (text.match(/^export async function send/gm) ?? []).length,
+      0,
     );
-    const actual = (email.match(/^export async function send/gm) ?? []).length;
 
     const words: Record<number, string> = {
       5: "five",

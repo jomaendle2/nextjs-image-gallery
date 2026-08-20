@@ -154,6 +154,9 @@ export interface NudgeCandidateRow extends NudgeCandidate {
   /** Null until the first nudge mints one. */
   nudge_token: string | null;
   first_signed_in_at: string | null;
+  /** The oldest unpublished photograph, for the draft track's mail. */
+  draft_url: string | null;
+  draft_description: string | null;
 }
 
 /**
@@ -186,6 +189,15 @@ export async function listNudgeCandidates(): Promise<NudgeCandidateRow[]> {
              AS published_count,
            MIN(p.created_at) FILTER (WHERE p.published_at IS NULL)
              AS oldest_unpublished_at,
+           -- The oldest draft itself, so the mail can show it. The display
+           -- copy and never the original: that is the one file here still
+           -- carrying whatever GPS the camera wrote, and a mail client
+           -- fetches whatever it is handed. The array trick takes the same
+           -- row MIN(created_at) already picked, without a second pass.
+           (ARRAY_AGG(p.display_url ORDER BY p.created_at ASC)
+              FILTER (WHERE p.published_at IS NULL))[1] AS draft_url,
+           (ARRAY_AGG(p.description ORDER BY p.created_at ASC)
+              FILTER (WHERE p.published_at IS NULL))[1] AS draft_description,
            COALESCE(MAX(n.stage) FILTER (WHERE n.track = 'empty'), 0)::int
              AS empty_stage,
            COALESCE(MAX(n.stage) FILTER (WHERE n.track = 'draft'), 0)::int

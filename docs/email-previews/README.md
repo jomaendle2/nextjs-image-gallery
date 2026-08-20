@@ -7,9 +7,10 @@ person changing the copy can see what they are changing it *from*.
 
 | File | What it shows |
 | --- | --- |
-| `nudge-emails.png` | Every stage of both sequences: six for an empty page (including the two versions of stage 1), three for a stalled draft at one photograph and at several |
+| `nudge-emails.png` | Every stage of both sequences: six for an empty page (including the two versions of stage 1), three for a stalled draft at one photograph and at several. The ones carrying a photograph are the ones arguing for something |
 | `quiet-page-ask.png` | `/contribute/quiet` — the opt-out, which is a button rather than a page load |
-| `quiet-page-done.png` | The same page afterwards |
+| `quiet-page-done.png` | The same page afterwards — the accent tick that says the thing happened |
+| `quiet-page-nothing.png` | And the other ending: a link that matched nobody, marked as neither an error nor an achievement |
 
 Regenerate with:
 

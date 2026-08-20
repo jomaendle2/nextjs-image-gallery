@@ -14,7 +14,6 @@ import {
   sendApplicationApproved,
   sendApplicationDeclined,
   sendInvitation,
-  sendNewWorkAnnouncement,
 } from "@/lib/auth/email";
 import { readInviteForm } from "@/lib/auth/invite-form";
 import { requireContributor } from "@/lib/auth/session";
@@ -28,7 +27,9 @@ import {
   setPublished,
 } from "@/lib/photos/repository";
 import { revalidateFeeds } from "@/lib/photos/revalidate";
+import { showcaseForMail } from "@/lib/photos/showcase";
 import { siteOrigin } from "@/lib/site-url";
+import { sendNewWorkAnnouncement } from "@/lib/subscribers/email";
 import { listConfirmedSubscribers } from "@/lib/subscribers/repository";
 
 /**
@@ -99,12 +100,12 @@ export async function invite(
      * by nobody. A stranger being told they have been chosen, by no one in
      * particular, reads as spam.
      */
-    await sendInvitation(
-      created.email,
-      created.display_name,
-      actor.display_name,
-      await invitationUrl(created.email),
-    );
+    await sendInvitation(created.email, {
+      displayName: created.display_name,
+      invitedByName: actor.display_name,
+      signInUrl: await invitationUrl(created.email),
+      showcase: await showcaseForMail(),
+    });
   } catch (error) {
     mailed = false;
     console.error("Could not send the invitation:", error);

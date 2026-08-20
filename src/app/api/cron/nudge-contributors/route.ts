@@ -7,8 +7,10 @@ import {
   listNudgeCandidates,
 } from "@/lib/auth/contributors";
 import { sendDraftNudge, sendUploadNudge } from "@/lib/auth/email";
+import type { MailPhoto } from "@/lib/auth/mailer";
 import { type PlannedNudge, planNudges } from "@/lib/auth/nudges";
 import { invitationUrl } from "@/lib/auth/tokens";
+import { latestShowcasePhoto } from "@/lib/photos/showcase";
 import { siteOrigin } from "@/lib/site-url";
 
 /**
@@ -51,7 +53,11 @@ type Outcome = "sent" | "skipped" | "failed";
  * nothing" exits are returns rather than `continue`s, and each is next to
  * the reason for it.
  */
-async function deliver(one: PlannedNudge, origin: string): Promise<Outcome> {
+async function deliver(
+  one: PlannedNudge,
+  origin: string,
+  showcase: MailPhoto | undefined,
+): Promise<Outcome> {
   /*
    * Claim first. The insert is the idempotency: if this stage was already
    * claimed — by a retry, by two overlapping runs, by a hand-run during an
@@ -92,6 +98,7 @@ async function deliver(one: PlannedNudge, origin: string): Promise<Outcome> {
       signInUrl,
       quietUrl,
       hasSignedIn: one.hasSignedIn,
+      showcase,
     });
   } else {
     await sendDraftNudge(one.email, {
@@ -100,6 +107,22 @@ async function deliver(one: PlannedNudge, origin: string): Promise<Outcome> {
       drafts: one.drafts,
       signInUrl,
       quietUrl,
+      /*
+       * Their own draft, when the query found one. An unpublished photograph
+       * often has no description yet — that is the very thing this message
+       * asks them to write — so the alt text says what it is rather than
+       * pretending to describe it.
+       */
+      draft:
+        one.draftUrl === null
+          ? undefined
+          : {
+              url: one.draftUrl,
+              alt:
+                one.draftDescription === null || one.draftDescription === ""
+                  ? "A photograph you have not published yet."
+                  : one.draftDescription,
+            },
     });
   }
 
@@ -148,12 +171,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const origin = siteOrigin();
+
+  /*
+   * One photograph for the whole run, fetched once.
+   *
+   * Only stage 3 of the empty track shows it — the message that says there is
+   * new work here — so this is at most one extra query per run and often an
+   * unused one. Per recipient it would be the same row fetched forty times.
+   */
+  const newest = await latestShowcasePhoto();
+  const showcase: MailPhoto | undefined =
+    newest === null
+      ? undefined
+      : {
+          url: newest.display_url,
+          alt: newest.description,
+          caption: `${newest.title === "" ? "Untitled" : newest.title} — ${newest.author_name}`,
+          href: `${origin}/photo/${newest.id}`,
+        };
+
   const tally: Record<Outcome, number> = { sent: 0, skipped: 0, failed: 0 };
 
   for (const one of plan) {
     try {
       // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — a queue is kinder to the provider than a burst, and each claim must settle before the next send
-      tally[await deliver(one, origin)] += 1;
+      tally[await deliver(one, origin, showcase)] += 1;
     } catch (error) {
       /*
        * Per recipient, so one bad address does not end the run for everybody

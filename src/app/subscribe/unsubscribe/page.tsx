@@ -32,6 +32,7 @@ export default async function UnsubscribePage({
       <StatusPage
         detail="Your address has been deleted, not just flagged. Nothing further will be sent to it."
         title="No longer following"
+        tone="done"
       />
     );
   }
@@ -41,6 +42,7 @@ export default async function UnsubscribePage({
       <StatusPage
         detail="That link did not match a subscription — it may already have been used, in which case nothing is being sent to you anyway."
         title="Nothing to stop"
+        tone="nothing-to-do"
       />
     );
   }

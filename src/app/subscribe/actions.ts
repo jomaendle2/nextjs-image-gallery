@@ -4,12 +4,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { FormState } from "@/app/form-state";
+import { clientIp, signInLimiter } from "@/lib/rate-limit";
+import { siteOrigin } from "@/lib/site-url";
 import {
   sendSubscribeConfirmation,
   sendSubscribeWelcome,
-} from "@/lib/auth/email";
-import { clientIp, signInLimiter } from "@/lib/rate-limit";
-import { siteOrigin } from "@/lib/site-url";
+} from "@/lib/subscribers/email";
 import {
   confirmSubscription,
   pruneUnconfirmed,

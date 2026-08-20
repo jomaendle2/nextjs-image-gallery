@@ -1,4 +1,16 @@
-import { button, escapeHtml, page, send } from "@/lib/auth/mailer";
+import {
+  block,
+  button,
+  escapeHtml,
+  eyebrow,
+  lead,
+  MAIL,
+  type MailPhoto,
+  page,
+  paragraph,
+  photo,
+  send,
+} from "@/lib/auth/mailer";
 import { buildNudge, draftCopy, uploadCopy } from "@/lib/auth/nudge-copy";
 import { LOGIN_TTL_MINUTES } from "@/lib/auth/ttl";
 import { count } from "@/lib/plural";
@@ -26,14 +38,24 @@ export async function sendLoginEmail(to: string, url: string): Promise<void> {
       `This link works once and expires in ${LOGIN_TTL_MINUTES} minutes.`,
       "If you did not ask for it, you can ignore this email.",
     ].join("\n"),
+    /*
+     * No photograph, and that is the rule rather than an omission: this
+     * message is a credential. It should render in the time it takes to draw
+     * text, on a train, on a phone with one bar — and a picture on it would
+     * be decoration on a door key.
+     */
     html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         Here is your sign-in link. It works once and expires in ${LOGIN_TTL_MINUTES} minutes.
-       </p>
-       ${button(url, "Sign in")}
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         If you did not ask for this, you can ignore it.
-       </p>`,
+      block(
+        `${eyebrow("Sign-in link")}
+         ${lead("Here is your link back in.")}
+         ${paragraph(`It works once and expires in ${LOGIN_TTL_MINUTES} minutes.`)}
+         ${button(url, "Sign in")}`,
+        "24px 28px 28px",
+      ),
+      {
+        preheader: `Works once, expires in ${LOGIN_TTL_MINUTES} minutes.`,
+        footnote: "If you did not ask for this, you can ignore it.",
+      },
     ),
   });
 }
@@ -53,10 +75,30 @@ export async function sendLoginEmail(to: string, url: string): Promise<void> {
  */
 export async function sendInvitation(
   to: string,
-  displayName: string,
-  invitedByName?: string,
-  signInUrl?: string,
+  options: {
+    displayName: string;
+    /** The photographer who spent an invitation, when one did. */
+    invitedByName?: string;
+    /** The minted sign-in link, when the caller could mint one. */
+    signInUrl?: string;
+    /**
+     * One published photograph, when the caller could find one.
+     *
+     * The invitation is the message with the hardest job on this site: it
+     * arrives unasked, tells a stranger they have been chosen, and asks them to
+     * follow a link — which is a description of a phishing attempt as much as
+     * of an invitation. Every sentence in it was doing that work alone.
+     *
+     * A photograph from the gallery is the argument the words were making, made
+     * instead by the thing itself. Optional because early on there may be
+     * nothing published, and a message with a broken image would undo exactly
+     * the trust this exists to build.
+     */
+    showcase?: MailPhoto;
+  },
 ): Promise<void> {
+  const { displayName, invitedByName, signInUrl, showcase } = options;
+
   /*
    * The invitation carries a sign-in link when the caller could mint one.
    *
@@ -113,23 +155,28 @@ export async function sendInvitation(
       "ignore it — nothing happens until you sign in.",
     ].join("\n"),
     html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${openingHtml}
-       </p>
-       ${button(url, "Sign in and add your work")}
-       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         You publish your own work — nobody reviews it, and nothing waits for
-         us. Give a photograph a title and a description and it is live.
-       </p>
-       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         Upload the full-size originals: the gallery reads the camera and
-         exposure from the file and never opens the GPS block, so where you
-         stood stays yours unless you choose to write it down or mark it.
-       </p>
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         The link works once and lasts a week. If you were not expecting this,
-         ignore it — nothing happens until you sign in.
-       </p>`,
+      /*
+       * The photograph before the words, which is the whole change. A
+       * gallery's invitation that opens with a paragraph is asking somebody
+       * to take its word for something it could simply show them.
+       */
+      `${showcase === undefined ? "" : photo(showcase)}
+       ${block(
+         `${eyebrow(from === "" ? "Invitation" : `Invitation from ${from}`)}
+          <div style="font-size:21px;line-height:1.4;letter-spacing:-0.02em;color:#e8eaed;margin:0 0 14px">${openingHtml}</div>
+          ${paragraph("You publish your own work. Nobody reviews it and nothing waits for us — give a photograph a title and a description and it is live.")}
+          ${paragraph("Upload the full-size originals: the gallery reads the camera and the exposure from the file and never opens the GPS block, so where you stood stays yours unless you write it down or mark it.")}
+          ${button(url, "Sign in and add your work")}`,
+         "24px 28px 28px",
+       )}`,
+      {
+        preheader:
+          from === ""
+            ? "Publish your photographs on the beauty of earth."
+            : `${from} thinks your work belongs here.`,
+        footnote:
+          "The link works once and lasts a week. If you were not expecting this, ignore it — nothing happens until you sign in.",
+      },
     ),
   });
 }
@@ -152,14 +199,14 @@ export async function sendApplicationApproved(
       "Upload the full-size original; the gallery handles the rest.",
     ].join("\n"),
     html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${name}, your work is a fit. Welcome.
-       </p>
-       ${button(url, "Publish your first photograph")}
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         Sign in with this address. Upload the full-size original — the gallery
-         handles the rest.
-       </p>`,
+      block(
+        `${eyebrow("Application")}
+         <div style="font-size:21px;line-height:1.4;letter-spacing:-0.02em;color:#e8eaed;margin:0 0 14px">${name}, your work is a fit. Welcome.</div>
+         ${paragraph("Sign in with this address and upload the full-size original — the gallery handles the rest.")}
+         ${button(url, "Publish your first photograph")}`,
+        "24px 28px 28px",
+      ),
+      { preheader: "Your work is a fit. Here is the way in." },
     ),
   });
 }
@@ -202,25 +249,18 @@ export async function sendMembershipWelcome(
       `Cancel any time from ${origin}/membership. No notice period.`,
     ].join("\n"),
     html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         Thank you — your membership is active.
-       </p>
-       ${button(signInUrl, "Sign in")}
-       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         The link works once and lasts ${LOGIN_TTL_MINUTES} minutes. If it
-         expires, ask for a fresh one at
-         <a href="${escapeHtml(`${origin}/contribute`)}" style="color:#a8adb4">${escapeHtml(`${origin}/contribute`)}</a>
-         using this same address.
-       </p>
-       <p style="margin:0 0 16px;color:#6b7178;font-size:13px;line-height:1.6">
-         Signed in, every photograph shows where it was taken and how,
-         wherever the photographer has written it down.
-       </p>
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         Cancel any time from
-         <a href="${escapeHtml(`${origin}/membership`)}" style="color:#6b7178">${escapeHtml(`${origin}/membership`)}</a>.
-         No notice period.
-       </p>`,
+      block(
+        `${eyebrow("Membership")}
+         ${lead("Thank you — your membership is active.")}
+         ${paragraph("Signed in, every photograph shows where it was taken and how, wherever the photographer has written it down.")}
+         ${button(signInUrl, "Sign in")}
+         ${paragraph(`The link works once and lasts ${LOGIN_TTL_MINUTES} minutes. If it expires, ask for a fresh one at ${origin}/contribute using this same address.`)}`,
+        "24px 28px 28px",
+      ),
+      {
+        preheader: "Every photograph now shows where it was taken, and how.",
+        footnote: `Cancel any time from <a href="${escapeHtml(`${origin}/membership`)}" style="color:${MAIL.faint}">${escapeHtml(`${origin}/membership`)}</a>. No notice period.`,
+      },
     ),
   });
 }
@@ -255,37 +295,23 @@ export async function sendApplicationDeclined(
       "",
       "You are welcome to apply again later.",
     ].join("\n"),
+    /*
+     * No button, and no photograph. This is the one message with nothing to
+     * ask of the reader, and a picture of the gallery they are not joining
+     * would read as a boast. Type and space carry it alone.
+     */
     html: page(
-      `<p style="margin:0 0 20px;color:#a8adb4;line-height:1.6">
-         ${name}, thank you for showing us your work.
-       </p>
-       <p style="margin:0 0 20px;color:#a8adb4;line-height:1.6">
-         We are not able to add you to the gallery at the moment. It stays
-         deliberately small, which means saying no to photographs we like.
-       </p>
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         You are welcome to apply again later.
-       </p>`,
+      block(
+        `${eyebrow("Application")}
+         <div style="font-size:21px;line-height:1.4;letter-spacing:-0.02em;color:#e8eaed;margin:0 0 14px">${name}, thank you for showing us your work.</div>
+         ${paragraph("We are not able to add you to the gallery at the moment. It stays deliberately small, which means saying no to photographs we like.")}`,
+        "24px 28px 28px",
+      ),
+      {
+        preheader: "Not this time — the gallery stays deliberately small.",
+        footnote: "You are welcome to apply again later.",
+      },
     ),
-  });
-}
-
-/**
- * The "new work is up" message, to one subscriber.
- *
- * The body is built by `lib/announcement.ts` and passed in already
- * assembled, so the escaping can be tested without a mail provider — see
- * the note there. This function's only job is delivery.
- */
-export async function sendNewWorkAnnouncement(
-  to: string,
-  message: { subject: string; text: string; html: string },
-): Promise<void> {
-  await send({
-    to,
-    subject: message.subject,
-    text: message.text,
-    html: page(message.html),
   });
 }
 
@@ -312,52 +338,20 @@ export async function sendAnnouncementReminder(
       `Send it, or leave it for next week: ${url}`,
     ].join("\n"),
     html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         ${phrase} have been published since the last announcement.
-       </p>
-       ${button(url, "Review and send")}
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         Nothing goes out until you press send.
-       </p>`,
+      block(
+        `${eyebrow("Waiting to be announced")}
+         ${lead(`${phrase} have been published since the last announcement.`)}
+         ${button(url, "Review and send")}`,
+        "24px 28px 28px",
+      ),
+      {
+        preheader: `${phrase}, and the list has not been told.`,
+        footnote: "Nothing goes out until you press send.",
+      },
     ),
   });
 }
 
-/**
- * The one message an unconfirmed address is ever sent.
- *
- * Deliberately plain about what happened and what to do if it was not them.
- * The address in the "to" line is the only evidence we have that whoever
- * typed it owns it, and until this link comes back we assume they do not.
- */
-export async function sendSubscribeConfirmation(
-  to: string,
-  url: string,
-): Promise<void> {
-  await send({
-    to,
-    subject: "Confirm — the beauty of earth.",
-    text: [
-      "Someone asked to hear when new photographs are published on",
-      "the beauty of earth. If that was you, confirm here:",
-      "",
-      url,
-      "",
-      "The link expires in a day. If it was not you, ignore this —",
-      "nothing will be sent to this address.",
-    ].join("\n"),
-    html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         Someone asked to hear when new photographs are published. If that was
-         you, confirm below — the link expires in a day.
-       </p>
-       ${button(url, "Yes, follow the gallery")}
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         If it was not you, ignore this. Nothing will be sent to this address.
-       </p>`,
-    ),
-  });
-}
 /**
  * Nudges somebody who was invited and has uploaded nothing.
  *
@@ -378,14 +372,32 @@ export async function sendUploadNudge(
     signInUrl: string;
     quietUrl: string;
     hasSignedIn: boolean;
+    /**
+     * Somebody else's photograph, on the one stage that argues from the
+     * gallery rather than from the reader's own page.
+     *
+     * Stage 3 is where the copy says there is new work here and three
+     * invitations of theirs unspent; the photograph is that sentence's
+     * evidence. The other five stay text — four and five are deliberately
+     * quiet, and a picture on them would be a nudge pretending to be news.
+     */
+    showcase?: MailPhoto;
   },
 ): Promise<void> {
   const message = buildNudge(
     uploadCopy(options.displayName, options.stage, options.hasSignedIn),
     options.signInUrl,
     options.quietUrl,
+    options.stage === 3 ? options.showcase : undefined,
   );
-  await send({ to, ...message, html: page(message.html) });
+  await send({
+    to,
+    ...message,
+    html: page(message.html, {
+      preheader: message.preheader,
+      footnote: message.footnote,
+    }),
+  });
 }
 
 /**
@@ -403,50 +415,28 @@ export async function sendDraftNudge(
     drafts: number;
     signInUrl: string;
     quietUrl: string;
+    /**
+     * Their own draft — the strongest image this software can send anybody.
+     *
+     * Their unpublished photograph, in their own inbox, above a button that
+     * publishes it. Every stage of this track carries it, because every stage
+     * of this track is about that photograph.
+     */
+    draft?: MailPhoto;
   },
 ): Promise<void> {
   const message = buildNudge(
     draftCopy(options.displayName, options.stage, options.drafts),
     options.signInUrl,
     options.quietUrl,
+    options.draft,
   );
-  await send({ to, ...message, html: page(message.html) });
-}
-
-/**
- * Sent once, on confirmation, carrying the unsubscribe link.
- *
- * That link is here as well as in every later message, because the moment
- * somebody most wants a way out is the moment they realise they did not mean
- * to sign up at all.
- */
-export async function sendSubscribeWelcome(
-  to: string,
-  unsubscribeUrl: string,
-): Promise<void> {
-  const gallery = siteOrigin();
-
   await send({
     to,
-    subject: "You're following — the beauty of earth.",
-    text: [
-      "You will hear from us when new photographs are published.",
-      "Not often, and never for anything else.",
-      "",
-      gallery,
-      "",
-      `Unsubscribe at any time: ${unsubscribeUrl}`,
-    ].join("\n"),
-    html: page(
-      `<p style="margin:0 0 24px;color:#a8adb4;line-height:1.6">
-         You will hear from us when new photographs are published. Not often,
-         and never for anything else.
-       </p>
-       ${button(gallery, "See the gallery")}
-       <p style="margin:0;color:#6b7178;font-size:13px;line-height:1.6">
-         <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7178">Stop following</a>
-         at any time.
-       </p>`,
-    ),
+    ...message,
+    html: page(message.html, {
+      preheader: message.preheader,
+      footnote: message.footnote,
+    }),
   });
 }
