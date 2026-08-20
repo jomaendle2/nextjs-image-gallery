@@ -28,8 +28,19 @@ interface Recorded {
 
 const issued: Recorded[] = [];
 
-/** Rows the fake returns, oldest first, one array per statement. */
-let responses: Record<string, unknown>[][] = [];
+/**
+ * Rows the fake returns, oldest first, one entry per statement.
+ *
+ * An `Error` in the queue is thrown rather than returned, which is the only
+ * way to test what this module does when one statement of a multi-statement
+ * flow fails while the ones before it have already committed.
+ */
+let responses: (Record<string, unknown>[] | Error)[] = [];
+
+/** A Postgres error as the neon driver surfaces one, code and all. */
+function pgError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
 
 /**
  * A stand-in for neon's tagged template.
@@ -45,7 +56,10 @@ function fakeSql(
   ...values: unknown[]
 ): Promise<Record<string, unknown>[]> {
   issued.push({ text: strings.join("?"), values });
-  return Promise.resolve(responses.shift() ?? []);
+  const next = responses.shift();
+  return next instanceof Error
+    ? Promise.reject(next)
+    : Promise.resolve(next ?? []);
 }
 
 vi.mock("@/lib/database", () => ({ sql: fakeSql }));
@@ -197,6 +211,43 @@ describe("consumeLoginToken", () => {
           role: "contributor",
         },
       ],
+    ];
+
+    const redeemed = await consumeLoginToken("a-secret");
+
+    expect(redeemed?.email).toBe("shooter@example.test");
+    expect(redeemed?.contributor?.slug).toBe("shooter");
+  });
+
+  it("still signs somebody in when the first-sign-in stamp cannot be written", async () => {
+    /*
+     * The one failure that must not cost somebody their link.
+     *
+     * `first_signed_in_at` is written *after* `used_at`, so by the time this
+     * statement runs the token is already spent and cannot be presented
+     * again. A rejection propagating from here is therefore not "sign-in
+     * failed, try the link again" — it is a 500 on a link that no longer
+     * works, and the only way back is asking for another one.
+     *
+     * `42703` is undefined_column, which is precisely the state of every
+     * preview deployment of a branch that adds the column: `scripts/migrate`
+     * refuses to run outside production and all three environments share one
+     * Neon database, so the code is deployed and the column is not. The same
+     * window `listContributors` reaches for `to_jsonb` to survive.
+     */
+    responses = [
+      [{ email: "shooter@example.test" }],
+      [
+        {
+          id: "c1",
+          email: "shooter@example.test",
+          slug: "shooter",
+          display_name: "Shooter",
+          site_url: null,
+          role: "contributor",
+        },
+      ],
+      pgError("42703", 'column "first_signed_in_at" does not exist'),
     ];
 
     const redeemed = await consumeLoginToken("a-secret");

@@ -134,12 +134,35 @@ export async function consumeLoginToken(
    * writes on exactly one sign-in per contributor and every later one costs
    * a statement that touches no rows. It is fire-and-forget in the sense
    * that matters: nothing below reads it, so it can only ever be late.
+   *
+   * And fire-and-forget is enforced here rather than merely intended, because
+   * the statement above already spent the token. Anything thrown from this
+   * one is not a failed sign-in the visitor can retry — the link is gone, and
+   * they get a 500 holding a secret that no longer works. Whatever this
+   * column is worth, it is not worth that.
+   *
+   * The catch is deliberately total, which is a departure from
+   * `listNudgeCounts` next door: that one narrows to `42P01` and rethrows the
+   * rest, because a query failing for an unexpected reason there is a bug
+   * worth surfacing and costs only a missing table cell. Here the cost of
+   * surfacing anything is somebody's way in, and no reason for failing is
+   * good enough. `42703` — undefined_column, every preview deployment of the
+   * branch that adds it, since `scripts/migrate.mts` refuses to run outside
+   * production and all three environments share one database — is merely the
+   * expected one.
    */
-  await sql`
-    UPDATE contributors
-       SET first_signed_in_at = now()
-     WHERE email = ${address} AND first_signed_in_at IS NULL;
-  `;
+  try {
+    await sql`
+      UPDATE contributors
+         SET first_signed_in_at = now()
+       WHERE email = ${address} AND first_signed_in_at IS NULL;
+    `;
+  } catch (error) {
+    console.warn(
+      "Could not stamp first_signed_in_at; signing in anyway:",
+      error,
+    );
+  }
 
   return {
     email: address,
