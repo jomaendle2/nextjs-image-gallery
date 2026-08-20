@@ -52,6 +52,20 @@ export const DRAFT_STAGES_HOURS = [24, 72, 168] as const;
  */
 export const MIN_GAP_HOURS = 20;
 
+/**
+ * How early a stage may arrive against the interval it owes.
+ *
+ * The same four hours `MIN_GAP_HOURS` already builds in, named once so the
+ * two rules cannot drift apart. A daily 09:00 job does not run at 09:00: it
+ * runs at 09:04, then at 08:58, and an interval demanding *exactly* 720
+ * hours would find yesterday's send four minutes too recent and stay silent.
+ * On the short thresholds that costs a day. On the monthly tail it costs a
+ * month, and a "monthly" mail that lands every 31 or 32 days depending on
+ * scheduler jitter is the kind of drift nobody notices until the sequence
+ * takes half a year to finish.
+ */
+export const CRON_DRIFT_HOURS = 4;
+
 export type NudgeTrack = "empty" | "draft";
 
 /** One row of `listNudgeCandidates`, as the schedule needs to read it. */
@@ -137,7 +151,10 @@ function anchorFor(
  *   - the track is exhausted, so the sequence has ended by itself;
  *   - there is no anchor to measure from;
  *   - the anchor is not yet old enough for the next stage;
- *   - another nudge went out inside `MIN_GAP_HOURS`.
+ *   - another nudge went out inside `MIN_GAP_HOURS`;
+ *   - the previous stage of this track went out too recently for this
+ *     one, which is what keeps a late sequence paced rather than
+ *     delivered all at once.
  *
  * A daily cron means "24h" is really "the first 09:00 run at least 24 hours
  * after the anchor". That is the desired behaviour rather than a rounding
@@ -184,6 +201,39 @@ export function dueStage(
   const lastSent = toTime(candidate.last_sent_at);
   if (lastSent !== null && hoursBetween(lastSent, at) < MIN_GAP_HOURS) {
     return null;
+  }
+
+  /*
+   * The interval this stage owes the one before it, and the rule without
+   * which the thresholds above do not actually pace anything.
+   *
+   * Every threshold is measured from the anchor, so the moment the anchor is
+   * older than the *last* threshold, every remaining stage is due — and stays
+   * due for ever. The global floor above then spaces them by twenty hours,
+   * which is to say the daily cron walks the rest of the sequence one stage
+   * per morning. A contributor invited last year would receive the entire
+   * monthly tail, ending with "this is the last time we will mention it", in
+   * the course of three days; a photographer sitting on a week-old draft
+   * would get all three draft stages the same way, on the very first run,
+   * because that track has no seed to start it further along.
+   *
+   * Measuring the gap between two adjacent thresholds and requiring it to
+   * have elapsed *since the last send* makes the sequence keep its shape
+   * however far behind it starts. Late is then simply late: the stages still
+   * arrive a day, three days and a week apart, just beginning later than the
+   * invitation did.
+   *
+   * Only from stage two onward. Stage one has no predecessor on this track,
+   * and must not inherit an interval from the track somebody just left — an
+   * upload after two empty nudges begins the draft track at stage 1, and the
+   * twenty-hour floor is the whole of the rule there.
+   */
+  const previous = stages[next - 2];
+  if (previous !== undefined && lastSent !== null) {
+    const interval = threshold - previous - CRON_DRIFT_HOURS;
+    if (hoursBetween(lastSent, at) < interval) {
+      return null;
+    }
   }
 
   return next;

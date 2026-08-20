@@ -85,6 +85,34 @@ describe("I17 — unasked-for mail carries a way out", () => {
     expect(senders).toMatch(/sendDraftNudge[\s\S]*buildNudge\(/);
   });
 
+  it("only the transport's own fields reach the provider", () => {
+    /*
+     * Both nudge senders call `send({ to, ...message, html: page(…) })`, and
+     * `NudgeMessage` carries two fields `Message` does not — `preheader` and
+     * `footnote`, which are inputs to the template rather than anything a
+     * mail API should see. TypeScript does not apply excess-property
+     * checking to spread properties, so nothing at the type level objects.
+     *
+     * What keeps them off the wire is that `send` never forwards its
+     * argument: it destructures the five fields it knows and names them
+     * again when building the body. That is the whole guard, it is one line,
+     * and it would be entirely natural for somebody tidying up to replace it
+     * with `JSON.stringify({ from, ...message })` — at which point every
+     * nudge starts posting two undeclared fields to Resend, and finds out
+     * whether Resend validates strictly.
+     */
+    const mailer = read("lib", "auth", "mailer.ts");
+    const transport = mailer.slice(
+      mailer.indexOf("export async function send"),
+    );
+    expect(transport).toMatch(
+      /const\s*\{\s*to,\s*subject,\s*text,\s*html,\s*headers\s*\}\s*=\s*message;/,
+    );
+    // Nothing spread into the payload, which is the only way an undeclared
+    // field could get there.
+    expect(transport).not.toMatch(/JSON\.stringify\(\{[^}]*\.\.\./);
+  });
+
   it("the opt-out is in the plain-text alternative too", () => {
     // An opt-out that only exists in the HTML part is an opt-out that only
     // exists for some readers, which is not one.

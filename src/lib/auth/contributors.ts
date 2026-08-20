@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { cache } from "react";
 import { sql } from "@/lib/database";
+import { NUDGE_SEED_AT } from "@/lib/schema";
 import type { NudgeCandidate } from "./nudges";
 import { generateSecret } from "./secrets";
 import { normaliseEmail, pickFreeSlug, slugify } from "./slug";
@@ -127,6 +128,7 @@ export async function listNudgeCounts(): Promise<Map<string, number>> {
     const rows = await sql`
       SELECT contributor_id, COUNT(*)::int AS n
       FROM contributor_nudges
+      WHERE sent_at > ${NUDGE_SEED_AT}
       GROUP BY contributor_id;
     `;
     return new Map(

@@ -10,7 +10,8 @@ import { sendDraftNudge, sendUploadNudge } from "@/lib/auth/email";
 import type { MailPhoto } from "@/lib/auth/mailer";
 import { type PlannedNudge, planNudges } from "@/lib/auth/nudges";
 import { invitationUrl } from "@/lib/auth/tokens";
-import { latestShowcasePhoto } from "@/lib/photos/showcase";
+import { pause } from "@/lib/pace";
+import { showcaseForMail } from "@/lib/photos/showcase";
 import { siteOrigin } from "@/lib/site-url";
 
 /**
@@ -41,8 +42,45 @@ import { siteOrigin } from "@/lib/site-url";
  * against a list that accumulated before the feature shipped cannot become a
  * burst. The overflow is warned about rather than dropped quietly, because a
  * silent truncation reads afterwards as "everybody was covered".
+ *
+ * Forty of these is also why this route carries an explicit `maxDuration` in
+ * `vercel.json`, exactly as the draft route does. Each one is three database
+ * round trips and a call to Resend, sequentially, so a full run is tens of
+ * seconds rather than one. A timeout mid-loop would not merely be slow: the
+ * claim happens *before* the send, so everybody already claimed and not yet
+ * mailed loses that stage silently — they never receive the message and
+ * tomorrow's run skips past them. The ceiling is set well above the worst
+ * realistic run so that cannot be what stops it.
  */
 const MAX_PER_RUN = 40;
+
+/**
+ * The wait between two messages, and the other half of the cap.
+ *
+ * `MAX_PER_RUN` bounds how much one run sends; this bounds how fast. Without
+ * it the loop issues a message roughly every 100-200ms — three Neon round
+ * trips and one Resend POST — which is several times Resend's default
+ * allowance of two requests a second.
+ *
+ * Being throttled is not a delay here, it is a loss. The claim is written
+ * before the send, so a 429 is caught by the handler below, counted as
+ * `failed`, and that recipient never receives that stage: tomorrow's run
+ * finds the stage claimed and moves past them. A burst could quietly lose
+ * most of itself and still answer 200 with a plausible-looking tally.
+ *
+ * 600ms rather than 500 for margin, because the consequence of being a little
+ * too slow is a run that takes forty seconds instead of thirty, and the
+ * consequence of being a little too fast is somebody silently never hearing
+ * from us. At the cap that is under half a minute of waiting, well inside the
+ * `maxDuration` this route declares in `vercel.json`.
+ *
+ * Releasing the claim on a failed send would be the other way to fix this,
+ * and it is deliberately not what happens: `markAnnounced`'s convention, and
+ * the comment on the claim above, both say a duplicate is worse than a miss.
+ * A send that failed *after* the provider accepted it would then be mailed
+ * twice. Not being throttled in the first place has no such edge.
+ */
+const SEND_INTERVAL_MS = 600;
 
 type Outcome = "sent" | "skipped" | "failed";
 
@@ -178,32 +216,46 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
    * Only stage 3 of the empty track shows it — the message that says there is
    * new work here — so this is at most one extra query per run and often an
    * unused one. Per recipient it would be the same row fetched forty times.
+   *
+   * Through `showcaseForMail` rather than mapping the row here, because the
+   * two invitations already go through it and the mapping is where the
+   * decisions live: the display copy and never the original, a caption that
+   * credits the photographer, a link to the photograph. A fourth hand-rolled
+   * copy is a fourth place for one of those to quietly stop being true.
    */
-  const newest = await latestShowcasePhoto();
-  const showcase: MailPhoto | undefined =
-    newest === null
-      ? undefined
-      : {
-          url: newest.display_url,
-          alt: newest.description,
-          caption: `${newest.title === "" ? "Untitled" : newest.title} — ${newest.author_name}`,
-          href: `${origin}/photo/${newest.id}`,
-        };
+  const showcase: MailPhoto | undefined = await showcaseForMail();
 
   const tally: Record<Outcome, number> = { sent: 0, skipped: 0, failed: 0 };
 
-  for (const one of plan) {
+  for (const [index, one] of plan.entries()) {
+    let outcome: Outcome = "failed";
     try {
       // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose — a queue is kinder to the provider than a burst, and each claim must settle before the next send
-      tally[await deliver(one, origin, showcase)] += 1;
+      outcome = await deliver(one, origin, showcase);
     } catch (error) {
       /*
        * Per recipient, so one bad address does not end the run for everybody
        * behind it. The stage stays claimed, which means that person misses
        * this one message rather than receiving it twice tomorrow.
        */
-      tally.failed += 1;
       console.error(`Nudge to ${one.email} failed:`, error);
+    }
+    tally[outcome] += 1;
+
+    /*
+     * Only after something actually reached the provider, and never after the
+     * last one. A skip never made the call — the stage was already claimed —
+     * so pausing for it would spend a minute of the run's budget waiting on
+     * nothing, and a wait after the final send is a sleep rather than a rate
+     * limit.
+     *
+     * A failure is paced exactly like a success on purpose: the failure this
+     * is here to prevent is a 429, and a run that responded to being told it
+     * was going too fast by immediately trying again would be the one case
+     * where the pacing was needed most and absent.
+     */
+    if (outcome !== "skipped" && index < plan.length - 1) {
+      await pause(SEND_INTERVAL_MS);
     }
   }
 

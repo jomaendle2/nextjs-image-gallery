@@ -19,7 +19,8 @@ const ensureNudgeToken = vi.fn();
 const sendUploadNudge = vi.fn();
 const sendDraftNudge = vi.fn();
 const invitationUrl = vi.fn();
-const latestShowcasePhoto = vi.fn();
+const showcaseForMail = vi.fn();
+const pause = vi.fn();
 
 vi.mock("@/lib/auth/contributors", () => ({
   listNudgeCandidates: () => listNudgeCandidates(),
@@ -39,12 +40,21 @@ vi.mock("@/lib/auth/tokens", () => ({
 }));
 
 /*
+ * The wait between two sends, mocked to nothing so the suite stays fast. What
+ * is asserted is that the route waited and where in the loop it did; the
+ * duration itself is a constant, pinned separately.
+ */
+vi.mock("@/lib/pace", () => ({
+  pause: (ms: number) => pause(ms),
+}));
+
+/*
  * The repository is mocked rather than imported, and not only for speed:
  * `src/lib/database` throws at module scope without `DATABASE_URL`, so an
  * unmocked import of it fails the whole file before a single test runs.
  */
 vi.mock("@/lib/photos/showcase", () => ({
-  latestShowcasePhoto: () => latestShowcasePhoto(),
+  showcaseForMail: () => showcaseForMail(),
 }));
 
 const { GET } = await import("./route");
@@ -93,7 +103,8 @@ beforeEach(() => {
   claimNudge.mockResolvedValue(true);
   ensureNudgeToken.mockResolvedValue("quiet-token");
   invitationUrl.mockResolvedValue("https://example.test/contribute/verify");
-  latestShowcasePhoto.mockResolvedValue(null);
+  showcaseForMail.mockResolvedValue(undefined);
+  pause.mockResolvedValue(undefined);
   sendUploadNudge.mockResolvedValue(undefined);
   sendDraftNudge.mockResolvedValue(undefined);
   listNudgeCandidates.mockResolvedValue([]);
@@ -280,6 +291,42 @@ describe("a real run", () => {
     const body = (await response.json()) as { sent: number; failed: number };
 
     expect(body).toMatchObject({ sent: 1, failed: 1 });
+  });
+
+  it("waits between sends rather than emptying the run at the provider", async () => {
+    /*
+     * The cap bounds how many messages a run sends; nothing bounded how
+     * fast. Three database round trips and one Resend POST per recipient
+     * runs at roughly five to ten sends a second, against a provider whose
+     * default allowance is two — and a 429 does not merely delay that
+     * message. The claim is already written, so the throw is caught, counted
+     * as `failed`, and that person silently never receives that stage while
+     * tomorrow's run skips past them. A burst can lose most of itself this
+     * way and still answer 200.
+     *
+     * The order is the assertion, not the count: a wait after the last send
+     * would be a sleep rather than a rate limit, and one before the first
+     * would delay every run for nothing.
+     */
+    listNudgeCandidates.mockResolvedValue([
+      candidate({ id: "a", email: "a@example.com" }),
+      candidate({ id: "b", email: "b@example.com" }),
+      candidate({ id: "c", email: "c@example.com" }),
+    ]);
+    const order: string[] = [];
+    sendUploadNudge.mockImplementation(() => {
+      order.push("send");
+      return Promise.resolve();
+    });
+    pause.mockImplementation(() => {
+      order.push("wait");
+      return Promise.resolve();
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: as above
+    await GET(request() as any);
+
+    expect(order).toEqual(["send", "wait", "send", "wait", "send"]);
   });
 
   it("caps a run and defers the rest rather than truncating quietly", async () => {
