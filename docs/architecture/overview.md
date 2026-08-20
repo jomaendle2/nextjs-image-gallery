@@ -164,5 +164,6 @@ from `vercel dev`.
 - [toolchain.md](toolchain.md) — why the linter is configured the way it is.
 - [../../DESIGN.md](../../DESIGN.md) — the design system.
 - `src/lib/legal.ts` — operator details behind the three legal pages.
-- [../archive/README.md](../archive/README.md) — the audits and reviews this
-  was all built out of.
+- The commit history, for anything older than this tree. Each invariant in
+  [security.md](security.md) names the defect that produced it, which is the
+  half worth keeping.

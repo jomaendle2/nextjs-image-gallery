@@ -11,9 +11,9 @@ npm run dev
 
 Open <http://localhost:3000>. Node 22.18 or newer; CI builds on 24.
 
-**[docs/README.md](docs/README.md) is the map** — architecture, operations,
-the roadmap, and the archived audits this was built out of. Working on the
-code, by hand or with an agent, starts at [AGENTS.md](AGENTS.md).
+**[docs/README.md](docs/README.md) is the map** — architecture, operations
+and the roadmap. Working on the code, by hand or with an agent, starts at
+[AGENTS.md](AGENTS.md).
 
 ## Routes
 

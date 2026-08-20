@@ -28,12 +28,17 @@ Procedural. Changes when a workflow does.
 | [operations/scripts.md](operations/scripts.md) | Looking for the command that does the thing |
 | [operations/contributing-photos.md](operations/contributing-photos.md) | A photographer asked how any of this works |
 
-## Ahead and behind
+## Ahead
 
 | Document | Read it when |
 | --- | --- |
 | [roadmap.md](roadmap.md) | Deciding what is next. Everything deliberately not done, with the condition that would change that |
-| [archive/README.md](archive/README.md) | You want to know *why* something is the way it is. Finished audits, reviews and plans |
+
+There is no archive. Finished audits, reviews and plans are in the commit
+history, which does not go stale and does not have to be maintained; what
+survived them is in the documents above, and every invariant in
+[architecture/security.md](architecture/security.md) names the defect that
+produced it.
 
 ---
 

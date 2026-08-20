@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { ROOT, walk } from "./source-text";
 
@@ -29,27 +29,6 @@ export const DOCS = join(ROOT, "docs");
  * exempt from everything by having picked an unlucky filename.
  */
 const SNAPSHOTS = join(DOCS, "snapshots");
-
-/**
- * The archive, and the one exemption in any of this.
- *
- * An archived document is a statement about a past state — what was true in
- * August, what a review found, what a plan intended. Holding it to the
- * present would mean editing it whenever the code moves, and a record edited
- * to keep a test quiet is not a record. That edit is the thing the exemption
- * exists to prevent.
- *
- * A directory rule rather than a list of files, unlike `NO_STYLESHEET` in
- * `design.test.ts`, and for the opposite reason: there, growth is supposed
- * to hurt, because each entry is a decision. Here the archive grows by
- * design and a per-file list would make every archival a two-file edit.
- *
- * What is *not* exempt is links. A sentence describing August is history; a
- * link is a promise to whoever clicks it now, and a promise that 404s is
- * broken however old the page is. The archive's own `README.md` is not a
- * record at all — it is the index into them — so it is held to everything.
- */
-const ARCHIVE = "docs/archive";
 
 /**
  * The block `next dev` writes into `AGENTS.md` and re-adds if it is removed.
@@ -119,7 +98,7 @@ export function authored(file: string, text: string): string {
   return file === "AGENTS.md" ? text.replace(GENERATED, "") : text;
 }
 
-/** Every markdown file at the repository root. */
+/** Every markdown file at the repository root, symlinks included. */
 function rootMarkdown(): string[] {
   return readdirSync(ROOT)
     .filter((entry) => entry.endsWith(".md"))
@@ -135,34 +114,19 @@ function rootMarkdown(): string[] {
  * every other, which is the shape of hole this whole file is against.
  */
 export function prose(): Prose[] {
-  return [...rootMarkdown(), ...markdownUnder()].map((file) => ({
+  /*
+   * Symlinks are not documents. `CLAUDE.md` points at `AGENTS.md`, so
+   * following it would scan the same bytes under a second name and report
+   * every finding twice. It still counts as a file that *exists* — see
+   * `knownMarkdown` — because a comment naming it is naming something real.
+   */
+  const roots = rootMarkdown().filter(
+    (file) => !lstatSync(file).isSymbolicLink(),
+  );
+  return [...roots, ...markdownUnder()].map((file) => ({
     file: rel(file),
     text: authored(rel(file), readFileSync(file, "utf8")),
   }));
-}
-
-/**
- * Whether a document is a record rather than a claim about now.
- *
- * On the repo-relative path with its separator, not `startsWith` against the
- * folder's own name. The folder name is a prefix of any sibling whose name
- * merely begins the same way — a hyphenated note file beside it, a directory
- * that pluralises it — and either would have been silently exempted from
- * every check in `docs.test.ts` by nothing more than a well-chosen filename.
- * An exemption that can be claimed by accident is not an exemption.
- *
- * Asked of the path rather than stored on the record, because a field that
- * says the same thing is a second place for the answer to live.
- */
-function isHistorical(relative: string): boolean {
-  return (
-    relative.startsWith(`${ARCHIVE}/`) && basename(relative) !== "README.md"
-  );
-}
-
-/** Live prose: everything the present tense is answerable for. */
-export function current(): Prose[] {
-  return prose().filter((entry) => !isHistorical(entry.file));
 }
 
 /**

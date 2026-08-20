@@ -1,11 +1,10 @@
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   authored,
   BARE_DOC,
   brokenRefs,
-  current,
   DOC_PATH,
   DOCS,
   exists,
@@ -36,15 +35,19 @@ import { ROOT } from "./source-text";
  */
 
 /**
- * The three files a document may be reached from.
+ * The two files a document may be reached from.
  *
- * Three rather than one so that `AGENTS.md` does not have to name every
- * dated record individually — it defers to `docs/README.md`, which defers to
- * the archive's own index. One hop each, hard-coded rather than computed as
- * full reachability, because full reachability lets two orphans link to each
- * other and call themselves indexed.
+ * Two rather than one because `AGENTS.md` is capped: it names the documents
+ * worth interrupting a task for and defers the rest to `docs/README.md`. One
+ * hop, hard-coded rather than computed as full reachability, because full
+ * reachability lets two orphans link to each other and call themselves
+ * indexed.
+ *
+ * There were three while the archive had its own index. Deleting the archive
+ * took the third with it — a document nobody maintains is not made current by
+ * being listed.
  */
-const INDEXES = ["AGENTS.md", "docs/README.md", "docs/archive/README.md"];
+const INDEXES = ["AGENTS.md", "docs/README.md"];
 
 /**
  * What `AGENTS.md` may cost, in lines of our own writing.
@@ -87,7 +90,7 @@ describe("every pointer between documents resolves", () => {
    */
   it("every docs/ path named in prose resolves", () => {
     expect(
-      brokenRefs(current(), DOC_PATH, exists),
+      brokenRefs(prose(), DOC_PATH, exists),
       "Name the document where it now lives. If the sentence is about a " +
         "record that was archived, describe it and link the archive — do " +
         "not keep the old path alive in prose.",
@@ -168,17 +171,21 @@ describe("the tree has the shape the map describes", () => {
   });
 
   /*
-   * The indexes are hard-coded above, which is only honest if the chain
-   * between them is real. Without these two edges a reader following
-   * `AGENTS.md` never reaches the archive, and the list quietly becomes
-   * three unrelated roots.
+   * The indexes are hard-coded above, which is only honest if the edge
+   * between them is real — otherwise the list is two unrelated roots and a
+   * document linked from neither still passes as reachable.
+   *
+   * `DESIGN.md` is asserted here too. It is the one reference document that
+   * lives at the root rather than under `docs/`, so the orphan check above
+   * cannot see it: nothing would notice if the map stopped naming the file
+   * that governs every colour and every heading on the site.
    */
-  it("the indexes form a chain", () => {
-    expect(readFileSync(join(ROOT, "AGENTS.md"), "utf8")).toContain(
-      "docs/README.md",
-    );
+  it("the map reaches the index, and both name the design system", () => {
+    const agents = readFileSync(join(ROOT, "AGENTS.md"), "utf8");
+    expect(agents).toContain("docs/README.md");
+    expect(agents).toContain("DESIGN.md");
     expect(readFileSync(join(DOCS, "README.md"), "utf8")).toContain(
-      "archive/README.md",
+      "DESIGN.md",
     );
   });
 
@@ -211,9 +218,14 @@ describe("the tree has the shape the map describes", () => {
    * Two files that are both nominally the entry point, disagreeing, is the
    * exact failure a single map exists to prevent.
    */
-  it("CLAUDE.md delegates rather than duplicating", () => {
-    expect(readFileSync(join(ROOT, "CLAUDE.md"), "utf8").trim()).toBe(
-      "@AGENTS.md",
-    );
+  it("CLAUDE.md is a symlink to AGENTS.md, not a second copy", () => {
+    const link = join(ROOT, "CLAUDE.md");
+    expect(
+      lstatSync(link).isSymbolicLink(),
+      "CLAUDE.md has become a real file. Two files that are both nominally " +
+        "the entry point, disagreeing, is the failure one map exists to " +
+        "prevent — and the copy is the one that gets edited.",
+    ).toBe(true);
+    expect(readlinkSync(link)).toBe("AGENTS.md");
   });
 });

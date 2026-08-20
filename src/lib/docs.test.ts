@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { brokenRefs, current, exists, NPM_SCRIPT, SRC_PATH } from "./doc-text";
+import { brokenRefs, exists, NPM_SCRIPT, prose, SRC_PATH } from "./doc-text";
 import { ROOT, read } from "./source-text";
 
 /**
@@ -42,7 +42,7 @@ describe("the documentation refers to things that exist", () => {
      * silently covered nothing it was written for. Caught by renaming a
      * referenced file and finding the test still green.
      */
-    expect(brokenRefs(current(), SRC_PATH, exists)).toEqual([]);
+    expect(brokenRefs(prose(), SRC_PATH, exists)).toEqual([]);
   });
 
   it("every npm script mentioned is defined", () => {
@@ -54,7 +54,7 @@ describe("the documentation refers to things that exist", () => {
     const defined = new Set(Object.keys(pkg.scripts));
 
     const missing: string[] = [];
-    for (const { file, text } of current()) {
+    for (const { file, text } of prose()) {
       /*
        * The trailing-argument form matters and was missing: the pattern
        * required a backtick straight after the name, so `npm run smoke:email
@@ -93,7 +93,7 @@ describe("counts stated in prose match the code", () => {
     expect(expected, `no word for ${actual} templates`).toBeDefined();
 
     const wrong: string[] = [];
-    for (const { file, text } of current()) {
+    for (const { file, text } of prose()) {
       for (const match of text.matchAll(/(\w+) templates/gi)) {
         const said = match[1]?.toLowerCase();
         // Only the counting words; "seven templates in" but not "email templates".
@@ -128,7 +128,7 @@ describe("counts stated in prose match the code", () => {
      */
     const ENUMERATING = 3;
 
-    for (const { file, text } of current()) {
+    for (const { file, text } of prose()) {
       const named = all.filter((name) => text.includes(name));
       if (named.length >= ENUMERATING && named.length < all.length) {
         const absent = all.filter((name) => !text.includes(name));

@@ -71,7 +71,6 @@ Each is enforced somewhere. The enforcement is named so you can read why.
 | Publishing, announcing, erasing, backups | [docs/operations/runbook.md](docs/operations/runbook.md) |
 | The command that does the thing | [docs/operations/scripts.md](docs/operations/scripts.md) |
 | What is deliberately not built, and what would change that | [docs/roadmap.md](docs/roadmap.md) |
-| Why something is the way it is | [docs/archive/README.md](docs/archive/README.md) |
 
 ## How this codebase is written
 

@@ -9,9 +9,9 @@ Every item has a **trigger** rather than a priority, because priorities drift
 and triggers do not. Nothing on this list blocks a small set of testers; that
 is the whole point of it being a list rather than work.
 
-The scaling numbers below were measured in August 2026 on the state of the
-project at the time — the working is in
-[the archived quality audit](archive/2026-08-quality-audit.md).
+The scaling numbers below were measured in August 2026 against the project as
+it stood, not projected from a rule of thumb. Each says what was counted, so
+a later reader can re-measure rather than trust the figure.
 
 ---
 
@@ -49,8 +49,8 @@ database.**
 Worth confirming while you are in the dashboard: what the Neon
 point-in-time-recovery retention actually is. The commands for a manual
 `pg_dump` floor, and the note that blobs are covered by none of it, are in
-[the archived launch checklist](archive/2026-08-launch-checklist.md); the retention number itself still has to be read
-off the dashboard and written down there.
+[the runbook](operations/runbook.md); the retention number itself still has
+to be read off the dashboard and written down there.
 
 **Trigger: the moment somebody other than you opens a preview link.** A Neon
 branch per preview is a dashboard setting, not code.

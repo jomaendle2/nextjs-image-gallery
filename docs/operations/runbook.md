@@ -171,9 +171,14 @@ and stays on the old grid until somebody gives it a point by hand.
 `/globe` is statically rendered with `revalidate = 3600`, so corrected dots
 reach readers on the next deploy or within the hour, not immediately.
 `coarsen.test.ts` pins the constant, so moving it is a decision somebody
-makes on purpose and reads this first. The procedure was last run for the
-100 km → 1 km change on 2026-08-19; the record is in
-[the archived launch checklist](../archive/2026-08-launch-checklist.md).
+makes on purpose and reads this first.
+
+Last run for the 100 km → 1 km change on 2026-08-19. `backfill-pins` supplied
+the four rows stored "public only", `recoarsen --apply` rewrote the rest, and
+all 28 published points were checked afterwards as bit-exact what `coarsen()`
+produces and inside the 1 km promise — nothing stranded. That is the outcome
+to expect; if a run leaves rows listed-but-untouched, they are the ones with
+neither an exact point nor a place name.
 
 ### Erasing somebody
 
