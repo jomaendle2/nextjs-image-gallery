@@ -6,15 +6,12 @@ import {
   BARE_DOC,
   brokenRefs,
   DOC_PATH,
-  DOCS,
   exists,
   GENERATED,
   knownMarkdown,
   linksIn,
-  markdownUnder,
   pointers,
   prose,
-  rel,
   resolveLink,
 } from "./doc-text";
 import { ROOT } from "./source-text";
@@ -35,19 +32,26 @@ import { ROOT } from "./source-text";
  */
 
 /**
- * The two files a document may be reached from.
+ * The files a document may be reached from — the ones a reader arrives at
+ * rather than is sent to.
  *
- * Two rather than one because `AGENTS.md` is capped: it names the documents
- * worth interrupting a task for and defers the rest to `docs/README.md`. One
- * hop, hard-coded rather than computed as full reachability, because full
+ * More than one because `AGENTS.md` is capped: it names the documents worth
+ * interrupting a task for and defers the rest to `docs/README.md`. One hop,
+ * hard-coded rather than computed as full reachability, because full
  * reachability lets two orphans link to each other and call themselves
  * indexed.
  *
- * There were three while the archive had its own index. Deleting the archive
- * took the third with it — a document nobody maintains is not made current by
- * being listed.
+ * `README.md` joined them when the orphan check widened to the root and
+ * found it. It belongs for the reason the other two do — it is an entry, and
+ * it is the thing that does the pointing. The edge test below holds all three
+ * together, so this list cannot quietly become a way to excuse a document
+ * nothing links to.
+ *
+ * There was a fourth while the archive had its own index. Deleting the
+ * archive took it — a document nobody maintains is not made current by being
+ * listed.
  */
-const INDEXES = ["AGENTS.md", "docs/README.md"];
+const INDEXES = ["README.md", "AGENTS.md", "docs/README.md"];
 
 /**
  * What `AGENTS.md` may cost, in lines of our own writing.
@@ -158,8 +162,15 @@ describe("the tree has the shape the map describes", () => {
       }),
     );
 
-    const orphans = markdownUnder()
-      .map(rel)
+    /*
+     * Over `prose()` rather than `docs/` alone. The first version walked
+     * `markdownUnder()`, so the documents at the root were exempt by
+     * construction — and `DESIGN.md`, which governs every colour and every
+     * heading on the site, had to be asserted by name in the next test to
+     * cover the hole. The next root document added would have got neither.
+     */
+    const orphans = prose()
+      .map((entry) => entry.file)
       .filter((path) => !(INDEXES.includes(path) || linked.has(path)));
 
     expect(
@@ -175,18 +186,16 @@ describe("the tree has the shape the map describes", () => {
    * between them is real — otherwise the list is two unrelated roots and a
    * document linked from neither still passes as reachable.
    *
-   * `DESIGN.md` is asserted here too. It is the one reference document that
-   * lives at the root rather than under `docs/`, so the orphan check above
-   * cannot see it: nothing would notice if the map stopped naming the file
-   * that governs every colour and every heading on the site.
+   * `DESIGN.md` used to be asserted here by name, because the orphan check
+   * walked `docs/` and could not see a root document. It can now, so the
+   * general rule covers it and only the edge is left.
    */
-  it("the map reaches the index, and both name the design system", () => {
-    const agents = readFileSync(join(ROOT, "AGENTS.md"), "utf8");
-    expect(agents).toContain("docs/README.md");
-    expect(agents).toContain("DESIGN.md");
-    expect(readFileSync(join(DOCS, "README.md"), "utf8")).toContain(
-      "DESIGN.md",
-    );
+  it("every entry reaches the index", () => {
+    for (const index of ["AGENTS.md", "README.md"]) {
+      expect(readFileSync(join(ROOT, index), "utf8")).toContain(
+        "docs/README.md",
+      );
+    }
   });
 
   it("AGENTS.md is a map, not an encyclopaedia", () => {

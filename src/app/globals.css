@@ -25,8 +25,9 @@
  * There was a third weight between them for a while. Nothing ever applied
  * `glass-regular`, and it kept two override rules alive underneath it — one
  * for `prefers-reduced-transparency`, one for `:hover` — so the middle rung
- * cost three blocks and carried nothing. Its blur value survives it, because
- * `glass-bar` reads it.
+ * cost three blocks and carried nothing. Its blur value is the one thing that
+ * survives, under `--glass-blur-bar`: `glass-bar` reads it, and naming it for
+ * the weight it no longer belongs to sent a reader looking for a third rung.
  *
  * Each weight is three effects stacked:
  *   1. blur + saturate  - the refraction. Saturation is what makes the
@@ -164,8 +165,10 @@
   --color-positive-edge: oklch(0.75 0.16 155 / 0.38);
 
   --glass-blur-thin: 14px;
-  --glass-blur-regular: 22px;
   --glass-blur-thick: 32px;
+
+  /* The bar sits between the two weights; it is not a third one. */
+  --glass-blur-bar: 22px;
 
   --glass-saturate: 180%;
 
@@ -249,7 +252,7 @@
  */
 @utility glass-bar {
   background-color: color-mix(in oklab, var(--ground) 72%, transparent);
-  backdrop-filter: blur(var(--glass-blur-regular))
+  backdrop-filter: blur(var(--glass-blur-bar))
     saturate(var(--glass-saturate));
   border-bottom: 1px solid oklch(100% 0 0 / 0.06);
   will-change: backdrop-filter;

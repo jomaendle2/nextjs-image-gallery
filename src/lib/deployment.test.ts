@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { code, ROOT, SRC, walk } from "./source-text";
+import { code, codeUnder, ROOT, rel } from "./source-text";
 
 /**
  * One reading of the deployment environment, and only one.
@@ -19,13 +19,13 @@ import { code, ROOT, SRC, walk } from "./source-text";
  */
 
 const READS = /process\.env\[\s*["']VERCEL_ENV["']\s*\]/;
-const HOME = join("lib", "deployment.ts");
+const HOME = "src/lib/deployment.ts";
 
 describe("the deployment environment is read in one place", () => {
   it("only the deployment module names the variable", () => {
     const files = [
-      ...walk(SRC, (entry) => /\.tsx?$/.test(entry)),
-      ...walk(join(ROOT, "scripts"), (entry) => /\.(?:mts|mjs)$/.test(entry)),
+      ...codeUnder(join(ROOT, "src")),
+      ...codeUnder(join(ROOT, "scripts")),
     ];
 
     /*
@@ -36,13 +36,13 @@ describe("the deployment environment is read in one place", () => {
      */
     const readers = files
       .filter((file) => READS.test(code(readFileSync(file, "utf8"))))
-      .map((file) => file.replace(SRC, "").replace(ROOT, ""))
+      .map(rel)
       .filter((file) => !file.endsWith("deployment.test.ts"));
 
     expect(
       readers,
       "Import isProduction() or deploymentEnv() from @/lib/deployment " +
         "instead. A sixth predicate is how the five disagreed.",
-    ).toEqual([join("/", HOME)]);
+    ).toEqual([HOME]);
   });
 });

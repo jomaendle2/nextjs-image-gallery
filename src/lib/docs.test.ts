@@ -53,23 +53,16 @@ describe("the documentation refers to things that exist", () => {
     };
     const defined = new Set(Object.keys(pkg.scripts));
 
-    const missing: string[] = [];
-    for (const { file, text } of prose()) {
-      /*
-       * The trailing-argument form matters and was missing: the pattern
-       * required a backtick straight after the name, so `npm run smoke:email
-       * -- you@example.com` and `npm run mint-link -- you@…` were invisible.
-       * Those two are the break-glass commands — the ones read while
-       * something is already broken — and they were the only ones unchecked.
-       */
-      for (const match of text.matchAll(NPM_SCRIPT)) {
-        const [, name] = match;
-        if (name !== undefined && !defined.has(name)) {
-          missing.push(`${file} → npm run ${name}`);
-        }
-      }
-    }
-    expect(missing).toEqual([]);
+    /*
+     * The trailing-argument form matters and was missing: the pattern
+     * required a backtick straight after the name, so `npm run smoke:email
+     * -- you@example.com` and `npm run mint-link -- you@…` were invisible.
+     * Those two are the break-glass commands — the ones read while
+     * something is already broken — and they were the only ones unchecked.
+     */
+    expect(
+      brokenRefs(prose(), NPM_SCRIPT, (name) => defined.has(name)),
+    ).toEqual([]);
   });
 });
 

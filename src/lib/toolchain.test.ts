@@ -57,16 +57,28 @@ const zones = config.overrides.filter(
 );
 
 /**
+ * The two kinds of zone, separated once.
+ *
+ * A zone either states the rule or turns it off, and the three checks below
+ * each used to re-ask which — with `typeof` in two different directions and a
+ * raw re-read in the third. The distinction is a property of the zone, so it
+ * is drawn here and read from.
+ */
+const narrowing = zones.filter(
+  (zone) => typeof zone.linter.rules.style?.noRestrictedImports === "object",
+);
+const exempt = zones.filter(
+  (zone) => zone.linter.rules.style?.noRestrictedImports === "off",
+);
+
+/**
  * How one zone's copy differs from the base, if at all.
  *
  * A zone that turns the rule off entirely diverges by definition and is not
  * this check's business — that is a decision, and the ordering check below is
- * what holds it.
+ * what holds it. `narrowing` has already dropped those.
  */
 function diverged(rule: Rule | string | undefined): string[] {
-  if (typeof rule === "string") {
-    return [];
-  }
   const here = paths(rule);
   return Object.entries(base).flatMap(([specifier, restriction]) => {
     const mine = here[specifier];
@@ -93,7 +105,7 @@ describe("the restricted imports say the same thing everywhere", () => {
    * accident and is what the next check is about.
    */
   it("every zone that narrows the rule still carries all of it", () => {
-    const missing = zones.flatMap((zone) =>
+    const missing = narrowing.flatMap((zone) =>
       diverged(zone.linter.rules.style?.noRestrictedImports).map(
         (note) => `${zone.includes.join(", ")} → ${note}`,
       ),
@@ -114,10 +126,7 @@ describe("the restricted imports say the same thing everywhere", () => {
    * working, which is the hardest kind to notice.
    */
   it("the exemption comes last", () => {
-    const off = zones.filter(
-      (zone) => zone.linter.rules.style?.noRestrictedImports === "off",
-    );
-    expect(off.length).toBe(1);
-    expect(zones.at(-1)).toBe(off[0]);
+    expect(exempt.length).toBe(1);
+    expect(zones.at(-1)).toBe(exempt[0]);
   });
 });

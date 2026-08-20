@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
-import { ROOT, walk } from "./source-text";
+import { codeUnder, GENERATED_BYTES, ROOT, rel, walk } from "./source-text";
 
 /**
  * Reading the documentation as a tree, for the tests that hold it together.
@@ -76,18 +76,10 @@ interface Prose {
   text: string;
 }
 
-/** Repo-relative and posix, the one spelling every check compares in. */
-export function rel(absolute: string): string {
-  return absolute
-    .slice(ROOT.length + 1)
-    .split(sep)
-    .join("/");
-}
-
 /** Every `.md` under `docs`, recursively, snapshots aside. */
-export function markdownUnder(dir: string = DOCS): string[] {
+export function markdownUnder(): string[] {
   return walk(
-    dir,
+    DOCS,
     (entry) => entry.endsWith(".md"),
     (full) => full === SNAPSHOTS,
   );
@@ -106,6 +98,58 @@ function rootMarkdown(): string[] {
 }
 
 /**
+ * The configuration, which is prose too.
+ *
+ * `biome.json` was named here by hand, because it was the file that prompted
+ * the rule: its restricted-import messages are read at the moment somebody is
+ * blocked, and every one of them cites a document. Naming it fixed that one
+ * file and left the rule shallower than its own reasoning — `tsconfig.json`
+ * grew a comment pointing at `docs/architecture/toolchain.md` in the same
+ * change that wrote this walk, and was outside it.
+ *
+ * By extension rather than by name, so the next config file is covered by
+ * existing. Root level only: `node_modules` is below it, and the size limit
+ * drops `package-lock.json`, which is 156 KB of resolved URLs and cites
+ * nothing.
+ */
+function configFiles(): string[] {
+  const roots = readdirSync(ROOT, { withFileTypes: true })
+    .filter(
+      (entry) => entry.isFile() && /\.(?:json|mjs|ya?ml)$/.test(entry.name),
+    )
+    .map((entry) => join(ROOT, entry.name))
+    .filter((file) => statSync(file).size <= GENERATED_BYTES);
+
+  /*
+   * Guarded, because a directory that is absent is not the same as a rule
+   * that does not apply: without this, a checkout with no `.github` fails
+   * every documentation test with an `ENOENT` naming a path nobody was
+   * asking about.
+   */
+  const workflows = exists(".github")
+    ? walk(join(ROOT, ".github"), (entry) => /\.ya?ml$/.test(entry))
+    : [];
+
+  return [...roots, ...workflows];
+}
+
+/**
+ * Read once per process.
+ *
+ * Nine test cases across two files ask for one of these two collections, and
+ * each call was a fresh directory walk plus a re-read of every file it found
+ * — 1.7 MB of source for `pointers()`, at thirteen milliseconds a time. The
+ * tree does not change while the suite runs, so the second read can only ever
+ * agree with the first.
+ *
+ * Safe here and nowhere near the application: nothing outside the tests
+ * imports this module, and a test process that outlives an edit to the
+ * documentation does not exist.
+ */
+let CACHED_PROSE: Prose[] | undefined;
+let CACHED_POINTERS: Prose[] | undefined;
+
+/**
  * Every prose file in the repository.
  *
  * The root files are discovered rather than listed. A hard-coded three drifted
@@ -120,18 +164,19 @@ export function prose(): Prose[] {
    * every finding twice. It still counts as a file that *exists* — see
    * `knownMarkdown` — because a comment naming it is naming something real.
    */
-  const roots = rootMarkdown().filter(
-    (file) => !lstatSync(file).isSymbolicLink(),
-  );
-  return [...roots, ...markdownUnder()].map((file) => ({
+  CACHED_PROSE ??= [
+    ...rootMarkdown().filter((file) => !lstatSync(file).isSymbolicLink()),
+    ...markdownUnder(),
+  ].map((file) => ({
     file: rel(file),
     text: authored(rel(file), readFileSync(file, "utf8")),
   }));
+  return CACHED_PROSE;
 }
 
 /**
- * Every file that could hold a pointer into the documentation — `src` and
- * `scripts`, both, tests included.
+ * Every file that could hold a pointer into the documentation, with its text
+ * — `src` and `scripts`, both, tests included. The `prose()` of the code side.
  *
  * Deliberately not `allSourceFiles`, and the difference is the point. That
  * function answers "where could a violation hide", and its exclusions are a
@@ -148,46 +193,13 @@ export function prose(): Prose[] {
  * were outside this walk when they were written, so moving the file they
  * cite would have left the suite green.
  */
-function allPointerFiles(): string[] {
-  return [
+export function pointers(): Prose[] {
+  CACHED_POINTERS ??= [
     ...codeUnder(join(ROOT, "src")),
     ...codeUnder(join(ROOT, "scripts")),
-    join(ROOT, "biome.json"),
-  ];
-}
-
-/**
- * How large a source file can be before it is taken to be generated data.
- *
- * The coastline tiers under `src/lib/geo` are 70 KB, 495 KB and 2.5 MB of
- * coordinate arrays; the largest thing anybody has written by hand here is
- * 31 KB. Scanning the three of them for documentation pointers was about a
- * quarter of what these tests cost, and it was worse than useless: a bare
- * filename matched inside a two-megabyte float array is a false positive,
- * not a finding.
- *
- * By size rather than by name, and that is not squeamishness — `world.test.ts`
- * asserts that no module mentions the heavy tiers outside a dynamic import,
- * so a list of them here would break the invariant that keeps them out of the
- * bundle. Size is also what actually matters, and it needs no maintenance
- * when a fourth tier is generated.
- */
-const GENERATED_BYTES = 64 * 1024;
-
-function codeUnder(dir: string): string[] {
-  return walk(
-    dir,
-    (entry) => /\.(?:tsx?|mts|mjs)$/.test(entry),
-    (full) => statSync(full).size > GENERATED_BYTES,
-  );
-}
-
-/** Every pointer file, with its text — the `prose()` of the code side. */
-export function pointers(): Prose[] {
-  return allPointerFiles().map((file) => ({
-    file: rel(file),
-    text: readFileSync(file, "utf8"),
-  }));
+    ...configFiles(),
+  ].map((file) => ({ file: rel(file), text: readFileSync(file, "utf8") }));
+  return CACHED_POINTERS;
 }
 
 /**
@@ -208,7 +220,16 @@ export function brokenRefs(
 ): string[] {
   const broken: string[] = [];
   for (const { file, text } of entries) {
-    for (const ref of new Set(text.match(pattern) ?? [])) {
+    /*
+     * Group 1 where the pattern has one, the whole match otherwise. The npm
+     * script check wanted the name without its `npm run` and backticks and
+     * so wrote this loop out for a fifth time — without the `new Set`, so a
+     * document naming the same command twice reported it twice.
+     */
+    const refs = [...text.matchAll(pattern)].map(
+      (match) => match[1] ?? match[0],
+    );
+    for (const ref of new Set(refs)) {
       if (!ok(ref)) {
         broken.push(`${file} → ${ref}`);
       }

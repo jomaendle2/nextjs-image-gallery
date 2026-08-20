@@ -8,28 +8,6 @@ import { isProduction } from "@/lib/deployment";
 import { clientIp, createLimiter } from "@/lib/rate-limit";
 
 /**
- * Whether a view here should be added to the real total.
- *
- * Preview, development and production all point at the same Neon database —
- * the trap `EnvironmentBanner` exists to announce, and it does not stop at
- * the buttons. Reading changes nothing about a photograph, but it does change
- * its number, so every pass through a gallery on `localhost` while building
- * something, and every click on a preview link shared for review, was landing
- * in the count a photographer sees.
- *
- * That is a quieter failure than a deleted row and a harder one to undo,
- * because nothing records which of the views were real.
- *
- * Deliberately on the server rather than in `useViewCount`. The client cannot
- * be told which environment it is in without a `NEXT_PUBLIC_*` variable baked
- * into the bundle, and a count is a claim about how many people looked — the
- * tier that decides it should be the one nobody can edit.
- */
-function viewsAreCounted(): boolean {
-  return isProduction();
-}
-
-/**
  * Generous, because browsing is the point: a visitor stepping through a
  * fourteen-photograph gallery legitimately posts fourteen times, and may
  * come back. This is here to make automated inflation tedious, not to
@@ -109,14 +87,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     /*
-     * Not production: answer with the real total and write nothing. The same
-     * shape as the repeat-limiter branch above, and for the same reason — the
-     * caller is showing a number, not performing a transaction, so a refusal
-     * here should be indistinguishable from a success to everything except
-     * the count itself. Returning zero would put a wrong number on a
-     * developer's screen and make the feature look broken locally.
+     * Not production: answer with the real total and write nothing.
+     *
+     * Preview, development and production all point at the same Neon
+     * database — the trap `EnvironmentBanner` exists to announce, and it does
+     * not stop at the buttons. Reading changes nothing about a photograph,
+     * but it does change its number, so every pass through a gallery on
+     * `localhost` while building something, and every click on a preview link
+     * shared for review, was landing in the count a photographer sees. That
+     * is a quieter failure than a deleted row and a harder one to undo,
+     * because nothing records which of the views were real.
+     *
+     * The refusal takes the same shape as the repeat-limiter branch above,
+     * and for the same reason — the caller is showing a number, not
+     * performing a transaction, so it should be indistinguishable from a
+     * success to everything except the count itself. Returning zero would put
+     * a wrong number on a developer's screen and make the feature look broken
+     * locally.
+     *
+     * Deliberately on the server rather than in `useViewCount`. The client
+     * cannot be told which environment it is in without a `NEXT_PUBLIC_*`
+     * variable baked into the bundle, and a count is a claim about how many
+     * people looked — the tier that decides it should be the one nobody can
+     * edit.
      */
-    if (!viewsAreCounted()) {
+    if (!isProduction()) {
       return NextResponse.json({
         viewCount: await getViewCount(imageId),
         success: true,

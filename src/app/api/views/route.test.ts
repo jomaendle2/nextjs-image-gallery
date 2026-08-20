@@ -22,7 +22,7 @@ import { code, read } from "@/lib/source-text";
 const route = code(read("app", "api", "views", "route.ts"));
 
 /* The two landmarks the ordering checks below are about. */
-const GATE = /if \(!viewsAreCounted\(\)\)/;
+const GATE = /if \(!isProduction\(\)\)/;
 const WRITE = /incrementViewCount\(imageId\)/;
 const READ = /getViewCount\(imageId\)/;
 
@@ -34,7 +34,7 @@ describe("only production adds to a view count", () => {
    * things holding that in place.
    */
   it("the gate is the deployment environment, not a client's word for it", () => {
-    expect(route).toContain("isProduction()");
+    expect(route).toMatch(GATE);
     expect(route).toContain('from "@/lib/deployment"');
   });
 

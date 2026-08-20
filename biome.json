@@ -574,8 +574,7 @@
         "src/lib/maptiler.ts",
         "src/lib/members/offer.ts",
         "src/lib/site-url.ts",
-        "src/lib/stripe.ts",
-        "src/components/ui/EnvironmentBanner.tsx"
+        "src/lib/stripe.ts"
       ],
       "linter": {
         "rules": {
