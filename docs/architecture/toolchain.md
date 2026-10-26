@@ -32,6 +32,11 @@ CI green while running a single test.
 understand Tailwind v4's `@plugin`, `@custom-variant` and `@theme inline`
 at-rules.
 
+Markdown is linted but not formatted. Biome 2.6 started formatting it, and its
+first pass over `docs/` rewrote every `*emphasis*` to `_emphasis_` and padded
+every table column — a ten-file diff that changed no meaning and would have
+buried the next real edit to those files in its blame.
+
 ### Rules that are off, and why
 
 | Rule | Why |

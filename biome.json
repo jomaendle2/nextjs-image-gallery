@@ -24,6 +24,11 @@
     "indentWidth": 2,
     "lineWidth": 80
   },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
   "assist": {
     "enabled": true,
     "actions": {
@@ -520,7 +525,7 @@
                 "patterns": [
                   {
                     "group": ["@/app/**", "@/components/**"],
-                    "message": "Layering: src/lib, src/hooks and src/data sit underneath the app, not beside it. Move the shared thing down \u2014 @/app/form-state was the only one that reached up, and it is now @/lib/form-state. See docs/architecture/toolchain.md."
+                    "message": "Layering: src/lib, src/hooks and src/data sit underneath the app, not beside it. Move the shared thing down — @/app/form-state was the only one that reached up, and it is now @/lib/form-state. See docs/architecture/toolchain.md."
                   }
                 ]
               }
