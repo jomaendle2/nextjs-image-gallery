@@ -25,7 +25,7 @@ import { listGlobePoints } from "@/lib/photos/repository";
 import { photoTitle } from "@/lib/photos/title";
 import { count } from "@/lib/plural";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 const DESCRIPTION =
   "Every place a photographer has marked, blurred to about a kilometre.";
@@ -72,7 +72,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The gallery by place.
  *
- * A server component with the same hourly revalidation as every other public
+ * A server component with the same daily revalidation as every other public
  * page, rather than a route handler with something fetching it — the data is
  * a list of places and the page is a list of places, and putting an API
  * between them would buy a spinner.

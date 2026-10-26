@@ -78,3 +78,17 @@ describe("only production adds to a view count", () => {
     expect(get).not.toContain("viewsAreCounted");
   });
 });
+
+describe("reading the counts does not keep the database awake", () => {
+  /*
+   * Every gallery visit asks for the whole table, so this header is the only
+   * thing between visitor traffic and Neon. Neon suspends its compute after
+   * five idle minutes; an edge cache shorter than that lets a steady trickle
+   * of readers hold it awake indefinitely, which at sixty seconds is what it
+   * did. Past five minutes, and the next reader is served from the edge.
+   */
+  it("caches at the edge for longer than Neon's suspend timeout", () => {
+    const seconds = Number(/s-maxage=(\d+)/.exec(route)?.[1]);
+    expect(seconds).toBeGreaterThan(5 * 60);
+  });
+});

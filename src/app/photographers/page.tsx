@@ -19,7 +19,7 @@ import { alternates, ogCard, shareCard } from "@/lib/metadata";
 import { GROUND } from "@/lib/photo-ground";
 import { count } from "@/lib/plural";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 const DESCRIPTION = "The photographers contributing to the beauty of earth.";
 
@@ -34,8 +34,8 @@ const DESCRIPTION = "The photographers contributing to the beauty of earth.";
  *
  * `generateMetadata` rather than a static object, because the strip has to be
  * built from real photographs. It runs the same query the page does — both
- * behind this route's hourly revalidation, so the pair costs two queries an
- * hour rather than two per visitor.
+ * behind this route's daily revalidation, so the pair costs two queries a
+ * day rather than two per visitor.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const contributors = await listContributorsWithPreviews();

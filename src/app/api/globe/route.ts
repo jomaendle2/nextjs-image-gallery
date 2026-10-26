@@ -38,10 +38,10 @@ import { photoTitle } from "@/lib/photos/title";
  * kilometre cell centre the page shows, and no `precise_` column is within
  * reach of this file.
  */
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 /**
- * The same hour as `revalidate`, and a day of staleness behind it.
+ * The same day as `revalidate`, and a day of staleness behind it.
  *
  * Named constants rather than one literal header string, because a long
  * comma-separated string of digits and hyphens is what a secret scanner is
@@ -49,7 +49,7 @@ export const revalidate = 3600;
  * out of the numbers, the header is both quieter to the linter and easier to
  * keep in step with the segment config above.
  */
-const SHARED_SECONDS = 3600;
+const SHARED_SECONDS = 86_400;
 const STALE_SECONDS = 86_400;
 
 interface GlobePlace {

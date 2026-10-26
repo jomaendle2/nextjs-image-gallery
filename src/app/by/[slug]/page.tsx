@@ -12,7 +12,7 @@ import { contributorAlternates, ogCard, shareCard } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographerSchema } from "@/lib/structured-data";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -20,7 +20,7 @@ interface PageProps {
 
 /**
  * Every photographer the sitemap advertises, built once and revalidated
- * hourly — literally the same list, from the same function, so the two
+ * daily — literally the same list, from the same function, so the two
  * cannot disagree about who has a page.
  *
  * Without this the `revalidate` above never applied to anything: a dynamic
@@ -111,7 +111,7 @@ export default async function ContributorGallery({ params }: PageProps) {
    * Both throw rather than degrading. A photographer whose page silently
    * fell back to `EmptyGallery` on a failed query was told, in their own
    * name, that they had not published anything — and because that render
-   * succeeded it was cached under the hourly `revalidate` and shown to
+   * succeeded it was cached under the `revalidate` window and shown to
    * everyone they had sent the link to. `EmptyGallery` below now means only
    * what it says.
    */
