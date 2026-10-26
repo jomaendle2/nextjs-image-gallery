@@ -4,11 +4,11 @@ import { listPublicContributorSlugs } from "@/lib/auth/contributors";
 import { siteOrigin } from "@/lib/site-url";
 
 /**
- * Re-generated hourly, matching the `revalidate` on the pages it lists.
+ * Re-generated daily, matching the `revalidate` on the pages it lists.
  * A sitemap that is staler than the pages it describes is worse than none:
  * it teaches the crawler to distrust the `lastModified` dates.
  */
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 /**
  * Every page worth crawling, which is not every page that exists.

@@ -64,9 +64,9 @@
  * the place a photographer chose is theirs, and the pin is the one field
  * here that is also a dot on a public map.
  *
- * Cached pages carry a one-hour revalidate, so an applied change reaches the
- * site within the hour rather than at once. Nothing here can shorten that
- * from outside Next.
+ * Cached pages carry a one-day revalidate, so an applied change reaches the
+ * site within the day rather than at once. Nothing here can shorten that
+ * from outside Next; a redeploy from Vercel can.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";

@@ -4,7 +4,7 @@ import { SITE_DESCRIPTION } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 
 /** Matches the pages it describes. */
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 export async function GET(): Promise<Response> {
   const images = await listGalleryImages();

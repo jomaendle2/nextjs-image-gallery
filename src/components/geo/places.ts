@@ -28,7 +28,7 @@ export interface GlobePlace {
  *
  * A module-scoped promise for the same reason the coastlines use one: opening
  * the globe a second time is instant, and two globes on one page cannot each
- * ask. The route is CDN-cached for an hour on top of this, so the second
+ * ask. The route is CDN-cached on top of this, so the second
  * reader does not reach the database either.
  */
 let placesPromise: Promise<GlobePlace[]> | null = null;

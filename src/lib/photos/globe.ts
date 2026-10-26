@@ -88,7 +88,7 @@ export function cellKeyOf(lat: number, lng: number): string {
  * top, so it has to be total: photograph count, then the first label
  * alphabetically, then the key. Sorting by count alone would leave two
  * equal cells in whatever order the query happened to return, and the page
- * is cached for an hour — so a tie that resolved differently on each
+ * is cached for a day — so a tie that resolved differently on each
  * revalidation would reshuffle the list under a reader for no reason.
  */
 export function groupIntoCells(rows: readonly GlobePointRow[]): GlobeCell[] {
