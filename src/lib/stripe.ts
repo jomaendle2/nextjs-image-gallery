@@ -30,6 +30,12 @@ import Stripe from "stripe";
  * webhook endpoint was created with.** They can disagree, and the two
  * helpers above read the new shape first for exactly that reason. Check the
  * endpoint's version in the Dashboard matches this string.
+ *
+ * The SDK is pinned exactly in `package.json` for the same reason. Each SDK
+ * minor narrows `apiVersion` to its own date, so a caret range let a routine
+ * `npm update` (22.5 to 22.6) fail typecheck here — or, had the string been
+ * widened to compile, move the account's version as a side effect of a
+ * dependency bump. Bump the SDK and this string together, deliberately.
  */
 const API_VERSION = "2026-07-29.dahlia";
 

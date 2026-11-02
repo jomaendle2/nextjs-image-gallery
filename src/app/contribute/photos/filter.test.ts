@@ -128,7 +128,9 @@ describe("selecting everything the filter matches", () => {
   const drafts = selectPhotos(rows, "draft", "");
 
   it("selects the whole filtered set from empty", () => {
-    expect([...toggleAll(new Set(), drafts)].sort()).toEqual(["b", "c"]);
+    expect(
+      [...toggleAll(new Set(), drafts)].sort((x, y) => x.localeCompare(y)),
+    ).toEqual(["b", "c"]);
   });
 
   it("clears them when they are all already selected", () => {
@@ -136,7 +138,9 @@ describe("selecting everything the filter matches", () => {
   });
 
   it("completes a partial selection rather than clearing it", () => {
-    expect([...toggleAll(new Set(["b"]), drafts)].sort()).toEqual(["b", "c"]);
+    expect(
+      [...toggleAll(new Set(["b"]), drafts)].sort((x, y) => x.localeCompare(y)),
+    ).toEqual(["b", "c"]);
   });
 
   /*
@@ -147,7 +151,11 @@ describe("selecting everything the filter matches", () => {
   it("never touches rows outside the current filter", () => {
     const next = toggleAll(new Set(["a"]), drafts);
     expect(next.has("a")).toBe(true);
-    expect([...next].sort()).toEqual(["a", "b", "c"]);
+    expect([...next].sort((x, y) => x.localeCompare(y))).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
 
     const cleared = toggleAll(next, drafts);
     expect([...cleared]).toEqual(["a"]);
