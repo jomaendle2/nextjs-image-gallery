@@ -56,4 +56,15 @@ export function revalidateFeeds(slug: string): void {
    * they expire together.
    */
   revalidatePath("/api/globe");
+  /*
+   * The two feeds and the sitemap, which were never on this list and did not
+   * need to be while every route expired hourly: a new photograph reached a
+   * feed reader within the hour regardless. The window is now a day, to stop
+   * crawlers keeping Neon awake, and on a day these are the surfaces where a
+   * missing entry shows — a subscriber told nothing for a day, a crawler
+   * handed yesterday's list of URLs.
+   */
+  revalidatePath("/feed.xml");
+  revalidatePath(`/by/${slug}/feed.xml`);
+  revalidatePath("/sitemap.xml");
 }

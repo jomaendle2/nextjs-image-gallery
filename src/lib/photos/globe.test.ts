@@ -73,7 +73,7 @@ describe("the order the page is read in", () => {
   });
 
   /*
-   * The page is cached for an hour, so a tie left to whatever order the
+   * The page is cached for a day, so a tie left to whatever order the
    * query returned would reshuffle the list under a reader on every
    * revalidation, for no reason they could see. The comparison has to be
    * total.

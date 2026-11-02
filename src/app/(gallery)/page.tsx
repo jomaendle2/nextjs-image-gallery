@@ -22,12 +22,21 @@ export const metadata: Metadata = {
 };
 
 /**
- * Statically rendered and refreshed hourly. Publishing calls
- * `revalidatePath("/")`, so the hour is only a backstop — visitors see new
+ * Statically rendered and refreshed daily. Publishing calls
+ * `revalidatePath("/")`, so the day is only a backstop — visitors see new
  * work immediately, and an anonymous visit never touches a session or waits
  * on a query.
+ *
+ * It was an hour, and the hour was what exhausted Neon's free compute. Every
+ * public route shares this window, and a crawler walking the sitemap
+ * re-renders whichever entries have lapsed, so an hourly backstop across a
+ * few hundred URLs became a query every few seconds. Neon only suspends after
+ * five idle minutes, so the database never slept. Every write a visitor can
+ * see already clears its pages through `revalidateFeeds`; the window only
+ * has to catch what a script changes. `src/lib/cache-window.test.ts` keeps
+ * every route on the same one.
  */
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 export default async function Home() {
   /*

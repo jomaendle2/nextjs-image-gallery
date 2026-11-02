@@ -277,7 +277,7 @@ export async function getMemberDetails(
  * here to prove what that query may select, and the three checks in
  * `security-membership.test.ts` *end* the `getMemberDetails` slice here — so
  * the three that would break are not even about the globe. A `cache(...)`
- * wrapper moves the marker all four read. The saving is one query per hourly
+ * wrapper moves the marker all four read. The saving is one query per daily
  * revalidation; the cost would be editing a security control to suit an
  * optimisation, which is the wrong way round. `docs/roadmap.md` records the
  * remedy that does not: one cached function tagged and invalidated by

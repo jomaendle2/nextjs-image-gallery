@@ -10,7 +10,7 @@ import {
 import { membershipConfigured } from "@/lib/members/offer";
 import { contributorAlternates, ogCard, shareCard } from "@/lib/metadata";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -91,7 +91,7 @@ export default async function ContributorSlideshow({ params }: PageProps) {
    *
    * The photographs throw rather than arriving empty, for the reason the
    * grid states: a failed query rendered as `EmptyGallery` is a successful
-   * render, and the hourly `revalidate` then caches "they have published
+   * render, and the `revalidate` window then caches "they have published
    * nothing" on the URL the photographer shares.
    */
   const [contributor, images] = await Promise.all([

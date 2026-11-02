@@ -8,14 +8,14 @@ import { alternates } from "@/lib/metadata";
 import { siteOrigin } from "@/lib/site-url";
 import { photographSchema } from "@/lib/structured-data";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Every published photograph, built once and then revalidated hourly.
+ * Every published photograph, built once and then revalidated daily.
  *
  * Without this the `revalidate` above was dead code. A dynamic segment with
  * no `generateStaticParams` has nothing to prerender, so Next rendered this

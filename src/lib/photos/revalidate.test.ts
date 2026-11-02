@@ -39,6 +39,10 @@ describe("revalidateFeeds", () => {
       // The globe is two caches: the page draws the dots, this answers the
       // card. Until they are one cache, they expire together.
       ["/api/globe"],
+      // Harmless to miss on an hourly window, a day stale on a daily one.
+      ["/feed.xml"],
+      ["/by/anna/feed.xml"],
+      ["/sitemap.xml"],
     ]);
   });
 });

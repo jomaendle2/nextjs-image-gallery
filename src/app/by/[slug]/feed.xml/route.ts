@@ -4,7 +4,7 @@ import { getContributorBySlug } from "@/lib/auth/contributors";
 import { buildRssFeed, rssResponse } from "@/lib/feed";
 import { siteOrigin } from "@/lib/site-url";
 
-export const revalidate = 3600;
+export const revalidate = 86_400;
 
 /**
  * One photographer's work, as a subscription.

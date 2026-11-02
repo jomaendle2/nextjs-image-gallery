@@ -259,16 +259,18 @@ if (opener !== undefined) {
  *
  * `revalidatePath` needs a Next request context and there is none here, so a
  * plain node script cannot clear the caches. `/by/[slug]`, its slideshow and
- * `/globe` are all ISR on an hour — so for up to an hour after an erasure the
+ * `/globe` are all ISR on a day — so for up to a day after an erasure the
  * gallery goes on serving the person's name, titles and locations, now with
  * broken images, which is the most visible possible version of it.
  *
- * A redeploy clears it immediately, and a redeploy is a button.
+ * A redeploy clears it immediately, and a redeploy is a button. For an
+ * erasure, press it: a day of somebody's name on a page they asked to leave
+ * is not a window worth waiting out.
  */
 console.log(
-  "\n  Cached pages still hold this work for up to an hour.\n" +
+  "\n  Cached pages still hold this work for up to a day.\n" +
     "  Redeploy from Vercel to clear /by/<slug>, its slideshow and /globe\n" +
-    "  now, or wait for the hourly revalidation.\n",
+    "  now, or wait for the daily revalidation.\n",
 );
 
 finish();

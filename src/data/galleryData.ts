@@ -68,10 +68,10 @@ export interface GalleryImage {
  * Throws, and every caller lets it. There used to be a second, swallowing
  * variant for the pages that *display* a gallery, on the reasoning that a
  * photo site showing nothing beats one showing a stack trace. That reasoning
- * was wrong in a way nobody could see: every consumer is cached for an hour,
+ * was wrong in a way nobody could see: every consumer is cached for hours,
  * and returning `[]` makes the failure look like a *successful* render of an
  * empty gallery. Next then caches "there is nothing here" and serves it to
- * everyone until the hour is out — one Neon hiccup during revalidation, and
+ * everyone until the window is out — one Neon hiccup during revalidation, and
  * the front page is blank until 3 a.m. The site does not look broken, it
  * looks empty, so nothing alerts and nobody reports it.
  *

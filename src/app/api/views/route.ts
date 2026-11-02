@@ -148,8 +148,15 @@ export async function GET(): Promise<NextResponse> {
           // View counts are ambient, not authoritative. Letting the CDN serve
           // a slightly stale copy while it revalidates keeps this off the
           // database for most visitors.
+          //
+          // Ten minutes, not one. Every gallery visit asks for this, so at
+          // sixty seconds any steady trickle of visitors reached Neon more
+          // often than its five-minute suspend and kept the compute awake on
+          // its own. Nobody is misled by the wait: a reader's own view comes
+          // back from the POST and `useViewCount` writes it straight into
+          // this list, so the number they caused moves at once.
           "Cache-Control":
-            "public, s-maxage=60, stale-while-revalidate=300, max-age=0",
+            "public, s-maxage=600, stale-while-revalidate=3600, max-age=0",
         },
       },
     );

@@ -190,8 +190,8 @@ exact point for rows that have none, re-deriving it from the place name the
 photographer published. Anything with neither is listed rather than touched,
 and stays on the old grid until somebody gives it a point by hand.
 
-`/globe` is statically rendered with `revalidate = 3600`, so corrected dots
-reach readers on the next deploy or within the hour, not immediately.
+`/globe` is statically rendered with `revalidate = 86_400`, so corrected dots
+reach readers on the next deploy or within the day, not immediately.
 `coarsen.test.ts` pins the constant, so moving it is a decision somebody
 makes on purpose and reads this first.
 

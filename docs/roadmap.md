@@ -187,7 +187,7 @@ in a review thread because a comment in a diff is read once.
 - **The globe is one derivation cached three times.** `/globe/page.tsx`,
   `/api/globe/route.ts` and now `/globe`'s `generateMetadata` all call
   `listGlobePoints()` and `groupIntoCells()`, and the first two declare
-  `revalidate = 3600`. Publishing clears them, but only because
+  `revalidate = 86_400`. Publishing clears them, but only because
   `revalidateFeeds` names them — the dots, the card that appears when you
   hover one and the number on the share card are the same data behind
   independent caches, and the bug that hid a new photograph's card for an hour
